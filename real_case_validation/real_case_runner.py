@@ -441,7 +441,7 @@ def write_single_step_markdown(payloads: list[dict], out_path: str) -> None:
             "The single-step MSE is the *honest* headline number — "
             "the rollout-averaged error in the autoregressive report "
             "grows large because errors compound over the loop. The "
-            "single-step number is the one to cite in the thesis "
+            "single-step number is the one to cite in the "
             "abstract.\n")
     with open(out_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
@@ -488,7 +488,7 @@ def run_preset(preset_spec,                    # name | path-to-JSON
     # their `forward()` hard-rejects any other W; widening past the
     # training-time W would silently break them. The clamp is the
     # honest way to express "we can't go past the trained W without
-    # retraining", which is the thesis' no-retrain constraint.
+    # retraining", which is the no-retrain constraint.
     W = int(warmup) if (warmup is not None and warmup > 0) else WINDOW_SIZE
     W = min(W, max(5, n_samples // 4))
     if loaded_models:

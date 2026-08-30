@@ -125,7 +125,7 @@ def _render_md(presets: list[dict]) -> str:
     lines.append(
         "- `mean_err_%` = 100 × mean position error over the rollout, "
         "in units of L. **The 1-3 % headline number elsewhere in the "
-        "thesis is the single-step MSE on the in-distribution "
+        "write-up is the single-step MSE on the in-distribution "
         "training set; the rollout-averaged error grows large "
         "regardless of model quality because errors compound.** "
         "Everything here is the *rollout-averaged* number; the "

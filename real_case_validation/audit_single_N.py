@@ -15,7 +15,7 @@ Usage
         --out        real_case_validation/report_N50/N50_audit.md
 
 The output is meant to stand alone — every chart, table, and verdict
-needed for the thesis "N=NN real-life validation" subsection is here.
+needed for the "N=NN real-life validation" subsection is here.
 """
 from __future__ import annotations
 

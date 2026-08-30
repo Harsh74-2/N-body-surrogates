@@ -103,4 +103,4 @@ Mean of `mean_err_%` across the presets that ran:
 | GNN | 1.94 % | 77.48 % |
 | GNN_stable | 2.21 % | 137.41 % |
 
-The single-step MSE is the *honest* headline number — the rollout-averaged error in the autoregressive report grows large because errors compound over the loop. The single-step number is the one to cite in the thesis abstract.
+The single-step MSE is the *honest* headline number — the rollout-averaged error in the autoregressive report grows large because errors compound over the loop. The single-step number is the one to cite in the abstract.

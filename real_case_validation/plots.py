@@ -187,7 +187,7 @@ def _surr_dash(model_name: str):
 
 
 # Default render DPI for every savefig in this module. Was 140; bumped
-# to 220 so the figures stay crisp when embedded in the thesis PDF or
+# to 220 so the figures stay crisp when embedded in the report PDF or
 # scaled in a Word document.
 DPI = 220
 

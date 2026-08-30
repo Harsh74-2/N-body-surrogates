@@ -2,7 +2,7 @@
 """
 bench_solver_latency.py
 =======================
-Closes the latency-crossover gap in the thesis benchmark, honestly.
+Closes the latency-crossover gap in the latency benchmark, honestly.
 
 It measures, on the *local* CPU (no VM needed), the per-frame latency of:
 
@@ -29,7 +29,7 @@ cheaper?" depends on how it is run:
 Outputs:
     results/latency_bench.json
     plots/scaling_latency.png        (2 panels: single-frame vs batched; also
-                                      copied to thesis_figures/)
+                                      copied to report_figures/)
 
 Usage:
     python bench_solver_latency.py
@@ -284,10 +284,10 @@ def main() -> None:
 
     out = Path(args.out)
     make_plot(ns, solver, single, batched, cs, cb, out)
-    if Path("thesis_figures").is_dir():
+    if Path("report_figures").is_dir():
         import shutil
-        shutil.copy(out, Path("thesis_figures") / out.name)
-        print(f"[plot] copied thesis_figures/{out.name}")
+        shutil.copy(out, Path("report_figures") / out.name)
+        print(f"[plot] copied report_figures/{out.name}")
 
     payload = {
         "n_values": ns, "repeats": args.repeats, "device": "cpu",

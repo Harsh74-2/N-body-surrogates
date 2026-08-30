@@ -100,7 +100,7 @@ omit it) so the runner regenerates the preds first.
   prediction counts and shape (so `make_animations.py` can pick models without re-running).
 - `real_case_validation/animations/N{n}_{preset}_{Model}.mp4` — supervisor-facing video clips.
 
-## Bottom line for the thesis
+## Bottom line
 
 Animations are a supervisor deliverable, not a model-accuracy claim. They show the
 qualitative gap between surrogate and reference on a real-system trajectory — the same gap

@@ -6,14 +6,14 @@ single Word document, with a TOC table at the top. Handles headings,
 bullets, numbered lists, bold/inline-code, code blocks, AND tables
 (markdown pipe tables are the bulk of the audit content).
 
-The output is meant to be ready to paste into a thesis appendix —
+The output is meant to be ready to paste into a report appendix —
 tables retain their alignment, code blocks use a monospace font, and
 the TOC at the top lets a reader jump straight to any section.
 
 Usage
 -----
     python -m real_case_validation.md_to_docx \\
-        --out  real_case_validation/thesis_bundle.docx
+        --out  real_case_validation/report_bundle.docx
 
 Reads, in order:
   1. cross_N_audit.md            (autoregressive rollout cross-N)
