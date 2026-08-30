@@ -19,7 +19,7 @@ The OOD premium is large for every model. The in-distribution number is itself f
 
 ## Reading the numbers
 
-- `mean_err_%` = 100 × mean position error over the rollout, in units of L. **The 1-3 % headline number elsewhere in the thesis is the single-step MSE on the in-distribution training set; the rollout-averaged error grows large regardless of model quality because errors compound.** Everything here is the *rollout-averaged* number; the in-distribution baseline is included so you can read the OOD cost directly off the table.
+- `mean_err_%` = 100 × mean position error over the rollout, in units of L. **The 1-3 % headline number elsewhere in the write-up is the single-step MSE on the in-distribution training set; the rollout-averaged error grows large regardless of model quality because errors compound.** Everything here is the *rollout-averaged* number; the in-distribution baseline is included so you can read the OOD cost directly off the table.
 - `max_err_%` = 100 × peak error during the rollout. This is the worst-case frame; for stable variants it grows much more slowly than the mean.
 - `frames_before_half_L` = how many rollout steps the model stayed below 0.5 L error. `0` = the model overshoots half-L in the first frame (very wrong); a large number (or essentially the full rollout) = the model stays in the right neighbourhood throughout.
 - `energy_drift` = max |E(t) - E(0)| / |E(0)| over the rollout. The leapfrog reference sits at 1e-4 to 1e-8; surrogates trained with the stability loss are 1-5 (stable); surrogates without it explode to 50-200+.

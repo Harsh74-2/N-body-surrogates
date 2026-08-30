@@ -144,8 +144,8 @@ results/                    JSON metrics and stability reports
 ```
 
 Checkpoints (`training_runs/*.pt`), raw datasets (`raw_data/`,
-`ml_ready_data/`), the bulky per-preset plot directories, and all thesis
-documents are not committed. The committed reports and figures form the
+`ml_ready_data/`), and the bulky per-preset plot directories are not
+committed. The committed reports and figures form the
 verification bundle and can be regenerated from the scripts.
 
 ---

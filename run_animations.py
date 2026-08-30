@@ -2,7 +2,7 @@
 """
 run_animations.py
 =================
-End-to-end pipeline for the thesis animations:
+End-to-end pipeline for the rollout animations:
 
   for N in {10, 25, 50, 100}:
     for preset in PRESETS:

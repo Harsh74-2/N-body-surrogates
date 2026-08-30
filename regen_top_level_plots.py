@@ -2,7 +2,7 @@
 """
 regen_top_level_plots.py
 ========================
-Re-renders the three top-level thesis plots from the *canonical* data on
+Re-renders the three top-level benchmark plots from the *canonical* data on
 disk (`real_case_validation/cross_N_audit_single_step.md` and
 `results/latency_bench.json`). The legacy `results/N{n}/metrics.json`
 and `results/N{n}/stability.json` files were deleted in the audit pass;

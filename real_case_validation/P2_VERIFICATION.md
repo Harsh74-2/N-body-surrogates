@@ -1,6 +1,6 @@
 # P2 verification — no-retrain error reduction
 
-Per `[[thesis-final-deadline]]` (no retraining). This file is the honest
+Per the no-retraining constraint. This file is the honest
 record of what the three new inference knobs can and cannot do.
 
 ## Configurations
@@ -49,7 +49,7 @@ explicitly:
 ```
 
 Reaching `W=20` would require retraining the MLP/LSTM ckpts at W=20, which
-is forbidden by the thesis deadline. The clamp is the honest way to express
+is forbidden by the submission deadline. The clamp is the honest way to express
 that constraint. **The flag is kept for the day after submission.**
 
 ### Finding 2 — ensemble does not lower the best-single error
@@ -97,7 +97,7 @@ materially.
 - The `--single-step` flag has been part of the runner since the prior
   OOD audit; no further verification needed.
 
-## Bottom line for the thesis
+## Bottom line
 
 Inference-time knobs cannot bring OOD error down to the in-distribution
 1-3 % without retraining. The honest story is:
