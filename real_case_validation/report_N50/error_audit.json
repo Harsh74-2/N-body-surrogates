@@ -1,0 +1,442 @@
+{
+  "per_preset": [
+    {
+      "name": "disc_imf_in_distribution_baseline",
+      "in_distribution": true,
+      "models": {
+        "MLP": {
+          "model": "MLP",
+          "mean_err_pct": 365.55565061955696,
+          "max_err_pct": 774.7168212680041,
+          "mse_position": 5.375538740418117,
+          "mse_state": 2.9220919249662147,
+          "frames_before_half_L": 48,
+          "max_energy_drift": 2.362250592839709
+        },
+        "MLP_stable": {
+          "model": "MLP_stable",
+          "mean_err_pct": 186.68701379007052,
+          "max_err_pct": 557.7365380920621,
+          "mse_position": 1.4488746502835717,
+          "mse_state": 1.058731131232855,
+          "frames_before_half_L": 30,
+          "max_energy_drift": 2.0976562014608047
+        },
+        "LSTM": {
+          "model": "LSTM",
+          "mean_err_pct": 219.81094804983348,
+          "max_err_pct": 691.6645161690059,
+          "mse_position": 2.381718256468869,
+          "mse_state": 1.3969605745171836,
+          "frames_before_half_L": 66,
+          "max_energy_drift": 2.6500327889886024
+        },
+        "LSTM_stable": {
+          "model": "LSTM_stable",
+          "mean_err_pct": 295.2435825681294,
+          "max_err_pct": 739.9534043882187,
+          "mse_position": 3.6336115126596176,
+          "mse_state": 1.940375190388241,
+          "frames_before_half_L": 37,
+          "max_energy_drift": 2.013695109555676
+        },
+        "GNN": {
+          "model": "GNN",
+          "mean_err_pct": 176.26395470671642,
+          "max_err_pct": 613.8138330998598,
+          "mse_position": 1.416737699758123,
+          "mse_state": 1.047518628642034,
+          "frames_before_half_L": 90,
+          "max_energy_drift": 2.523198020707946
+        },
+        "GNN_stable": {
+          "model": "GNN_stable",
+          "mean_err_pct": 300.1738778196539,
+          "max_err_pct": 680.6666150611076,
+          "mse_position": 3.711603569033678,
+          "mse_state": 2.0153217901630467,
+          "frames_before_half_L": 70,
+          "max_energy_drift": 17.357978734314226
+        }
+      }
+    },
+    {
+      "name": "full_solar_system",
+      "in_distribution": false,
+      "models": {
+        "MLP": {
+          "model": "MLP",
+          "mean_err_pct": 284.79308566473514,
+          "max_err_pct": 520.1058780785584,
+          "mse_position": 3.00567698319597,
+          "mse_state": 4.917900018191866,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 161.21248208300554
+        },
+        "MLP_stable": {
+          "model": "MLP_stable",
+          "mean_err_pct": 117.14755840015907,
+          "max_err_pct": 504.94950819117923,
+          "mse_position": 0.5481970694237572,
+          "mse_state": 3.8134966086352957,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 3.6867688539146943
+        },
+        "LSTM": {
+          "model": "LSTM",
+          "mean_err_pct": 355.4297538740145,
+          "max_err_pct": 528.9799581629562,
+          "mse_position": 4.767498751532493,
+          "mse_state": 5.946165890415322,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 38.979181166172076
+        },
+        "LSTM_stable": {
+          "model": "LSTM_stable",
+          "mean_err_pct": 757.9496258799596,
+          "max_err_pct": 1166.7902894634865,
+          "mse_position": 23.864303999540496,
+          "mse_state": 15.391052387981148,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 4.641150867532879
+        },
+        "GNN": {
+          "model": "GNN",
+          "mean_err_pct": 197.1449156085266,
+          "max_err_pct": 426.6142643364412,
+          "mse_position": 1.8017735197408185,
+          "mse_state": 4.546219997110526,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 114.90646363053898
+        },
+        "GNN_stable": {
+          "model": "GNN_stable",
+          "mean_err_pct": 344.4642263142441,
+          "max_err_pct": 960.8214117021422,
+          "mse_position": 5.184725310010439,
+          "mse_state": 6.0589939462321025,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 809.1817249182486
+        }
+      }
+    },
+    {
+      "name": "inner_planets",
+      "in_distribution": false,
+      "models": {
+        "MLP": {
+          "model": "MLP",
+          "mean_err_pct": 94.33497784536405,
+          "max_err_pct": 221.81355900490453,
+          "mse_position": 0.42570618389057135,
+          "mse_state": 0.5970685358874938,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 69.37527792356367
+        },
+        "MLP_stable": {
+          "model": "MLP_stable",
+          "mean_err_pct": 119.38926612165604,
+          "max_err_pct": 298.2076296770151,
+          "mse_position": 0.5685649288394343,
+          "mse_state": 0.757146355819223,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 3.9144337042686455
+        },
+        "LSTM": {
+          "model": "LSTM",
+          "mean_err_pct": 88.17919494667231,
+          "max_err_pct": 234.20500815335558,
+          "mse_position": 0.3545656333187804,
+          "mse_state": 0.5908621771917084,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 75.9939695661239
+        },
+        "LSTM_stable": {
+          "model": "LSTM_stable",
+          "mean_err_pct": 91.92875123780027,
+          "max_err_pct": 233.62084685644015,
+          "mse_position": 0.38510067725381764,
+          "mse_state": 0.6008442629719969,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 2.288045853018563
+        },
+        "GNN": {
+          "model": "GNN",
+          "mean_err_pct": 73.12047951868654,
+          "max_err_pct": 225.30642156193727,
+          "mse_position": 0.2712035805461729,
+          "mse_state": 0.6619181205953,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 73.59150711673763
+        },
+        "GNN_stable": {
+          "model": "GNN_stable",
+          "mean_err_pct": 94.44883102169904,
+          "max_err_pct": 245.26497055443085,
+          "mse_position": 0.39014069917276806,
+          "mse_state": 0.7734568403454701,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 236.21665210877728
+        }
+      }
+    },
+    {
+      "name": "jupiter_galileans",
+      "in_distribution": false,
+      "models": {
+        "MLP": {
+          "model": "MLP",
+          "mean_err_pct": 328.9866245438452,
+          "max_err_pct": 734.5677845031148,
+          "mse_position": 4.396798351159651,
+          "mse_state": 2.6667550741028125,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 64.56644932912448
+        },
+        "MLP_stable": {
+          "model": "MLP_stable",
+          "mean_err_pct": 129.9931619152442,
+          "max_err_pct": 259.06531981598005,
+          "mse_position": 0.6693326363399952,
+          "mse_state": 0.8716516521164983,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 3.863548001586895
+        },
+        "LSTM": {
+          "model": "LSTM",
+          "mean_err_pct": 264.65227682654864,
+          "max_err_pct": 519.3608528106635,
+          "mse_position": 3.003996801297122,
+          "mse_state": 2.091883402125631,
+          "frames_before_half_L": 2,
+          "max_energy_drift": 70.32739281174857
+        },
+        "LSTM_stable": {
+          "model": "LSTM_stable",
+          "mean_err_pct": 492.47742202404777,
+          "max_err_pct": 1022.8403855328418,
+          "mse_position": 12.97731672910719,
+          "mse_state": 6.953542245936155,
+          "frames_before_half_L": 2,
+          "max_energy_drift": 2.2409459655140553
+        },
+        "GNN": {
+          "model": "GNN",
+          "mean_err_pct": 123.46176655161767,
+          "max_err_pct": 478.02061986571107,
+          "mse_position": 0.7584463717490052,
+          "mse_state": 1.026495650342089,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 70.97461358314717
+        },
+        "GNN_stable": {
+          "model": "GNN_stable",
+          "mean_err_pct": 253.75744675401762,
+          "max_err_pct": 646.0320024494005,
+          "mse_position": 2.662037864346751,
+          "mse_state": 1.878405942063003,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 223.82006250952807
+        }
+      }
+    },
+    {
+      "name": "solar_system_extended",
+      "in_distribution": false,
+      "models": {
+        "MLP": {
+          "model": "MLP",
+          "mean_err_pct": 262.8588951765895,
+          "max_err_pct": 1057.5552993073584,
+          "mse_position": 2.7924254511145756,
+          "mse_state": 13.17127162731316,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 43.265472463298956
+        },
+        "MLP_stable": {
+          "model": "MLP_stable",
+          "mean_err_pct": 115.77034526912784,
+          "max_err_pct": 498.8344800017313,
+          "mse_position": 0.5631815751715676,
+          "mse_state": 12.64981803864011,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 3.830021449041399
+        },
+        "LSTM": {
+          "model": "LSTM",
+          "mean_err_pct": 257.70092549799773,
+          "max_err_pct": 555.0500653288728,
+          "mse_position": 2.6695357235172987,
+          "mse_state": 13.670440225278016,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 39.6739034912519
+        },
+        "LSTM_stable": {
+          "model": "LSTM_stable",
+          "mean_err_pct": 323.86815862019154,
+          "max_err_pct": 645.350253032124,
+          "mse_position": 3.9272477526885234,
+          "mse_state": 14.042411843083242,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 2.3321375887283065
+        },
+        "GNN": {
+          "model": "GNN",
+          "mean_err_pct": 168.13632403137407,
+          "max_err_pct": 447.0384951361317,
+          "mse_position": 1.2746262485800235,
+          "mse_state": 11.567451991047,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 47.32246544066641
+        },
+        "GNN_stable": {
+          "model": "GNN_stable",
+          "mean_err_pct": 350.82817186025335,
+          "max_err_pct": 1017.9323191958711,
+          "mse_position": 6.118507327572404,
+          "mse_state": 14.324572276657086,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 116.8885593741854
+        }
+      }
+    },
+    {
+      "name": "sun_earth_only",
+      "in_distribution": false,
+      "models": {
+        "MLP": {
+          "model": "MLP",
+          "mean_err_pct": 135.7911821863668,
+          "max_err_pct": 205.49710439215926,
+          "mse_position": 0.737421860047267,
+          "mse_state": 0.5039423657198937,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 69.41723409603398
+        },
+        "MLP_stable": {
+          "model": "MLP_stable",
+          "mean_err_pct": 136.78512148590698,
+          "max_err_pct": 258.2046360146998,
+          "mse_position": 0.7275102142741369,
+          "mse_state": 0.5750273437801406,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 3.9163562490499615
+        },
+        "LSTM": {
+          "model": "LSTM",
+          "mean_err_pct": 118.46801122457013,
+          "max_err_pct": 220.35636731049286,
+          "mse_position": 0.5513849692772079,
+          "mse_state": 0.4449138475888881,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 76.06738119348681
+        },
+        "LSTM_stable": {
+          "model": "LSTM_stable",
+          "mean_err_pct": 131.90619117021038,
+          "max_err_pct": 196.0858583909825,
+          "mse_position": 0.662225166128116,
+          "mse_state": 0.48331496304134575,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 2.2882918274776722
+        },
+        "GNN": {
+          "model": "GNN",
+          "mean_err_pct": 87.20656152980408,
+          "max_err_pct": 223.31812814851122,
+          "mse_position": 0.3787406841372095,
+          "mse_state": 0.38976484309865567,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 56.36980033835761
+        },
+        "GNN_stable": {
+          "model": "GNN_stable",
+          "mean_err_pct": 124.14126260301144,
+          "max_err_pct": 219.03955442849306,
+          "mse_position": 0.607291282147668,
+          "mse_state": 0.5812367626700895,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 236.3771999613699
+        }
+      }
+    },
+    {
+      "name": "sun_planets_moon",
+      "in_distribution": false,
+      "models": {
+        "MLP": {
+          "model": "MLP",
+          "mean_err_pct": 191.78024861049357,
+          "max_err_pct": 516.3500962139923,
+          "mse_position": 1.6435953778855812,
+          "mse_state": 4.418177026923309,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 553.3256519755829
+        },
+        "MLP_stable": {
+          "model": "MLP_stable",
+          "mean_err_pct": 98.72433695818397,
+          "max_err_pct": 504.94951457580726,
+          "mse_position": 0.43893795090594806,
+          "mse_state": 3.9207659689965717,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 3.9085716802056227
+        },
+        "LSTM": {
+          "model": "LSTM",
+          "mean_err_pct": 193.39094177634232,
+          "max_err_pct": 471.44428591151666,
+          "mse_position": 1.946054331830611,
+          "mse_state": 4.777596490407349,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 37.952859491741215
+        },
+        "LSTM_stable": {
+          "model": "LSTM_stable",
+          "mean_err_pct": 209.84925227722218,
+          "max_err_pct": 499.47349089222774,
+          "mse_position": 2.102524832249917,
+          "mse_state": 4.719481963927969,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 4.569493210639759
+        },
+        "GNN": {
+          "model": "GNN",
+          "mean_err_pct": 117.60195787868804,
+          "max_err_pct": 426.6804346838902,
+          "mse_position": 0.8922397607529422,
+          "mse_state": 4.3139803144985125,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 97.02416772620565
+        },
+        "GNN_stable": {
+          "model": "GNN_stable",
+          "mean_err_pct": 199.46840502011995,
+          "max_err_pct": 960.2616553008811,
+          "mse_position": 2.9169423770460754,
+          "mse_state": 5.295558067229956,
+          "frames_before_half_L": 0,
+          "max_energy_drift": 1365.5359755956185
+        }
+      }
+    }
+  ],
+  "aggregate": {
+    "in_distribution_mean": {
+      "MLP": 365.55565061955696,
+      "MLP_stable": 186.68701379007052,
+      "LSTM": 219.81094804983348,
+      "LSTM_stable": 295.2435825681294,
+      "GNN": 176.26395470671642,
+      "GNN_stable": 300.1738778196539
+    },
+    "ood_mean": {
+      "MLP": 216.4241690045657,
+      "MLP_stable": 119.63496502504636,
+      "LSTM": 212.97018402435762,
+      "LSTM_stable": 334.66323353490526,
+      "GNN": 127.77866751978284,
+      "GNN_stable": 227.8513905955576
+    }
+  }
+}

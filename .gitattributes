@@ -1,0 +1,9 @@
+# Normalize line endings on checkout so files uploaded from Windows
+# (OneDrive working copy) don't carry CRLF into the Linux VM. Shell
+# scripts MUST be LF or bash fails (`set -euo pipefail\r` etc.); Python
+# tolerates CRLF but LF is cleaner cross-platform.
+*.sh  text eol=lf
+*.py  text eol=lf
+*.tex text eol=lf
+*.bib text eol=lf
+*.md  text eol=lf
