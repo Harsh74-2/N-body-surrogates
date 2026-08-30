@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>N-body ML Surrogates &mdash; Interactive Benchmark</title>
+<style>
+body { font-family: system-ui, sans-serif; max-width: 1100px; margin: 0 auto;
+       padding: 1rem 1.5rem; background: #fafafa; color: #222; }
+h1, h2, h3 { color: #003a70; }
+h1 { border-bottom: 2px solid #003a70; padding-bottom: 0.3rem; }
+nav { background: #003a70; color: #fff; padding: 0.6rem 1rem; border-radius: 6px;
+      margin-bottom: 1.5rem; }
+nav a { color: #fff; margin-right: 1rem; text-decoration: none; font-weight: 500; }
+nav a:hover { text-decoration: underline; }
+table { border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+th, td { border: 1px solid #ccc; padding: 0.3rem 0.6rem; text-align: left; }
+th { background: #003a70; color: #fff; }
+.video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+              gap: 1rem; margin: 1rem 0; }
+.video-card { background: #fff; padding: 0.6rem; border-radius: 6px;
+              box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.video-card video { width: 100%; height: auto; }
+.video-card h4 { margin: 0.3rem 0 0.1rem; font-size: 0.95rem; }
+.plot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+             gap: 1rem; margin: 1rem 0; }
+.plot-grid img { width: 100%; height: auto; border: 1px solid #ddd;
+                 border-radius: 4px; background: #fff; }
+.plot-grid figcaption { font-size: 0.85rem; color: #555; padding-top: 0.3rem; }
+section { margin: 2rem 0; padding-top: 1rem;
+          border-top: 1px solid #e0e0e0; }
+section:first-of-type { border-top: none; padding-top: 0; }
+.lead { font-size: 1.05rem; color: #333; margin-bottom: 1.5rem; }
+.page-intro { background: #eef3f9; padding: 0.8rem 1rem; border-radius: 6px;
+              border-left: 4px solid #003a70; margin: 1rem 0 1.5rem; }
+.page-intro p { margin: 0.4rem 0; }
+footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #ccc;
+         text-align: center; color: #666; font-size: 0.9rem; }
+.footer-credit a { color: #003a70; }
+</style></head><body>
+<nav><a href="index.html" style="text-decoration: underline">Interactive hub</a><a href="main_interactive.html" style="text-decoration: underline">Interactive hub</a><a href="animations.html">Animations</a><a href="plots.html">Plots</a><a href="n10.html">N=10</a><a href="n25.html">N=25</a><a href="n50.html">N=50</a><a href="n100.html">N=100</a></nav>
+<h1>N-body ML Surrogates &mdash; Out-of-Distribution Benchmark</h1>
+<p class="lead"><strong>An open benchmark for machine-learning surrogates of gravitational N-body dynamics, validated against real Solar-System initial conditions.</strong></p>
+<p>Variable-body-count machine-learning surrogates for gravitational N-body
+dynamics, evaluated out-of-distribution on real Solar-System initial
+conditions. Three architectures (MLP, LSTM, GNN) are trained at
+N &isin; {10, 25, 50, 100} on an immutably-frozen disc IMF dataset, then
+rolled out on seven Solar-System presets sourced from NASA JPL Horizons
+ephemerides. This page is the visual companion to the benchmark;
+numerical audit tables, trajectory animations, static plots, and per-N
+dashboards are linked below.</p>
+
+<h2>Headline results &mdash; rollout (multi-step) error</h2>
+<p>Mean trajectory error after a full multi-step rollout, as a percentage of the reference trajectory radius. Lower is better. Values above 100% mean the predicted orbit is further from the true position than the orbit radius itself. Source file: <a href="audit/cross_N_audit.md"><code>cross_N_audit.md</code></a>.</p>
+<h1>Cross-N Real-Case Validation, Error-Percentage Audit</h1>
+
+Autoregressive rollout variant: each surrogate predicts **forward in time** from its own previous output. Errors compound over the rollout. Use this report to read the distribution-shift cost of the Solar System relative to the synthetic disc training set.
+
+Each cell is the *mean error %* averaged across every preset that ran for that N. The cell on the right (N=100) is the **best** any model in this family can do on the given training budget; the cell on the left (N=10) is the worst. Reading left-to-right should show the gradual improvement as the training budget grows.
+
+<h2>Headline: mean error % by (N, model)</h2>
+
+<table>
+<tr><th>model</th><th>N=10</th><th>N=25</th><th>N=50</th><th>N=100</th><th>Δ (N=100 − N=10, pp)</th></tr>
+<tr><td>MLP</td><td>261.1 %</td><td>296.5 %</td><td>237.7 %</td><td>195.4 %</td><td>-65.7</td></tr>
+<tr><td>MLP_stable</td><td>238.5 %</td><td>152.2 %</td><td>129.2 %</td><td>115.9 %</td><td>-122.6</td></tr>
+<tr><td>LSTM</td><td>236.2 %</td><td>165.1 %</td><td>213.9 %</td><td>158.7 %</td><td>-77.5</td></tr>
+<tr><td>LSTM_stable</td><td>186.4 %</td><td>198.9 %</td><td>329.0 %</td><td>178.0 %</td><td>-8.3</td></tr>
+<tr><td>GNN</td><td>109.3 %</td><td>168.0 %</td><td>134.7 %</td><td>209.7 %</td><td>+100.4</td></tr>
+<tr><td>GNN_stable</td><td>154.7 %</td><td>119.3 %</td><td>238.2 %</td><td>219.3 %</td><td>+64.6</td></tr>
+</table>
+
+<h2>Per-preset mean error % across N (headline preset detail)</h2>
+
+<h3>`disc_imf_in_distribution_baseline` (in-distribution)</h3>
+
+<table>
+<tr><th>model</th><th>N=10</th><th>N=25</th><th>N=50</th><th>N=100</th></tr>
+<tr><td>MLP</td><td>286.35 %</td><td>428.72 %</td><td>365.56 %</td><td>227.79 %</td></tr>
+<tr><td>MLP_stable</td><td>286.83 %</td><td>235.29 %</td><td>186.69 %</td><td>183.14 %</td></tr>
+<tr><td>LSTM</td><td>316.80 %</td><td>250.70 %</td><td>219.81 %</td><td>222.30 %</td></tr>
+<tr><td>LSTM_stable</td><td>201.17 %</td><td>242.50 %</td><td>295.24 %</td><td>232.16 %</td></tr>
+<tr><td>GNN</td><td>176.16 %</td><td>353.44 %</td><td>176.26 %</td><td>295.93 %</td></tr>
+<tr><td>GNN_stable</td><td>200.99 %</td><td>154.44 %</td><td>300.17 %</td><td>234.19 %</td></tr>
+</table>
+
+<h3>`full_solar_system` (OOD)</h3>
+
+<table>
+<tr><th>model</th><th>N=10</th><th>N=25</th><th>N=50</th><th>N=100</th></tr>
+<tr><td>MLP</td><td>410.41 %</td><td>581.63 %</td><td>284.79 %</td><td>267.36 %</td></tr>
+<tr><td>MLP_stable</td><td>422.54 %</td><td>185.88 %</td><td>117.15 %</td><td>99.27 %</td></tr>
+<tr><td>LSTM</td><td>395.47 %</td><td>241.58 %</td><td>355.43 %</td><td>166.71 %</td></tr>
+<tr><td>LSTM_stable</td><td>255.62 %</td><td>294.95 %</td><td>757.95 %</td><td>288.19 %</td></tr>
+<tr><td>GNN</td><td>125.90 %</td><td>248.82 %</td><td>197.14 %</td><td>366.39 %</td></tr>
+<tr><td>GNN_stable</td><td>208.55 %</td><td>125.34 %</td><td>344.46 %</td><td>293.06 %</td></tr>
+</table>
+
+<h3>`inner_planets` (OOD)</h3>
+
+<table>
+<tr><th>model</th><th>N=10</th><th>N=25</th><th>N=50</th><th>N=100</th></tr>
+<tr><td>MLP</td><td>121.21 %</td><td>78.67 %</td><td>94.33 %</td><td>109.64 %</td></tr>
+<tr><td>MLP_stable</td><td>104.37 %</td><td>105.21 %</td><td>119.39 %</td><td>108.84 %</td></tr>
+<tr><td>LSTM</td><td>116.50 %</td><td>88.53 %</td><td>88.18 %</td><td>94.41 %</td></tr>
+<tr><td>LSTM_stable</td><td>124.08 %</td><td>100.13 %</td><td>91.93 %</td><td>109.41 %</td></tr>
+<tr><td>GNN</td><td>76.72 %</td><td>77.16 %</td><td>73.12 %</td><td>87.23 %</td></tr>
+<tr><td>GNN_stable</td><td>106.95 %</td><td>77.83 %</td><td>94.45 %</td><td>78.30 %</td></tr>
+</table>
+
+<h3>`jupiter_galileans` (OOD)</h3>
+
+<table>
+<tr><th>model</th><th>N=10</th><th>N=25</th><th>N=50</th><th>N=100</th></tr>
+<tr><td>MLP</td><td>384.08 %</td><td>405.87 %</td><td>328.99 %</td><td>280.67 %</td></tr>
+<tr><td>MLP_stable</td><td>394.48 %</td><td>188.46 %</td><td>129.99 %</td><td>111.88 %</td></tr>
+<tr><td>LSTM</td><td>422.65 %</td><td>189.85 %</td><td>264.65 %</td><td>147.75 %</td></tr>
+<tr><td>LSTM_stable</td><td>188.16 %</td><td>248.22 %</td><td>492.48 %</td><td>166.69 %</td></tr>
+<tr><td>GNN</td><td>156.27 %</td><td>194.53 %</td><td>123.46 %</td><td>298.78 %</td></tr>
+<tr><td>GNN_stable</td><td>199.62 %</td><td>123.36 %</td><td>253.76 %</td><td>191.16 %</td></tr>
+</table>
+
+<h3>`solar_system_extended` (OOD)</h3>
+
+<table>
+<tr><th>model</th><th>N=10</th><th>N=25</th><th>N=50</th><th>N=100</th></tr>
+<tr><td>MLP</td><td>267.24 %</td><td>311.89 %</td><td>262.86 %</td><td>218.48 %</td></tr>
+<tr><td>MLP_stable</td><td>166.53 %</td><td>142.63 %</td><td>115.77 %</td><td>90.35 %</td></tr>
+<tr><td>LSTM</td><td>125.21 %</td><td>178.94 %</td><td>257.70 %</td><td>222.79 %</td></tr>
+<tr><td>LSTM_stable</td><td>193.11 %</td><td>212.38 %</td><td>323.87 %</td><td>181.65 %</td></tr>
+<tr><td>GNN</td><td>89.59 %</td><td>132.22 %</td><td>168.14 %</td><td>199.30 %</td></tr>
+<tr><td>GNN_stable</td><td>138.24 %</td><td>174.98 %</td><td>350.83 %</td><td>422.95 %</td></tr>
+</table>
+
+<h3>`sun_earth_only` (OOD)</h3>
+
+<table>
+<tr><th>model</th><th>N=10</th><th>N=25</th><th>N=50</th><th>N=100</th></tr>
+<tr><td>MLP</td><td>142.59 %</td><td>94.19 %</td><td>135.79 %</td><td>127.72 %</td></tr>
+<tr><td>MLP_stable</td><td>146.81 %</td><td>129.08 %</td><td>136.79 %</td><td>133.22 %</td></tr>
+<tr><td>LSTM</td><td>154.59 %</td><td>125.65 %</td><td>118.47 %</td><td>132.63 %</td></tr>
+<tr><td>LSTM_stable</td><td>193.08 %</td><td>142.28 %</td><td>131.91 %</td><td>144.69 %</td></tr>
+<tr><td>GNN</td><td>81.13 %</td><td>84.52 %</td><td>87.21 %</td><td>112.65 %</td></tr>
+<tr><td>GNN_stable</td><td>147.49 %</td><td>99.85 %</td><td>124.14 %</td><td>94.76 %</td></tr>
+</table>
+
+<h3>`sun_planets_moon` (OOD)</h3>
+
+<table>
+<tr><th>model</th><th>N=10</th><th>N=25</th><th>N=50</th><th>N=100</th></tr>
+<tr><td>MLP</td><td>215.74 %</td><td>174.52 %</td><td>191.78 %</td><td>135.89 %</td></tr>
+<tr><td>MLP_stable</td><td>147.88 %</td><td>79.21 %</td><td>98.72 %</td><td>84.40 %</td></tr>
+<tr><td>LSTM</td><td>122.29 %</td><td>80.11 %</td><td>193.39 %</td><td>124.11 %</td></tr>
+<tr><td>LSTM_stable</td><td>149.29 %</td><td>151.67 %</td><td>209.85 %</td><td>123.45 %</td></tr>
+<tr><td>GNN</td><td>59.37 %</td><td>85.15 %</td><td>117.60 %</td><td>107.81 %</td></tr>
+<tr><td>GNN_stable</td><td>80.94 %</td><td>79.64 %</td><td>199.47 %</td><td>220.81 %</td></tr>
+</table>
+
+<h2>Family-level verdict (single vs stable, mean across N)</h2>
+
+<table>
+<tr><th>family</th><th>N=10 single</th><th>N=10 stable</th><th>Δ (pp)</th><th>N=100 single</th><th>N=100 stable</th><th>Δ (pp)</th></tr>
+<tr><td>MLP</td><td>261.09 %</td><td>238.49 %</td><td>-22.60</td><td>195.36 %</td><td>115.87 %</td><td>-79.49</td></tr>
+<tr><td>LSTM</td><td>236.22 %</td><td>186.36 %</td><td>-49.86</td><td>158.67 %</td><td>178.03 %</td><td>+19.36</td></tr>
+<tr><td>GNN</td><td>109.30 %</td><td>154.68 %</td><td>+45.38</td><td>209.73 %</td><td>219.32 %</td><td>+9.59</td></tr>
+</table>
+
+<h2>Headline results &mdash; single-step error</h2>
+<p>Mean one-step prediction error, the cleanest measure of surrogate quality without rollout amplification. Values stay in the 1&ndash;3% range for the in-distribution disc baseline. Source file: <a href="audit/cross_N_audit_single_step.md"><code>cross_N_audit_single_step.md</code></a>.</p>
+<h1>Cross-N Real-Case Validation, Error-Percentage Audit</h1>
+
+Single-step variant: each surrogate predicts the next frame only from a warm-up window of leapfrog frames. Errors do **not** compound because the window is always re-built from the reference. This is the headline 1-3 % single-step MSE the surrogates were trained on.
+
+Each cell is the *mean error %* averaged across every preset that ran for that N. The cell on the right (N=100) is the **best** any model in this family can do on the given training budget; the cell on the left (N=10) is the worst. Reading left-to-right should show the gradual improvement as the training budget grows.
+
+<h2>Headline: mean error % by (N, model)</h2>
+
+<table>
+<tr><th>model</th><th>N=10</th><th>N=25</th><th>N=50</th><th>N=100</th><th>Δ (N=100 − N=10, pp)</th></tr>
+<tr><td>MLP</td><td>55.1 %</td><td>79.9 %</td><td>73.2 %</td><td>67.0 %</td><td>+11.8</td></tr>
+<tr><td>MLP_stable</td><td>72.5 %</td><td>122.7 %</td><td>117.7 %</td><td>84.6 %</td><td>+12.1</td></tr>
+<tr><td>LSTM</td><td>37.8 %</td><td>42.2 %</td><td>66.8 %</td><td>56.0 %</td><td>+18.2</td></tr>
+<tr><td>LSTM_stable</td><td>68.2 %</td><td>50.6 %</td><td>79.3 %</td><td>73.7 %</td><td>+5.5</td></tr>
+<tr><td>GNN</td><td>70.1 %</td><td>64.4 %</td><td>67.2 %</td><td>66.7 %</td><td>-3.4</td></tr>
+<tr><td>GNN_stable</td><td>61.3 %</td><td>70.3 %</td><td>84.7 %</td><td>118.1 %</td><td>+56.8</td></tr>
+</table>
+
+<h2>Per-preset mean error % across N (headline preset detail)</h2>
+
+<h3>`disc_imf_in_distribution_baseline` (in-distribution)</h3>
+
+<table>
+<tr><th>model</th><th>N=10</th><th>N=25</th><th>N=50</th><th>N=100</th></tr>
+<tr><td>MLP</td><td>3.66 %</td><td>2.54 %</td><td>1.95 %</td><td>2.73 %</td></tr>
+<tr><td>MLP_stable</td><td>5.73 %</td><td>2.69 %</td><td>2.81 %</td><td>3.20 %</td></tr>
+<tr><td>LSTM</td><td>3.73 %</td><td>1.59 %</td><td>1.62 %</td><td>1.87 %</td></tr>
+<tr><td>LSTM_stable</td><td>8.64 %</td><td>2.57 %</td><td>3.10 %</td><td>2.75 %</td></tr>
+<tr><td>GNN</td><td>3.77 %</td><td>1.43 %</td><td>1.59 %</td><td>1.94 %</td></tr>
+<tr><td>GNN_stable</td><td>3.38 %</td><td>1.40 %</td><td>2.42 %</td><td>2.21 %</td></tr>
+</table>
+
+<h3>`full_solar_system` (OOD)</h3>
+
+<table>
+<tr><th>model</th><th>N=10</th><th>N=25</th><th>N=50</th><th>N=100</th></tr>
+<tr><td>MLP</td><td>49.00 %</td><td>60.40 %</td><td>69.53 %</td><td>63.88 %</td></tr>
+<tr><td>MLP_stable</td><td>47.40 %</td><td>107.90 %</td><td>110.76 %</td><td>73.94 %</td></tr>
+<tr><td>LSTM</td><td>22.63 %</td><td>29.89 %</td><td>79.20 %</td><td>58.15 %</td></tr>
+<tr><td>LSTM_stable</td><td>73.00 %</td><td>48.80 %</td><td>95.42 %</td><td>90.60 %</td></tr>
+<tr><td>GNN</td><td>69.75 %</td><td>41.44 %</td><td>60.97 %</td><td>51.72 %</td></tr>
+<tr><td>GNN_stable</td><td>39.65 %</td><td>52.78 %</td><td>81.95 %</td><td>136.46 %</td></tr>
+</table>
+
+<h3>`inner_planets` (OOD)</h3>
+
+<table>
+<tr><th>model</th><th>N=10</th><th>N=25</th><th>N=50</th><th>N=100</th></tr>
+<tr><td>MLP</td><td>65.19 %</td><td>73.11 %</td><td>71.39 %</td><td>77.72 %</td></tr>
+<tr><td>MLP_stable</td><td>94.27 %</td><td>113.39 %</td><td>120.19 %</td><td>112.24 %</td></tr>
+<tr><td>LSTM</td><td>58.10 %</td><td>53.67 %</td><td>51.85 %</td><td>51.15 %</td></tr>
+<tr><td>LSTM_stable</td><td>67.60 %</td><td>57.69 %</td><td>62.82 %</td><td>60.42 %</td></tr>
+<tr><td>GNN</td><td>76.17 %</td><td>77.75 %</td><td>77.47 %</td><td>80.85 %</td></tr>
+<tr><td>GNN_stable</td><td>78.90 %</td><td>77.60 %</td><td>78.56 %</td><td>77.82 %</td></tr>
+</table>
+
+<h3>`jupiter_galileans` (OOD)</h3>
+
+<table>
+<tr><th>model</th><th>N=10</th><th>N=25</th><th>N=50</th><th>N=100</th></tr>
+<tr><td>MLP</td><td>41.08 %</td><td>50.04 %</td><td>52.66 %</td><td>54.29 %</td></tr>
+<tr><td>MLP_stable</td><td>61.10 %</td><td>79.26 %</td><td>84.65 %</td><td>86.90 %</td></tr>
+<tr><td>LSTM</td><td>32.10 %</td><td>28.05 %</td><td>27.73 %</td><td>28.66 %</td></tr>
+<tr><td>LSTM_stable</td><td>37.93 %</td><td>30.09 %</td><td>33.48 %</td><td>33.66 %</td></tr>
+<tr><td>GNN</td><td>40.99 %</td><td>42.27 %</td><td>41.84 %</td><td>45.38 %</td></tr>
+<tr><td>GNN_stable</td><td>43.36 %</td><td>41.82 %</td><td>43.78 %</td><td>42.33 %</td></tr>
+</table>
+
+<h3>`solar_system_extended` (OOD)</h3>
+
+<table>
+<tr><th>model</th><th>N=10</th><th>N=25</th><th>N=50</th><th>N=100</th></tr>
+<tr><td>MLP</td><td>103.85 %</td><td>232.73 %</td><td>168.03 %</td><td>119.44 %</td></tr>
+<tr><td>MLP_stable</td><td>135.48 %</td><td>302.15 %</td><td>252.03 %</td><td>111.70 %</td></tr>
+<tr><td>LSTM</td><td>54.06 %</td><td>85.12 %</td><td>155.22 %</td><td>129.38 %</td></tr>
+<tr><td>LSTM_stable</td><td>122.94 %</td><td>91.86 %</td><td>170.00 %</td><td>150.74 %</td></tr>
+<tr><td>GNN</td><td>126.24 %</td><td>144.95 %</td><td>122.53 %</td><td>123.03 %</td></tr>
+<tr><td>GNN_stable</td><td>119.91 %</td><td>162.22 %</td><td>192.43 %</td><td>315.58 %</td></tr>
+</table>
+
+<h3>`sun_earth_only` (OOD)</h3>
+
+<table>
+<tr><th>model</th><th>N=10</th><th>N=25</th><th>N=50</th><th>N=100</th></tr>
+<tr><td>MLP</td><td>67.82 %</td><td>74.39 %</td><td>75.10 %</td><td>80.15 %</td></tr>
+<tr><td>MLP_stable</td><td>110.94 %</td><td>126.27 %</td><td>128.96 %</td><td>122.31 %</td></tr>
+<tr><td>LSTM</td><td>68.89 %</td><td>63.64 %</td><td>61.65 %</td><td>57.06 %</td></tr>
+<tr><td>LSTM_stable</td><td>87.80 %</td><td>70.96 %</td><td>82.92 %</td><td>77.08 %</td></tr>
+<tr><td>GNN</td><td>96.95 %</td><td>98.46 %</td><td>98.19 %</td><td>107.90 %</td></tr>
+<tr><td>GNN_stable</td><td>100.75 %</td><td>99.19 %</td><td>103.04 %</td><td>101.08 %</td></tr>
+</table>
+
+<h3>`sun_planets_moon` (OOD)</h3>
+
+<table>
+<tr><th>model</th><th>N=10</th><th>N=25</th><th>N=50</th><th>N=100</th></tr>
+<tr><td>MLP</td><td>55.26 %</td><td>66.02 %</td><td>74.05 %</td><td>70.48 %</td></tr>
+<tr><td>MLP_stable</td><td>52.45 %</td><td>126.96 %</td><td>124.74 %</td><td>81.56 %</td></tr>
+<tr><td>LSTM</td><td>24.88 %</td><td>33.36 %</td><td>90.26 %</td><td>65.44 %</td></tr>
+<tr><td>LSTM_stable</td><td>79.65 %</td><td>52.22 %</td><td>107.63 %</td><td>100.53 %</td></tr>
+<tr><td>GNN</td><td>76.55 %</td><td>44.61 %</td><td>67.81 %</td><td>55.99 %</td></tr>
+<tr><td>GNN_stable</td><td>43.27 %</td><td>56.83 %</td><td>90.42 %</td><td>151.18 %</td></tr>
+</table>
+
+<h2>Family-level verdict (single vs stable, mean across N)</h2>
+
+<table>
+<tr><th>family</th><th>N=10 single</th><th>N=10 stable</th><th>Δ (pp)</th><th>N=100 single</th><th>N=100 stable</th><th>Δ (pp)</th></tr>
+<tr><td>MLP</td><td>55.12 %</td><td>72.48 %</td><td>+17.36</td><td>66.96 %</td><td>84.55 %</td><td>+17.59</td></tr>
+<tr><td>LSTM</td><td>37.77 %</td><td>68.22 %</td><td>+30.45</td><td>55.96 %</td><td>73.68 %</td><td>+17.72</td></tr>
+<tr><td>GNN</td><td>70.06 %</td><td>61.32 %</td><td>-8.74</td><td>66.69 %</td><td>118.09 %</td><td>+51.41</td></tr>
+</table>
+
+<section>
+<h2>Trajectory animations</h2>
+<p>Side-by-side mp4s of every (training body count N, Solar-System preset, architecture) combination. Each clip shows the surrogate&rsquo;s predicted orbit compared against the closed-form Kepler reference.</p>
+<ul>
+<li><a href="main_interactive.html" style="text-decoration: underline">Interactive hub &mdash; one page with every animation, plot, and time-slider viewer &rarr;</a></li>
+<li><a href="animations.html">All trajectory animations &amp; interactive viewers &rarr;</a></li>
+<li><a href="plots.html">Static plot gallery &rarr;</a></li>
+<li><a href="n10.html">N=10 dashboard</a> &middot; <a href="n25.html">N=25</a> &middot; <a href="n50.html">N=50</a> &middot; <a href="n100.html">N=100</a></li>
+</ul>
+</section>
+
+<section>
+<h2>What this benchmark measures</h2>
+<ul>
+<li><strong>Generalisation to real Solar-System initial conditions.</strong> Training is on synthetic disc IMF data; validation is on NASA JPL Horizons ephemerides. Three independent distribution shifts apply simultaneously: mass ratio (10<sup>5</sup>&times; vs 10&times;), timestep (~50&times; finer), and geometry (thin-disk vs Plummer sphere).</li>
+<li><strong>Variable body count.</strong> One model per N, not one model handling all N. Tests whether a fixed-capacity network can absorb geometry/mass scaling without retraining.</li>
+<li><strong>Stability training.</strong> For each architecture there is a single-step-trained checkpoint and a stability-trained checkpoint (warm-started with a multi-step rollout loss). The stability variant lowers error variance but not always mean error.</li>
+</ul>
+</section>
+
+<section>
+<h2>How to read the results</h2>
+<ul>
+<li>Solid lines = surrogate prediction. Dashed lines = closed-form Kepler reference. Colours: blue = MLP, green = LSTM, red = GNN; the &ldquo;_stable&rdquo; suffix shares its base colour.</li>
+<li>The <em>disc IMF in-distribution baseline</em> preset (lower-left of every grid) uses the same N, masses, timestep, and geometry as the training set. Its 1&ndash;3% error is the upper bound on surrogate quality.</li>
+<li>The other six presets are all real Solar-System configurations. Error inflation is the cost of distribution shift, not surrogate failure.</li>
+</ul>
+</section>
+
+<section>
+<h2>Reproducibility</h2>
+<p>All training checkpoints, evaluation scripts, and animation rendering scripts are in the public GitHub repository.</p>
+<ul>
+<li><a href="https://github.com/Harsh74-2/N-body-surrogates">github.com/Harsh74-2/N-body-surrogates</a></li>
+<li><a href="audit/cross_N_audit.md">cross_N_audit.md</a> &middot; <a href="audit/cross_N_audit_single_step.md">cross_N_audit_single_step.md</a></li>
+<li><a href="archive/disc_model_comparison.html">Interactive disc-model comparison HTML</a></li>
+</ul>
+</section>
+
+<footer>
+<p class="footer-credit">Built as a public benchmark by <a href="https://github.com/Harsh74-2">Harsh74-2</a>, 2026. Source on GitHub under the same handle.</p>
+</footer>
+</body></html>

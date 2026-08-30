@@ -1,0 +1,70 @@
+[
+  {
+    "name": "disc_imf_in_distribution_baseline",
+    "label": "25-body galaxy disc, training IMF (in-distribution sanity)",
+    "in_distribution": true,
+    "n_bodies": 25,
+    "n_samples": 2500,
+    "dt_N": 0.002,
+    "duration_years": 5,
+    "scale": {
+      "M_kg": 1.0,
+      "L_m": 1.0,
+      "T_s": 122404.43065054427,
+      "V_m_per_s": 8.169638914909275e-06,
+      "E_J": 6.6743e-11
+    },
+    "per_model": {
+      "GNN": {
+        "mse_state": 2.279968400790323,
+        "mse_position": 4.038519632666406,
+        "max_error_over_L": 8.95159081803567,
+        "mean_error_over_L": 2.9592997682400815,
+        "frames_before_half_L": 65,
+        "max_energy_drift": 2.1105891468950824
+      },
+      "GNN_stable": {
+        "mse_state": 1.5678560998163122,
+        "mse_position": 2.5009029378430583,
+        "max_error_over_L": 6.9188881506549365,
+        "mean_error_over_L": 2.341921047379372,
+        "frames_before_half_L": 115,
+        "max_energy_drift": 1.4540656459632444
+      },
+      "LSTM": {
+        "mse_state": 1.2842415446210216,
+        "mse_position": 2.104282520854971,
+        "max_error_over_L": 5.518878511476807,
+        "mean_error_over_L": 2.222964503345469,
+        "frames_before_half_L": 68,
+        "max_energy_drift": 8.835863516223718
+      },
+      "LSTM_stable": {
+        "mse_state": 1.4068348126858812,
+        "mse_position": 2.443621366360725,
+        "max_error_over_L": 7.443327409126202,
+        "mean_error_over_L": 2.321624204897962,
+        "frames_before_half_L": 40,
+        "max_energy_drift": 8.93270043038768
+      },
+      "MLP": {
+        "mse_state": 1.3250485061456305,
+        "mse_position": 2.286207103936755,
+        "max_error_over_L": 6.210184101508285,
+        "mean_error_over_L": 2.277902839648502,
+        "frames_before_half_L": 30,
+        "max_energy_drift": 4.7996279364201335
+      },
+      "MLP_stable": {
+        "mse_state": 0.9268256745851311,
+        "mse_position": 1.3494032118750792,
+        "max_error_over_L": 4.786435434236557,
+        "mean_error_over_L": 1.8314087058443527,
+        "frames_before_half_L": 23,
+        "max_energy_drift": 4.296989277654499
+      }
+    },
+    "wallclock_s": 90.6707032000013,
+    "kepler_check": []
+  }
+]

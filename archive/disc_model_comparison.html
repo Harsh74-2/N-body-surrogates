@@ -1,0 +1,1537 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Galactic Disc Models — Plummer vs Exponential vs Mixed</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root {
+    --bg:#0b0f1a; --panel:#121828; --ink:#e7ecf3; --muted:#9aa6b8;
+    --acc:#6cf; --pl:#ffb86b; --ex:#7ee787; --mx:#c4b5fd;
+    --grid:#1f2740; --good:#7ee787; --bad:#ff6b6b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: linear-gradient(180deg,#070a14 0%,#0e1426 100%);
+    color: var(--ink);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.45;
+  }
+  header {
+    padding: 22px 28px 14px; border-bottom: 1px solid #1c2440;
+    display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap;
+  }
+  header h1 { font-size: 20px; margin: 0; letter-spacing: 0.2px; }
+  header .sub { color: var(--muted); font-size: 13px; }
+  header .legend { margin-left: auto; display: flex; gap: 14px; font-size: 13px; }
+  .swatch { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align: middle; }
+  .grid {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 18px; padding: 18px 22px;
+  }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: var(--panel); border: 1px solid #1c2440; border-radius: 10px;
+    padding: 14px 16px; margin-bottom: 16px;
+  }
+  .panel h2 { font-size: 14px; margin: 0 0 10px; color: var(--ink); letter-spacing: 0.3px; text-transform: uppercase; }
+  .row { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+  .row label { flex: 0 0 96px; color: var(--muted); font-size: 12.5px; }
+  .row input[type=range] { flex: 1; }
+  .row .val { flex: 0 0 60px; text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); font-size: 12.5px; }
+  button {
+    appearance: none; background: #1c2547; color: var(--ink); border: 1px solid #2a356a;
+    padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; margin-right: 6px;
+  }
+  button:hover { background:#233068; }
+  button.primary { background:#2b3a85; border-color:#3a4db0; }
+  .toggle { display:flex; flex-wrap: wrap; gap: 8px; }
+  .pill { user-select:none; cursor:pointer; padding:6px 10px; border-radius:999px; border:1px solid #2a356a; font-size:12.5px; color:var(--muted); }
+  .pill.on { color: var(--ink); background:#243071; border-color:#3a4db0; }
+  .pill .swatch { margin-right:8px; }
+  .charts {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  }
+  .charts > .full { grid-column: 1 / -1; }
+  @media (max-width: 1200px) { .charts { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid #1c2440; border-radius: 10px; padding: 8px 8px 4px; }
+  .card h3 { margin: 4px 8px 6px; font-size: 13px; color: var(--muted); letter-spacing: 0.3px; text-transform: uppercase; }
+  .stats {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px;
+  }
+  .stat { background:#0e1426; border: 1px solid #1c2440; border-radius: 8px; padding: 10px; }
+  .stat .k { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .stat .v { font-size: 18px; font-variant-numeric: tabular-nums; margin-top: 2px; width: 100%; overflow-wrap: break-word; word-break: break-word; }
+  .stat.ok  .v { color: var(--good); }
+  .stat.bad .v { color: var(--bad); }
+  .katex { color: var(--ink); font-size: 1.05em; }
+  .note { color: var(--muted); font-size: 12.5px; margin-top: 8px; }
+  .why-panel p { margin: 10px 0; }
+  .why-panel math { font-size: 0.95em; line-height: 1.2; vertical-align: middle; }
+  .equations { font-size: 13.5px; line-height: 1.85; color: #d6dceb; max-height: 200px; overflow-y: auto; }
+  .equations .eq { padding: 4px 0; border-bottom: 1px dashed #1c2440; }
+  .equations .eq:last-child { border-bottom: 0; }
+  .pill-row { display:flex; gap:8px; flex-wrap: wrap; margin-bottom: 8px; }
+  .statusbar {
+    background: #0e1426; border: 1px solid #1c2440; border-radius: 8px;
+    padding: 8px 10px; font-size: 12px; color: var(--muted);
+    display: flex; gap: 16px; flex-wrap: wrap; align-items: center;
+    font-variant-numeric: tabular-nums; margin-top: 8px;
+  }
+  .statusbar .lbl { color: var(--muted); margin-right: 4px; }
+  .statusbar .val { color: var(--ink); }
+  .statusbar .ok  .val { color: var(--good); }
+  .statusbar .bad .val { color: var(--bad); }
+
+  /* Video panel */
+  .video-card { position: relative; }
+  .video-host { position: relative; height: 420px; border-radius: 8px; overflow: hidden;
+                background: radial-gradient(ellipse at center,#0a0f24 0%,#03050d 100%); }
+  .video-host canvas { display: block; width: 100% !important; height: 100% !important; }
+  .video-overlay { position: absolute; left: 8px; top: 8px; font-size: 11px;
+                   color: var(--muted); padding: 4px 8px; background: rgba(0,0,0,0.45);
+                   border-radius: 4px; pointer-events: none; font-variant-numeric: tabular-nums; }
+  .video-overlay b { color: var(--ink); }
+  .video-controls { display: grid; grid-template-columns: auto auto auto 1fr auto auto; gap: 8px;
+                    align-items: center; margin-top: 10px; padding: 8px 4px 0; }
+  .video-controls input[type=range] { width: 100%; }
+  .vbtn { appearance:none; background:#1c2547; color:var(--ink); border:1px solid #2a356a;
+          padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12.5px; }
+  .vbtn:hover { background: #233068; }
+  .vbtn.on { background:#2b3a85; border-color:#3a4db0; }
+  .energy-readout { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums;
+                    min-width: 110px; text-align: right; }
+  .energy-readout .lbl { display:inline-block; width: 56px; }
+  .energy-readout .val { color: var(--ink); }
+  .scene-tag { position:absolute; bottom: 8px; padding: 4px 9px; font-size: 11px;
+               border-radius: 4px; background: rgba(0,0,0,0.55); pointer-events:none; }
+  .scene-tag.left  { left: 8px;  border-left: 3px solid var(--mx); }
+  .scene-tag.mid   { left: 50%; transform: translateX(-50%); border-left: 3px solid var(--ex); }
+  .scene-tag.right { right: 8px; border-left: 3px solid var(--pl); }
+</style>
+
+<!-- KaTeX for math rendering (MathML-compatible) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+
+<!-- Plotly for interactive charts -->
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Galactic Disc Models — Plummer · Exponential · Mixed</h1>
+    <div class="sub">Interactive surface-density comparison. The dashed blend in the <em>Mixed</em> profile is exactly what <code>init_galaxy_disc</code> in <code>simulation_3d.py</code> samples from.</div>
+  </div>
+  <div class="legend">
+    <span><span class="swatch" style="background:var(--pl)"></span>Plummer</span>
+    <span><span class="swatch" style="background:var(--ex)"></span>Exponential</span>
+    <span><span class="swatch" style="background:var(--mx)"></span>Mixed (Plummer × Exponential)</span>
+  </div>
+</header>
+
+<div class="grid">
+
+  <!-- LEFT: controls + theory -->
+  <aside>
+    <div class="panel">
+      <h2>Model parameters</h2>
+      <div class="row">
+        <label>Plummer core $r_c$</label>
+        <input id="rc" type="range" min="0.2" max="3.0" step="0.05" value="1.0">
+        <div class="val"><span id="rc_v">1.00</span></div>
+      </div>
+      <p class="note ring-note">ring radius $\;R^\star = r_c/\sqrt{3}\;=\;$<span id="rc_ring">$0.58$</span></p>
+      <div class="row">
+        <label>Disc scale $r_d$</label>
+        <input id="rd" type="range" min="0.4" max="4.0" step="0.05" value="1.5">
+        <div class="val"><span id="rd_v">1.50</span></div>
+      </div>
+      <div class="row">
+        <label>Outer cutoff $r_{\max}$</label>
+        <input id="rmax" type="range" min="2.0" max="12.0" step="0.1" value="6.0">
+        <div class="val"><span id="rmax_v">6.0</span></div>
+      </div>
+      <div class="row">
+        <label>Bodies $N$</label>
+        <input id="N" type="range" min="50" max="2000" step="50" value="500">
+        <div class="val"><span id="N_v">500</span></div>
+      </div>
+      <div class="row">
+        <label>$z$ thickness $\sigma_z$</label>
+        <input id="sz" type="range" min="0.0" max="0.5" step="0.005" value="0.075">
+        <div class="val"><span id="sz_v">0.075</span></div>
+      </div>
+      <div class="row">
+        <button class="primary" id="resample">Resample bodies</button>
+        <button id="copy">Copy link</button>
+      </div>
+      <div class="statusbar" id="status">
+        <span><span class="lbl">$\text{seed}$</span><span class="val" id="st_seed">$0$</span></span>
+        <span><span class="lbl">$N$</span><span class="val" id="st_N">$500$</span></span>
+        <span><span class="lbl">$r_c$</span><span class="val" id="st_rc">$1.00$</span></span>
+        <span><span class="lbl">$r_d$</span><span class="val" id="st_rd">$1.50$</span></span>
+        <span><span class="lbl">$r_{\max}$</span><span class="val" id="st_rmax">$6.0$</span></span>
+        <span><span class="lbl">$\sigma_z$</span><span class="val" id="st_sz">$0.075$</span></span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Show / hide profiles</h2>
+      <div class="pill-row">
+        <div class="pill on" data-toggle="pl"> <span class="swatch" style="background:var(--pl)"></span>Plummer</div>
+        <div class="pill on" data-toggle="ex"> <span class="swatch" style="background:var(--ex)"></span>Exponential</div>
+        <div class="pill on" data-toggle="mx"> <span class="swatch" style="background:var(--mx)"></span>Mixed</div>
+      </div>
+      <div class="row">
+        <button id="reset">Reset view</button>
+        <button id="seed0">Deterministic ($\text{seed}=0$)</button>
+      </div>
+      <div class="note">Three profiles use identical bodies where possible so you can compare like-for-like positions and orbital radii.</div>
+    </div>
+
+    <div class="panel">
+      <h2>The math</h2>
+      <div class="equations" id="math">
+        <div class="eq" id="m_sigma"></div>
+        <div class="eq" id="m_pdf"></div>
+        <div class="eq" id="m_mix"></div>
+        <div class="eq" id="m_vphi"></div>
+        <div class="eq" id="m_menc"></div>
+        <div class="eq" id="m_ks"></div>
+        <div class="eq" id="m_kc"></div>
+        <p class="note">Each equation is right-clickable → "Show Math As → MathML" or "Copy → TeX".</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Goodness of fit (Kolmogorov–Smirnov)</h2>
+      <div class="stats" id="ks_stats">
+        <div class="stat"><div class="k">Plummer $D_N$</div><div class="v" id="ks_pl">—</div></div>
+        <div class="stat"><div class="k">Exponential $D_N$</div><div class="v" id="ks_ex">—</div></div>
+        <div class="stat"><div class="k">Mixed $D_N$</div><div class="v" id="ks_mx">—</div></div>
+        <div class="stat"><div class="k">Plummer $p$</div><div class="v" id="kp_pl">—</div></div>
+        <div class="stat"><div class="k">Exponential $p$</div><div class="v" id="kp_ex">—</div></div>
+        <div class="stat"><div class="k">Mixed $p$</div><div class="v" id="kp_mx">—</div></div>
+      </div>
+      <p class="note">A small $D_N$ and a large $p$ mean the sampled distribution is statistically indistinguishable from the analytic one. The P-P plot in the chart grid is the visual companion to this number.</p>
+    </div>
+
+    <div class="panel">
+      <h2>Sampled statistics</h2>
+      <div class="stats" id="stats">
+        <div class="stat"><div class="k">Plummer $\bar{R}$</div><div class="v" id="s_pl">—</div></div>
+        <div class="stat"><div class="k">Exponential $\bar{R}$</div><div class="v" id="s_ex">—</div></div>
+        <div class="stat"><div class="k">Mixed $\bar{R}$</div><div class="v" id="s_mx">—</div></div>
+        <div class="stat"><div class="k">Plummer $\tilde{R}$</div><div class="v" id="sp_pl">—</div></div>
+        <div class="stat"><div class="k">Exponential $\tilde{R}$</div><div class="v" id="sp_ex">—</div></div>
+        <div class="stat"><div class="k">Mixed $\tilde{R}$</div><div class="v" id="sp_mx">—</div></div>
+      </div>
+      <button class="download-btn" id="downloadBtn">Download PNG</button>
+    </div>
+
+    <div class="panel">
+      <h2>Why the hole? (annulus area)</h2>
+      <p>Bodies are placed at a sampled radius $R$ with uniform azimuth $\varphi$, so the probability of landing in $[R, R+dR]$ is
+        $$p(R)\,dR \;\propto\; R\cdot\Sigma(R)\,dR$$
+        The $R$ factor is the annulus area $2\pi R\,dR$. The centre has zero area, so the density is zero there regardless of $\Sigma$.</p>
+      <p>The Plummer sampling PDF peaks at
+        $$R^\star_{\text{Pl}} \;=\; \frac{r_c}{\sqrt{3}}$$
+        and the Exponential at
+        $$R^\star_{\text{Exp}} \;=\; r_d$$
+        Increasing $r_c$ makes the Plummer ring bigger. The "donut" you see in the scatter is the geometry, not a bug.</p>
+    </div>
+
+    <div class="panel">
+      <h2>Model differences</h2>
+      <p>
+        <strong>Plummer model:</strong> 3D spherically symmetric density $\rho \propto (1+r^2/r_c^2)^{-5/2}$; projected surface density
+        $\Sigma_{\text{Pl}}(R) \propto (1+(R/r_c)^2)^{-2}$. It has a finite total mass, a soft core, and stars are more concentrated toward the centre.
+        The sampling probability peaks at $R = r_c/\sqrt{3}$, producing the characteristic ring in the face-on scatter.
+      </p>
+      <p>
+        <strong>Exponential model:</strong> Classic thin-disc surface-density profile $\Sigma_{\text{Exp}}(R) \propto e^{-R/r_d}$ with scale length $r_d$.
+        It has infinite total mass if extended to infinity, but we truncate at $r_{\max}$ for normalization. The sampling probability peaks at $R = r_d$,
+        giving a more extended radial distribution than Plummer for the same scale length.
+      </p>
+      <p>
+        <strong>Mixed model:</strong> Product $\Sigma_{\text{Mix}}(R) \propto e^{-R/r_d}\,(1+(R/r_c)^2)^{-2.5}$ (the exact form used by the N-body initializer).
+        It combines the concentrated core of the Plummer model with the exponential truncation of the disc model, yielding a realistic
+        galactic disc that declines faster than a pure exponential at large radii due to the extra Plummer factor.
+      </p>
+    </div>
+
+    <div class="panel why-panel">
+      <h2>Why the models act this way</h2>
+      <p>
+        <strong>Why the hole in the centre?</strong> Bodies are dropped uniformly in azimuth, so the probability of landing in
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mo stretchy="false">[</mo><mi>R</mi><mo>,</mo><mi>R</mi><mo>+</mo><mi>d</mi><mi>R</mi><mo stretchy="false">]</mo></math>
+        is
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mi>p</mi><mo stretchy="false">(</mo><mi>R</mi><mo stretchy="false">)</mo><mi>d</mi><mi>R</mi><mo>&#x221D;</mo><mi>R</mi><mo>&#x22C5;</mo><mi mathvariant="normal">&#x03A3;</mi><mo stretchy="false">(</mo><mi>R</mi><mo stretchy="false">)</mo><mi>d</mi><mi>R</mi></math>.
+        The annulus area
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mn>2</mn><mi>&#x03C0;</mi><mi>R</mi><mi>d</mi><mi>R</mi></math>
+        vanishes at
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mi>R</mi><mo>=</mo><mn>0</mn></math>,
+        so even an infinitely peaked
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mi mathvariant="normal">&#x03A3;</mi></math>
+        cannot put mass in the centre. This is geometry, not a bug — galaxies look like donuts when sampled this way.
+      </p>
+      <p>
+        <strong>Why does Plummer collapse fastest?</strong> Plummer packs more mass into small radii, so the central potential well is
+        deep and steep. Equal-mass Plummer bodies feel strong mutual attraction, and the disc is geometrically dense near the core — small
+        perturbations from initial-condition noise grow into radial inflow, so the ring tightens and the inner spike sharpens. The
+        integrator stays symplectic (
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mi mathvariant="normal">&#x0394;</mi><mi>E</mi><mo>/</mo><msub><mi>E</mi><mn>0</mn></msub><mo>&#x223C;</mo><msup><mn>10</mn><mrow><mo>-</mo><mn>3</mn></mrow></msup></math>
+        ), so this is real gravitational evolution, not numerical drift.
+      </p>
+      <p>
+        <strong>Why does the Exponential stay smooth?</strong> The exponential profile places less mass per unit radius at small
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mi>R</mi></math>
+        than Plummer (no core concentration), and
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mi>M</mi><mo stretchy="false">(</mo><mo>&lt;</mo><mi>R</mi><mo stretchy="false">)</mo><mo>&#x221D;</mo><mn>1</mn><mo>-</mo><msup><mi>e</mi><mrow><mo>-</mo><mi>R</mi><mo>/</mo><msub><mi>r</mi><mi>d</mi></msub></mrow></msup></math>
+        saturates gently. The self-gravitational pull at any
+        radius is therefore weaker, and circular-orbit initial conditions are closer to true equilibrium. The result is a disc that
+        rotates almost rigidly with little radial rearrangement — exactly what real spiral-galaxy discs do on short timescales.
+      </p>
+      <p>
+        <strong>Why does the Mixed model look "in between"?</strong> At small
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mi>R</mi></math>
+        the Plummer factor
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><msup><mrow><mo>(</mo><mn>1</mn><mo>+</mo><msup><mrow><mo>(</mo><mi>R</mi><mo>/</mo><msub><mi>r</mi><mi>c</mi></msub><mo>)</mo></mrow><mn>2</mn></msup><mo>)</mo></mrow><mrow><mo>-</mo><mn>5</mn><mo>/</mo><mn>2</mn></mrow></msup></math>
+        dominates and concentrates mass like a Plummer sphere. At large
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mi>R</mi></math>
+        the exponential factor
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><msup><mi>e</mi><mrow><mo>-</mo><mi>R</mi><mo>/</mo><msub><mi>r</mi><mi>d</mi></msub></mrow></msup></math>
+        dominates and truncates faster than either pure profile would. So the Mixed disc inherits Plummer's tight core <em>and</em> the Exponential's clean edge, which is
+        why it is the profile the N-body initializer in <code>simulation_3d.py</code> actually uses.
+      </p>
+      <p>
+        <strong>Why does the exponential tail stretch further?</strong> Look at
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><msub><mi>v</mi><mi>&#x03C6;</mi></msub><mo stretchy="false">(</mo><mi>R</mi><mo stretchy="false">)</mo><mo>=</mo><msqrt><mrow><mi>G</mi><mo>&#x22C5;</mo><mi>M</mi><mo stretchy="false">(</mo><mo>&lt;</mo><mi>R</mi><mo stretchy="false">)</mo><mo>/</mo><mi>R</mi></mrow></msqrt></math>.
+        Plummer's
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mi>M</mi><mo stretchy="false">(</mo><mo>&lt;</mo><mi>R</mi><mo stretchy="false">)</mo></math>
+        saturates quickly because the
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><msup><mrow><mo>(</mo><mn>1</mn><mo>+</mo><msup><mrow><mo>(</mo><mi>R</mi><mo>/</mo><msub><mi>r</mi><mi>c</mi></msub><mo>)</mo></mrow><mn>2</mn></msup><mo>)</mo></mrow><mrow><mo>-</mo><mn>2</mn></mrow></msup></math>
+        factor crushes the integrand at large
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mi>R</mi></math>.
+        The exponential, by contrast,
+        contributes a long, slowly-decreasing tail, so
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mi>M</mi><mo stretchy="false">(</mo><mo>&lt;</mo><mi>R</mi><mo stretchy="false">)</mo></math>
+        keeps growing further out — pushing the velocity curve higher and
+        letting bodies orbit at larger radii.
+      </p>
+      <p>
+        <strong>Why the sampling ring
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><msubsup><mi>R</mi><mrow></mrow><mo>&#x22C6;</mo></msubsup><mo>=</mo><msub><mi>r</mi><mi>c</mi></msub><mo>/</mo><msqrt><mn>3</mn></msqrt></math>?</strong>
+        The peak of
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mi>p</mi><mo stretchy="false">(</mo><mi>R</mi><mo stretchy="false">)</mo><mo>&#x221D;</mo><mi>R</mi><mo>&#x22C5;</mo><msup><mrow><mo>(</mo><mn>1</mn><mo>+</mo><msup><mrow><mo>(</mo><mi>R</mi><mo>/</mo><msub><mi>r</mi><mi>c</mi></msub><mo>)</mo></mrow><mn>2</mn></msup><mo>)</mo></mrow><mrow><mo>-</mo><mn>2</mn></mrow></msup></math>
+        is found by
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mi>d</mi><mo>/</mo><mi>d</mi><mi>R</mi><mrow><mo>[</mo><msup><mrow><mo>(</mo><mn>1</mn><mo>+</mo><msup><mi>x</mi><mn>2</mn></msup><mo>)</mo></mrow><mrow><mo>-</mo><mn>2</mn></mrow></msup><mo>+</mo><mn>2</mn><mi>x</mi><msup><mrow><mo>(</mo><mn>1</mn><mo>+</mo><msup><mi>x</mi><mn>2</mn></msup><mo>)</mo></mrow><mrow><mo>-</mo><mn>3</mn></mrow></msup><mo>&#x22C5;</mo><mi>x</mi><mo>/</mo><mn>2</mn><mo>]</mo></mrow><mo>=</mo><mn>0</mn></math>
+        with
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mi>x</mi><mo>=</mo><mi>R</mi><mo>/</mo><msub><mi>r</mi><mi>c</mi></msub></math>,
+        giving
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><msup><mi>x</mi><mn>2</mn></msup><mo>=</mo><mn>1</mn><mo>/</mo><mn>3</mn></math>,
+        so
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><msubsup><mi>R</mi><mrow></mrow><mo>&#x22C6;</mo></msubsup><mo>=</mo><msub><mi>r</mi><mi>c</mi></msub><mo>/</mo><msqrt><mn>3</mn></msqrt></math>.
+        For the exponential the analogous maximisation gives
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><msubsup><mi>R</mi><mrow></mrow><mo>&#x22C6;</mo></msubsup><mo>=</mo><msub><mi>r</mi><mi>d</mi></msub></math>
+        exactly. The Mixed profile has no closed-form peak; the code
+        finds it numerically.
+      </p>
+      <p>
+        <strong>Why are the orbits so different on screen?</strong> A Plummer body at
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><msubsup><mi>R</mi><mrow></mrow><mo>&#x22C6;</mo></msubsup><mo>=</mo><msub><mi>r</mi><mi>c</mi></msub><mo>/</mo><msqrt><mn>3</mn></msqrt></math>
+        has a small radius
+        and a high circular speed, so it sweeps through many orbits per second. An exponential body at
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><msubsup><mi>R</mi><mrow></mrow><mo>&#x22C6;</mo></msubsup><mo>=</mo><msub><mi>r</mi><mi>d</mi></msub></math>
+        has a larger
+        radius and a lower speed (longer period), so it appears to drift. The video is real time — they are not running on different
+        clocks.
+      </p>
+    </div>
+
+    <div class="panel">
+      <h2>What you should see</h2>
+      <ul style="margin:0; padding-left: 18px; color: var(--muted); font-size: 12.5px;">
+        <li>Drag $r_c$: the orange (Plummer) curve fattens/thins; bodies in the scatter and the histogram redistribute; the KS test re-evaluates.</li>
+        <li>Drag $r_d$: the green (Exponential) curve and the violet (Mixed) curve both stretch; the exponential tail now extends further.</li>
+        <li>Drag $r_{\max}$: this is the hard cutoff used by the sampler. Nothing past it on the $x$-axis of any chart.</li>
+        <li>Drag $N$: more bodies, smoother histograms, smaller $D_N$ (the KS statistic scales as $1/\sqrt{N}$).</li>
+        <li>Drag $\sigma_z$: only the edge-on $(x,z)$ scatter changes. Other charts are 2D-projected, so $\sigma_z$ doesn't affect them — by design.</li>
+        <li>Resample: advances the seed. The numeric seed in the status bar changes; bodies shuffle; the URL hash updates; the N-body video resets to $t=0$.</li>
+        <li>Copy link: copies a URL whose fragment encodes every parameter and seed. Opening that URL in another tab reproduces the view exactly.</li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- RIGHT: charts -->
+  <main>
+    <div class="card video-card">
+      <h3>7. N-body evolution: Mixed vs. Exponential vs. pure Plummer (side-by-side)</h3>
+      <div class="video-host" id="video_host">
+        <div class="video-overlay">
+          <b>$t = $ <span id="vid_t">$0.000$</span></b> &nbsp;·&nbsp;
+          $\text{step}\;$ <span id="vid_step">$0$</span> / <span id="vid_total">$0$</span>
+          &nbsp;·&nbsp; $\text{fps}\;$ <span id="vid_fps">$0$</span>
+        </div>
+        <div class="scene-tag left"><b>Mixed</b> · $e^{-R/r_d}\cdot(1+(R/r_c)^2)^{-5/2}$</div>
+        <div class="scene-tag mid"><b>Exponential</b> · $e^{-R/r_d}$</div>
+        <div class="scene-tag right"><b>Pure Plummer</b> · $(1+(R/r_c)^2)^{-2}$</div>
+      </div>
+      <div class="video-controls">
+        <button class="vbtn" id="vid_play">▶ Play</button>
+        <button class="vbtn" id="vid_step1">Step</button>
+        <button class="vbtn" id="vid_reset">⟲ Reset</button>
+        <input type="range" id="vid_scrub" min="0" max="0" value="0" step="1">
+        <select class="vbtn" id="vid_speed">
+          <option value="0.25">0.25×</option>
+          <option value="0.5">0.5×</option>
+          <option value="1" selected>1×</option>
+          <option value="2">2×</option>
+          <option value="4">4×</option>
+        </select>
+        <div class="energy-readout" id="vid_energy">
+          <div><span class="lbl" style="color:var(--mx)">Mixed</span> <span class="val" id="vid_e_mx">—</span></div>
+          <div><span class="lbl" style="color:var(--ex)">Exponential</span> <span class="val" id="vid_e_ex">—</span></div>
+          <div><span class="lbl" style="color:var(--pl)">Plummer</span> <span class="val" id="vid_e_pl">—</span></div>
+        </div>
+      </div>
+      <div class="note">All three panels integrate the same N-body equations of motion with the leapfrog (Störmer–Verlet) scheme. Initial positions are sampled from the chosen surface density (Mixed on the left, pure Exponential in the middle, pure Plummer on the right), with circular-orbit velocities for centrifugal equilibrium. $\Delta E/E_0$ stays $\sim 10^{-3}$ over the run because the integrator is symplectic.</div>
+    </div>
+
+    <div class="charts">
+      <div class="card full"><h3>1. Radial probability density $p(R)\propto R\cdot\Sigma(R)$</h3><div id="chart_density" style="height:340px"></div></div>
+      <div class="card"><h3>2. Sampled bodies — face-on $(x,y)$</h3><div id="chart_xy" style="height:380px"></div></div>
+      <div class="card"><h3>3. Sampled bodies — edge-on $(x,z)$</h3><div id="chart_xz" style="height:380px"></div></div>
+      <div class="card"><h3>4. Histogram of sampled radii vs. $\Sigma(R)$ curve</h3><div id="chart_hist" style="height:340px"></div></div>
+      <div class="card"><h3>5. Circular orbital speed $v_\varphi(R)$</h3><div id="chart_vphi" style="height:340px"></div></div>
+      <div class="card full"><h3>6. Enclosed mass $M(<R)$</h3><div id="chart_menc" style="height:300px"></div></div>
+      <div class="card full"><h3>8. Empirical vs analytic CDF (the "rightness" plot)</h3><div id="chart_cdf" style="height:340px"></div></div>
+    </div>
+  </main>
+</div>
+
+<script>
+"use strict";
+
+/* ───────────────────────────────────────────────────────────────────────
+   Models
+   ─────────────────────────────────────────────────────────────────────── */
+const G_DISP = 1.0;  // display value; simulation_3d.py uses G = 1 by default
+
+// Analytic surface-density curves.
+function sigma_plummer(R, rc) {
+  return Math.pow(1 + (R/rc)*(R/rc), -2);
+}
+function sigma_exponential(R, rd) {
+  return Math.exp(-R/rd);
+}
+function sigma_mixed(R, rc, rd) {
+  return Math.exp(-R/rd) * Math.pow(1 + (R/rc)*(R/rc), -2.5);
+}
+// Sampling PDFs include the annulus Jacobian 2πR; we drop the 2π constant.
+function dR_pdf_plummer(R, rc)   { return sigma_plummer(R, rc)   * R; }
+function dR_pdf_exponential(R, rd){ return sigma_exponential(R, rd)* R; }
+function dR_pdf_mixed(R, rc, rd) { return sigma_mixed(R, rc, rd) * R; }
+
+/* Build a CDF on a grid and invert by linear interpolation. */
+function sampleFromPDF(pdfFn, Rmax, N, rng) {
+  const n = 8192;
+  const R = new Float64Array(n+1);
+  const dR = Rmax / n;
+  for (let i=0;i<=n;i++) R[i] = i*dR;
+  const cdf = new Float64Array(n+1);
+  let acc = 0;
+  for (let i=1;i<=n;i++) {
+    acc += 0.5 * (pdfFn(R[i-1]) + pdfFn(R[i])) * dR;
+    cdf[i] = acc;
+  }
+  const total = cdf[n];
+  for (let i=0;i<=n;i++) cdf[i] /= total;
+  cdf[n] = 1.0;
+
+  const out = new Float64Array(N);
+  for (let k=0;k<N;k++) {
+    const u = rng();
+    let lo=0, hi=n;
+    while (lo<hi) {
+      const mid = (lo+hi) >> 1;
+      if (cdf[mid] < u) lo = mid+1; else hi = mid;
+    }
+    if (lo===0) out[k] = R[0];
+    else {
+      const t = (u - cdf[lo-1]) / (cdf[lo] - cdf[lo-1]);
+      out[k] = R[lo-1] + t * (R[lo] - R[lo-1]);
+    }
+  }
+  return out;
+}
+
+/* Build a CDF grid (returned for KS testing). */
+
+function buildCDF(pdfFn, Rmax, n=8192) {
+  const R = new Float64Array(n+1);
+  const cdf = new Float64Array(n+1);
+  const dR = Rmax / n;
+  let acc = 0;
+  R[0]=0; cdf[0]=0;
+  for (let i=1;i<=n;i++) {
+    R[i] = i*dR;
+    acc += 0.5 * (pdfFn(R[i-1]) + pdfFn(R[i])) * dR;
+    cdf[i] = acc;
+  }
+  const total = cdf[n];
+  for (let i=0;i<=n;i++) cdf[i] /= total;
+  cdf[n] = 1.0;
+  return {R, cdf};
+}
+
+
+function evalCDF(grid, x) {
+  const {R, cdf} = grid;
+  if (x <= R[0]) return 0;
+  if (x >= R[R.length-1]) return 1;
+  let lo=0, hi=R.length-1;
+  while (hi - lo > 1) {
+    const mid = (lo+hi) >> 1;
+    if (R[mid] < x) lo = mid; else hi = mid;
+  }
+  const t = (x - R[lo]) / (R[hi] - R[lo]);
+  return cdf[lo] + t * (cdf[hi] - cdf[lo]);
+}
+
+/* Kolmogorov–Smirnov: D_N = sup_x |F_N(x) - F(x)|.
+   p-value from the Smirnov asymptotic:
+     p = Q_KS( sqrt(N) * D )   where
+     Q_KS(λ) = 2 Σ_{j=1..∞} (-1)^{j-1} e^{-2 j² λ²}
+   We truncate to 100 terms — converges to float precision well before that. */
+function ksTest(samples, analyticGrid) {
+  const N = samples.length;
+  const sorted = Array.from(samples).sort((a,b)=>a-b);
+  let D = 0;
+  for (let i=0;i<N;i++) {
+    const Femp_lo = i / N;
+    const Femp_hi = (i+1) / N;
+    const x = sorted[i];
+    const F = evalCDF(analyticGrid, x);
+    D = Math.max(D, Math.abs(Femp_lo - F), Math.abs(Femp_hi - F));
+  }
+  const lam = Math.sqrt(N) * D;
+  let sum = 0;
+  for (let j=1;j<=100;j++) {
+    sum += Math.pow(-1, j-1) * Math.exp(-2 * j * j * lam * lam);
+  }
+  const p = Math.max(0, Math.min(1, 2 * sum));
+  return {D, p};
+}
+
+/* Seeded RNG (Mulberry32). */
+let currentSeed = 0;
+function makeRng(seed) {
+  let a = (seed >>> 0) || 1;
+  return function() {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* Centrifugal equilibrium: v_phi(R) = sqrt(G * M(<R) / R). */
+function enclosedMassCurve(pdfFn, rmax, nSteps=4000) {
+  const Rs = new Float64Array(nSteps+1);
+  const Ms = new Float64Array(nSteps+1);
+  const dR = rmax / nSteps;
+  let acc = 0;
+  for (let i=0;i<=nSteps;i++) {
+    const r = i*dR;
+    Rs[i] = r;
+    if (i>0) acc += 0.5 * (pdfFn(Rs[i-1]) + pdfFn(r)) * dR;
+    Ms[i] = acc;
+  }
+  const total = Ms[nSteps];
+  for (let i=0;i<=nSteps;i++) Ms[i] /= total;
+  return {Rs, Ms, total: 1.0};
+}
+function interp1(xs, ys, x) {
+  if (x <= xs[0]) return ys[0];
+  if (x >= xs[xs.length-1]) return ys[ys.length-1];
+  let lo=0, hi=xs.length-1;
+  while (hi - lo > 1) {
+    const mid = (lo+hi) >> 1;
+    if (xs[mid] < x) lo = mid; else hi = mid;
+  }
+  const t = (x - xs[lo]) / (xs[hi] - xs[lo]);
+  return ys[lo] + t * (ys[hi] - ys[lo]);
+}
+
+/* ───────────────────────────────────────────────────────────────────────
+   Plot helpers
+   ─────────────────────────────────────────────────────────────────────── */
+const TEXT  = "#e7ecf3";
+const GRID  = "#1f2740";
+const MUTED = "#9aa6b8";
+const palette = { pl: "#ffb86b", ex: "#7ee787", mx: "#c4b5fd" };
+
+function visibility() {
+  return {
+    pl: document.querySelector('[data-toggle=pl]').classList.contains('on'),
+    ex: document.querySelector('[data-toggle=ex]').classList.contains('on'),
+    mx: document.querySelector('[data-toggle=mx]').classList.contains('on'),
+  };
+}
+function baseLayout(extra={}) {
+  return Object.assign({
+    paper_bgcolor:'rgba(0,0,0,0)',
+    plot_bgcolor:'rgba(0,0,0,0)',
+    font: { color: TEXT, family: 'ui-sans-serif, system-ui, sans-serif' },
+    margin: { l: 55, r: 18, t: 10, b: 42 },
+    xaxis: { gridcolor: GRID, zerolinecolor: GRID, linecolor: GRID, tickfont:{color:MUTED} },
+    yaxis: { gridcolor: GRID, zerolinecolor: GRID, linecolor: GRID, tickfont:{color:MUTED} },
+    legend: { bgcolor:'rgba(0,0,0,0)', font:{color:TEXT} },
+    hoverlabel: { bgcolor:'#0e1426', bordercolor:'#1c2440', font:{color:TEXT} },
+  }, extra);
+}
+const cfg = { displayModeBar: false, responsive: true };
+
+/* ───────────────────────────────────────────────────────────────────────
+   State + URL hash sync
+   ─────────────────────────────────────────────────────────────────────── */
+const state = {
+  rc: 1.0, rd: 1.5, rmax: 6.0, N: 500, sz: 0.075,
+  bodies: { pl: null, ex: null, mx: null },
+  ks:     { pl: null, ex: null, mx: null },
+};
+
+function readHash() {
+  const h = location.hash.replace(/^#/, '');
+  const out = {};
+  if (!h) return out;
+  for (const part of h.split('&')) {
+    const [k, v] = part.split('=');
+    if (k) out[decodeURIComponent(k)] = decodeURIComponent(v ?? '');
+  }
+  return out;
+}
+function writeHash() {
+  const params = new URLSearchParams();
+  params.set('rc', state.rc);
+  params.set('rd', state.rd);
+  params.set('rmax', state.rmax);
+  params.set('N', state.N);
+  params.set('sz', state.sz);
+  params.set('seed', currentSeed);
+  const hidden = ['pl','ex','mx'].filter(k => !visibility()[k]);
+  if (hidden.length) params.set('hide', hidden.join(','));
+  const newHash = '#' + params.toString();
+  if ('#' + params.toString() !== location.hash) {
+    history.replaceState(null, '', newHash);
+  }
+}
+function applyHash() {
+  const h = readHash();
+  const setIfNum = (k, key) => { if (k in h && !isNaN(parseFloat(h[k]))) state[key] = parseFloat(h[k]); };
+  setIfNum('rc', 'rc');
+  setIfNum('rd', 'rd');
+  setIfNum('rmax', 'rmax');
+  setIfNum('N', 'N');
+  setIfNum('sz', 'sz');
+  if ('seed' in h && !isNaN(parseInt(h.seed, 10))) currentSeed = parseInt(h.seed, 10);
+  if ('hide' in h) {
+    const hidden = new Set(h.hide.split(',').filter(Boolean));
+    ['pl','ex','mx'].forEach(k => {
+      const pill = document.querySelector('[data-toggle=' + k + ']');
+      if (pill) {
+        if (hidden.has(k)) {
+          if (pill.classList.contains('on')) {
+            const event = new Event('click');
+            pill.dispatchEvent(event);
+          }
+        } else {
+          if (!pill.classList.contains('on')) {
+            const event = new Event('click');
+            pill.dispatchEvent(event);
+          }
+        }
+      }
+    });
+  }
+  // Reflect hash values into the slider DOM
+  document.getElementById('rc').value = state.rc;
+  document.getElementById('rd').value = state.rd;
+  document.getElementById('rmax').value = state.rmax;
+  document.getElementById('N').value = state.N;
+  document.getElementById('sz').value = state.sz;
+  setMath('rc_v', state.rc.toFixed(2));
+  setMath('rd_v', state.rd.toFixed(2));
+  setMath('rmax_v', state.rmax.toFixed(1));
+  setMath('N_v', state.N.toFixed(0));
+  setMath('sz_v', state.sz.toFixed(3));
+}
+
+/* ───────────────────────────────────────────────────────────────────────
+   Sampling + stats + KS
+   ─────────────────────────────────────────────────────────────────────── */
+function mean(a) {
+  let s=0; for (let i=0;i<a.length;i++) s+=a[i]; return s/a.length;
+}
+function median(a) {
+  const s = Array.from(a).sort((u,v)=>u-v);
+  const m = Math.floor(s.length/2);
+  return s.length%2 ? s[m] : 0.5*(s[m-1]+s[m]);
+}
+
+// Render a TeX string into an element as proper math (HTML + MathML).
+// Use this for every live numeric readout so the values match the
+// "all numbers are typeset math" rule — no mixed conventions.
+function setMath(id, tex) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (typeof katex === 'undefined') { el.textContent = tex; return; }
+  katex.render(tex, el, {throwOnError:false, displayMode:false});
+}
+
+function sampleAll() {
+  const rng = makeRng(currentSeed);
+  const R_pl = sampleFromPDF(r => dR_pdf_plummer(r, state.rc),  state.rmax, state.N, rng);
+  const R_ex = sampleFromPDF(r => dR_pdf_exponential(r, state.rd), state.rmax, state.N, rng);
+  const R_mx = sampleFromPDF(r => dR_pdf_mixed(r, state.rc, state.rd), state.rmax, state.N, rng);
+
+  state.bodies.pl = buildXYZ(R_pl, rng);
+  state.bodies.ex = buildXYZ(R_ex, rng);
+  state.bodies.mx = buildXYZ(R_mx, rng);
+
+  // KS tests
+  const gridPl = buildCDF(r => dR_pdf_plummer(r, state.rc),  state.rmax);
+  const gridEx = buildCDF(r => dR_pdf_exponential(r, state.rd), state.rmax);
+  const gridMx = buildCDF(r => dR_pdf_mixed(r, state.rc, state.rd), state.rmax);
+  state.ks.pl = ksTest(R_pl, gridPl);
+  state.ks.ex = ksTest(R_ex, gridEx);
+  state.ks.mx = ksTest(R_mx, gridMx);
+
+  // Sampled stats
+  setMath('s_pl',  mean(R_pl).toFixed(3));
+  setMath('s_ex',  mean(R_ex).toFixed(3));
+  setMath('s_mx',  mean(R_mx).toFixed(3));
+  setMath('sp_pl', median(R_pl).toFixed(3));
+  setMath('sp_ex', median(R_ex).toFixed(3));
+  setMath('sp_mx', median(R_mx).toFixed(3));
+
+  // KS readouts — value is the number; we keep the ✓/✗ as plain text
+  // outside the math so it sits at the natural reading height.
+  const N = state.N;
+  const crit = 1.36 / Math.sqrt(N);
+  function ksTex(d, p) {
+    const ok = d < crit && p >= 0.05;
+    return (ok ? '▼' : '▲') + ' ' + d.toFixed(3);
+  }
+  setMath('ks_pl', ksTex(state.ks.pl.D, state.ks.pl.p));
+  setMath('ks_ex', ksTex(state.ks.ex.D, state.ks.ex.p));
+  setMath('ks_mx', ksTex(state.ks.mx.D, state.ks.mx.p));
+  setMath('kp_pl', state.ks.pl.p.toFixed(3));
+  setMath('kp_ex', state.ks.ex.p.toFixed(3));
+  setMath('kp_mx', state.ks.mx.p.toFixed(3));
+  // Colour the parent .stat green/red
+  for (const k of ['pl','ex','mx']) {
+    const el = document.getElementById('ks_' + k);
+    el.parentElement.classList.toggle('ok',  state.ks[k].D < crit);
+    el.parentElement.classList.toggle('bad', state.ks[k].D >= crit);
+  }
+
+  // Status bar
+  setMath('st_seed',  String(currentSeed));
+  setMath('st_N',     String(state.N));
+  setMath('st_rc',    state.rc.toFixed(2));
+  setMath('st_rd',    state.rd.toFixed(2));
+  setMath('st_rmax',  state.rmax.toFixed(1));
+  setMath('st_sz',    state.sz.toFixed(3));
+
+  // Live ring-radius readout
+  setMath('rc_ring', (state.rc / Math.sqrt(3)).toFixed(2));
+}
+
+function buildXYZ(R_samples, rng) {
+  const N = R_samples.length;
+  const x = new Float64Array(N), y = new Float64Array(N), z = new Float64Array(N);
+  for (let i=0;i<N;i++) {
+    const phi = rng() * 2 * Math.PI;
+    x[i] = R_samples[i] * Math.cos(phi);
+    y[i] = R_samples[i] * Math.sin(phi);
+    const u1 = Math.max(rng(), 1e-12), u2 = rng();
+    z[i] = state.sz * Math.sqrt(-2*Math.log(u1)) * Math.cos(2*Math.PI*u2);
+  }
+  return {x, y, z, R: R_samples};
+}
+
+/* ───────────────────────────────────────────────────────────────────────
+   Charts
+   ─────────────────────────────────────────────────────────────────────── */
+// Numerical peak-finder for the sampling distribution p(R) ∝ R·Σ(R).
+// The Plummer peak is at r_c/√3 and the Exponential peak is at r_d, but
+// the Mixed peak doesn't have a closed form, so we find it numerically.
+function findSamplingPeak(fn, rmax, n=4000) {
+  let bestR = 0, bestY = -Infinity;
+  for (let i=0;i<n;i++) {
+    const R = i/(n-1) * rmax;
+    const y = fn(R) * R;
+    if (y > bestY) { bestY = y; bestR = R; }
+  }
+  return bestR;
+}
+
+function chartDensity() {
+  const N = 1200;
+  const xs = new Float64Array(N);
+  for (let i=0;i<N;i++) xs[i] = i/(N-1) * state.rmax;
+
+  const vis = visibility();
+
+  // These are the actual sampling densities the bodies are drawn from:
+  // p(R) ∝ Σ(R) · 2πR.  We peak-normalise each curve to make them
+  // comparable and to make the "ring" structure obvious.
+  function peakNormalise(fn) {
+    let peak = 0;
+    for (let i=0;i<N;i++) { const y = fn(xs[i]) * xs[i]; if (y > peak) peak = y; }
+    return R => (fn(R) * R) / peak;
+  }
+  const pnPl = peakNormalise(R => sigma_plummer(R, state.rc));
+  const pnEx = peakNormalise(R => sigma_exponential(R, state.rd));
+  const pnMx = peakNormalise(R => sigma_mixed(R, state.rc, state.rd));
+
+  const peakPl = findSamplingPeak(R => sigma_plummer(R, state.rc),    state.rmax);
+  const peakEx = findSamplingPeak(R => sigma_exponential(R, state.rd), state.rmax);
+  const peakMx = findSamplingPeak(R => sigma_mixed(R, state.rc, state.rd), state.rmax);
+
+  const traces = [];
+  if (vis.pl) traces.push({
+    x: xs, y: xs.map(pnPl),
+    name: `p_Plummer(R),  R★ = r_c/√3 ≈ ${peakPl.toFixed(2)}`,
+    mode: 'lines', line: { color: palette.pl, width: 2.5 }
+  });
+  if (vis.ex) traces.push({
+    x: xs, y: xs.map(pnEx),
+    name: `p_Exp(R),  R★ = r_d ≈ ${peakEx.toFixed(2)}`,
+    mode: 'lines', line: { color: palette.ex, width: 2.5 }
+  });
+  if (vis.mx) traces.push({
+    x: xs, y: xs.map(pnMx),
+    name: `p_Mixed(R),  R★ ≈ ${peakMx.toFixed(2)}`,
+    mode: 'lines', line: { color: palette.mx, width: 3 },
+    fill: 'tozeroy', fillcolor: 'rgba(196,181,253,0.10)'
+  });
+
+  // Vertical lines at the predicted peak radii.
+  const shapes = [];
+  if (vis.pl) shapes.push({type:'line', x0:peakPl, x1:peakPl, y0:0, y1:1,
+                            xref:'x', yref:'y',
+                            line:{color:palette.pl, width:1, dash:'dashdot'}});
+  if (vis.ex) shapes.push({type:'line', x0:peakEx, x1:peakEx, y0:0, y1:1,
+                            xref:'x', yref:'y',
+                            line:{color:palette.ex, width:1, dash:'dashdot'}});
+  if (vis.mx) shapes.push({type:'line', x0:peakMx, x1:peakMx, y0:0, y1:1,
+                            xref:'x', yref:'y',
+                            line:{color:palette.mx, width:1, dash:'dashdot'}});
+
+  Plotly.react('chart_density', traces, baseLayout({
+    xaxis: { title: {text:'cylindrical radius  R', font:{color:MUTED}}, gridcolor:GRID, zerolinecolor:GRID, linecolor:GRID, tickfont:{color:MUTED} },
+    yaxis: { title: {text:'p(R) ∝ R·Σ(R),  peak-normalised', font:{color:MUTED}}, gridcolor:GRID, zerolinecolor:GRID, linecolor:GRID, tickfont:{color:MUTED} },
+    legend:{x:0.4, y:0.97, bgcolor:'rgba(0,0,0,0)', font:{color:TEXT, size:11}},
+    shapes: shapes,
+  }), cfg);
+}
+
+function chartScatter(div, xkey, ykey, xlabel, ylabel) {
+  const vis = visibility();
+  const traces = [];
+  for (const k of ['pl','ex','mx']) {
+    if (!vis[k] || !state.bodies[k]) continue;
+    traces.push({
+      x: Array.from(state.bodies[k][xkey]),
+      y: Array.from(state.bodies[k][ykey]),
+      mode: 'markers',
+      name: {pl:'Plummer', ex:'Exponential', mx:'Mixed'}[k],
+      marker: { size: 4, color: palette[k], opacity: 0.7, line:{width:0} },
+      type: 'scattergl',
+    });
+  }
+  Plotly.react(div, traces, baseLayout({
+    xaxis: { title:{text:xlabel, font:{color:MUTED}}, gridcolor:GRID, zerolinecolor:GRID, linecolor:GRID,
+             scaleanchor: div.endsWith('xy')?'y':undefined, constrain:'domain',
+             tickfont:{color:MUTED}},
+    yaxis: { title:{text:ylabel, font:{color:MUTED}}, gridcolor:GRID, zerolinecolor:GRID, linecolor:GRID,
+             tickfont:{color:MUTED}},
+    legend:{x:0.02, y:0.98, bgcolor:'rgba(0,0,0,0.4)', font:{color:TEXT}},
+  }), cfg);
+}
+
+function chartHist() {
+  const vis = visibility();
+  const traces = [];
+  const nbinsx = 24;
+
+  if (vis.pl && state.bodies.pl) {
+    traces.push({
+      x: Array.from(state.bodies.pl.R), type:'histogram', nbinsx,
+      histnorm:'probability density', name:'Plummer',
+      marker:{color:palette.pl, opacity:0.55, line:{color:palette.pl, width:1}},
+    });
+  }
+  if (vis.ex && state.bodies.ex) {
+    traces.push({
+      x: Array.from(state.bodies.ex.R), type:'histogram', nbinsx,
+      histnorm:'probability density', name:'Exponential',
+      marker:{color:palette.ex, opacity:0.55, line:{color:palette.ex, width:1}},
+    });
+  }
+  if (vis.mx && state.bodies.mx) {
+    traces.push({
+      x: Array.from(state.bodies.mx.R), type:'histogram', nbinsx,
+      histnorm:'probability density', name:'Mixed',
+      marker:{color:palette.mx, opacity:0.55, line:{color:palette.mx, width:1}},
+    });
+  }
+
+  const N=600;
+  const xs = new Float64Array(N);
+  for (let i=0;i<N;i++) xs[i] = i/(N-1) * state.rmax;
+  if (vis.pl) traces.push({
+    x: xs, y: xs.map(R => sigma_plummer(R, state.rc)),
+    mode:'lines', name:'Σ_Plummer', yaxis:'y2', type:'scatter',
+    line:{color:palette.pl, width:2, dash:'dot'},
+  });
+  if (vis.ex) traces.push({
+    x: xs, y: xs.map(R => sigma_exponential(R, state.rd)),
+    mode:'lines', name:'Σ_Exp', yaxis:'y2', type:'scatter',
+    line:{color:palette.ex, width:2, dash:'dot'},
+  });
+  if (vis.mx) traces.push({
+    x: xs, y: xs.map(R => sigma_mixed(R, state.rc, state.rd)),
+    mode:'lines', name:'Σ_Mixed', yaxis:'y2', type:'scatter',
+    line:{color:palette.mx, width:2, dash:'dot'},
+  });
+
+  Plotly.react('chart_hist', traces, baseLayout({
+    barmode: 'overlay',
+    xaxis:{title:{text:'R', font:{color:MUTED}}, gridcolor:GRID, zerolinecolor:GRID, linecolor:GRID, tickfont:{color:MUTED}},
+    yaxis:{title:{text:'sampled density', font:{color:MUTED}}, gridcolor:GRID, zerolinecolor:GRID, linecolor:GRID, tickfont:{color:MUTED}},
+    yaxis2:{title:{text:'Σ(R)', font:{color:MUTED}}, overlaying:'y', side:'right',
+            gridcolor:'rgba(0,0,0,0)', zerolinecolor:GRID, linecolor:GRID, tickfont:{color:MUTED}, showgrid:false},
+    legend:{x:0.62, y:0.98, bgcolor:'rgba(0,0,0,0.4)', font:{color:TEXT}},
+  }), cfg);
+}
+
+function chartVPhi() {
+  const vis = visibility();
+  const N = 800;
+  const xs = new Float64Array(N);
+  for (let i=0;i<N;i++) xs[i] = 0.05 + i/(N-1) * (state.rmax - 0.05);
+
+  const Mpl = enclosedMassCurve(r => dR_pdf_plummer(r, state.rc), state.rmax);
+  const Mex = enclosedMassCurve(r => dR_pdf_exponential(r, state.rd), state.rmax);
+  const Mmx = enclosedMassCurve(r => dR_pdf_mixed(r, state.rc, state.rd), state.rmax);
+
+  const traces = [];
+  function v(R, M) { return Math.sqrt(Math.max(G_DISP * interp1(M.Rs, M.Ms, R) / R, 0)); }
+  if (vis.pl) traces.push({
+    x: xs, y: xs.map(R => v(R, Mpl)),
+    name:'Plummer', mode:'lines', line:{color:palette.pl, width:2.5}
+  });
+  if (vis.ex) traces.push({
+    x: xs, y: xs.map(R => v(R, Mex)),
+    name:'Exponential', mode:'lines', line:{color:palette.ex, width:2.5}
+  });
+  if (vis.mx) traces.push({
+    x: xs, y: xs.map(R => v(R, Mmx)),
+    name:'Mixed', mode:'lines', line:{color:palette.mx, width:2.5}
+  });
+
+  Plotly.react('chart_vphi', traces, baseLayout({
+    xaxis:{title:{text:'R', font:{color:MUTED}}, gridcolor:GRID, zerolinecolor:GRID, linecolor:GRID, tickfont:{color:MUTED}},
+    yaxis:{title:{text:'v_φ(R) = √(G·M(<R) / R)', font:{color:MUTED}}, gridcolor:GRID, zerolinecolor:GRID, linecolor:GRID, tickfont:{color:MUTED}},
+    legend:{x:0.02, y:0.98, bgcolor:'rgba(0,0,0,0.4)', font:{color:TEXT}},
+  }), cfg);
+}
+
+function chartMenc() {
+  const vis = visibility();
+  const N = 800;
+  const xs = new Float64Array(N);
+  for (let i=0;i<N;i++) xs[i] = 0.001 + i/(N-1) * (state.rmax - 0.001);
+
+  const Mpl = enclosedMassCurve(r => dR_pdf_plummer(r, state.rc), state.rmax);
+  const Mex = enclosedMassCurve(r => dR_pdf_exponential(r, state.rd), state.rmax);
+  const Mmx = enclosedMassCurve(r => dR_pdf_mixed(r, state.rc, state.rd), state.rmax);
+
+  const traces = [];
+  if (vis.pl) traces.push({
+    x: xs, y: xs.map(R => interp1(Mpl.Rs, Mpl.Ms, R)),
+    name:'Plummer', mode:'lines', line:{color:palette.pl, width:2.5}
+  });
+  if (vis.ex) traces.push({
+    x: xs, y: xs.map(R => interp1(Mex.Rs, Mex.Ms, R)),
+    name:'Exponential', mode:'lines', line:{color:palette.ex, width:2.5}
+  });
+  if (vis.mx) traces.push({
+    x: xs, y: xs.map(R => interp1(Mmx.Rs, Mmx.Ms, R)),
+    name:'Mixed', mode:'lines', line:{color:palette.mx, width:3}
+  });
+
+  Plotly.react('chart_menc', traces, baseLayout({
+    xaxis:{title:{text:'R', font:{color:MUTED}}, gridcolor:GRID, zerolinecolor:GRID, linecolor:GRID, tickfont:{color:MUTED}},
+    yaxis:{title:{text:'M(<R) / M_total', font:{color:MUTED}}, gridcolor:GRID, zerolinecolor:GRID, linecolor:GRID,
+           tickfont:{color:MUTED}, range:[0,1]},
+    legend:{x:0.6, y:0.4, bgcolor:'rgba(0,0,0,0.4)', font:{color:TEXT}},
+  }), cfg);
+}
+
+function chartCDF() {
+  // Empirical vs analytic CDF (P-P plot). The closer points are to the
+  // y=x diagonal, the better the sample matches the analytic distribution.
+  const vis = visibility();
+  const traces = [];
+  const nbinsx = 120;
+  const N = state.N;
+  // 1:1 reference line
+  traces.push({
+    x: [0,1], y: [0,1], mode:'lines', name:'y = x (perfect)',
+    line:{color: MUTED, width:1, dash:'dot'}, hoverinfo:'skip',
+  });
+
+  function empVsAna(samples, grid) {
+    const sorted = Array.from(samples).sort((a,b)=>a-b);
+    const xs = new Array(nbinsx), ys = new Array(nbinsx);
+    for (let i=0;i<nbinsx;i++) {
+      const u = (i + 0.5) / nbinsx;
+      // x = analytic quantile at u
+      // find R such that F(R) = u
+      const {R, cdf} = grid;
+      let lo=0, hi=R.length-1;
+      while (hi - lo > 1) {
+        const mid = (lo+hi) >> 1;
+        if (cdf[mid] < u) lo = mid; else hi = mid;
+      }
+      const t = (u - cdf[lo]) / (cdf[hi] - cdf[lo]);
+      const Rq = R[lo] + t * (R[hi] - R[lo]);
+      // y = empirical CDF at Rq
+      // count of samples <= Rq / N
+      let cnt = 0;
+      for (let k=0;k<sorted.length;k++) { if (sorted[k] <= Rq) cnt++; else break; }
+      const Femp = cnt / N;
+      xs[i] = u; ys[i] = Femp;
+    }
+    return {xs, ys};
+  }
+
+  if (vis.pl && state.bodies.pl) {
+    const {xs, ys} = empVsAna(state.bodies.pl.R, buildCDF(r => dR_pdf_plummer(r, state.rc), state.rmax));
+    traces.push({x:xs, y:ys, mode:'lines+markers', name:'Plummer', line:{color:palette.pl, width:2}, marker:{size:4}});
+  }
+  if (vis.ex && state.bodies.ex) {
+    const {xs, ys} = empVsAna(state.bodies.ex.R, buildCDF(r => dR_pdf_exponential(r, state.rd), state.rmax));
+    traces.push({x:xs, y:ys, mode:'lines+markers', name:'Exponential', line:{color:palette.ex, width:2}, marker:{size:4}});
+  }
+  if (vis.mx && state.bodies.mx) {
+    const {xs, ys} = empVsAna(state.bodies.mx.R, buildCDF(r => dR_pdf_mixed(r, state.rc, state.rd), state.rmax));
+    traces.push({x:xs, y:ys, mode:'lines+markers', name:'Mixed', line:{color:palette.mx, width:2}, marker:{size:4}});
+  }
+
+  Plotly.react('chart_cdf', traces, baseLayout({
+    xaxis:{title:{text:'analytic CDF  F(R)', font:{color:MUTED}}, gridcolor:GRID, zerolinecolor:GRID, linecolor:GRID,
+           tickfont:{color:MUTED}, range:[0,1]},
+    yaxis:{title:{text:'empirical CDF  F_N(R)', font:{color:MUTED}}, gridcolor:GRID, zerolinecolor:GRID, linecolor:GRID,
+           tickfont:{color:MUTED}, range:[0,1]},
+    legend:{x:0.02, y:0.98, bgcolor:'rgba(0,0,0,0.4)', font:{color:TEXT}},
+  }), cfg);
+}
+
+function drawAll() {
+  chartDensity();
+  chartScatter('chart_xy', 'x', 'y', 'x', 'y');
+  chartScatter('chart_xz', 'x', 'z', 'x', 'z');
+  chartHist();
+  chartVPhi();
+  chartMenc();
+  chartCDF();
+}
+
+/* ───────────────────────────────────────────────────────────────────────
+   Wiring — every change goes through applyAll()
+   ─────────────────────────────────────────────────────────────────────── */
+function applyAll() {
+  sampleAll();
+  drawAll();
+  rebuildSims();
+  writeHash();
+}
+
+function bindSlider(id, key, fmt) {
+  const el = document.getElementById(id);
+  const v  = document.getElementById(id + '_v');
+  el.addEventListener('input', () => {
+    const val = parseFloat(el.value);
+    state[key] = val;
+    setMath(v.id, fmt ? fmt(val) : val.toFixed(2));
+    applyAll();
+  });
+  setMath(v.id, fmt ? fmt(parseFloat(el.value)) : parseFloat(el.value).toFixed(2));
+}
+
+bindSlider('rc',   'rc',   v => v.toFixed(2));
+bindSlider('rd',   'rd',   v => v.toFixed(2));
+bindSlider('rmax', 'rmax', v => v.toFixed(1));
+bindSlider('N',    'N',    v => v.toFixed(0));
+bindSlider('sz',   'sz',   v => v.toFixed(3));
+
+document.getElementById('resample').addEventListener('click', () => {
+  currentSeed = (currentSeed + 1 + Math.floor(Math.random()*1e6)) >>> 0;
+  applyAll();
+});
+
+document.getElementById('seed0').addEventListener('click', () => {
+  currentSeed = 0;
+  applyAll();
+});
+
+document.getElementById('copy').addEventListener('click', async () => {
+  writeHash();
+  const url = location.href;
+  try { await navigator.clipboard.writeText(url); } catch {}
+  // Visual feedback
+  const b = document.getElementById('copy');
+  const orig = b.textContent;
+  b.textContent = 'Copied ✓';
+  setTimeout(() => { b.textContent = orig; }, 1200);
+});
+
+document.querySelectorAll('.pill').forEach(p => {
+  p.addEventListener('click', () => {
+    p.classList.toggle('on');
+    drawAll();
+    writeHash();
+  });
+});
+
+document.getElementById('reset').addEventListener('click', () => {
+  ['chart_xy','chart_xz'].forEach(id => Plotly.relayout(id, {'xaxis.autorange':true,'yaxis.autorange':true}));
+});
+
+window.addEventListener('hashchange', () => {
+  applyHash();
+  applyAll();
+});
+
+window.addEventListener('resize', () => drawAll());
+
+/* ───────────────────────────────────────────────────────────────────────
+   Math (KaTeX) — fills the math panel
+   ─────────────────────────────────────────────────────────────────────── */
+function renderMath() {
+  if (typeof katex === 'undefined' || typeof renderMathInElement === 'undefined') return false;
+  // Auto-render all $...$ and \(...\) inline, \[...\] and $$...$$ display,
+  // anywhere in the document.  Skips elements that already have a KaTeX
+  // node (so we don't double-render the seven hand-built equations below).
+  renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '$',  right: '$',  display: false},
+      {left: '\\(', right: '\\)', display: false},
+      {left: '\\[', right: '\\]', display: true},
+    ],
+    throwOnError: false,
+    ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+  });
+  katex.render(String.raw`
+    \Sigma_{\text{Plummer}}(R)=\left(1+\left(\tfrac{R}{r_c}\right)^{2}\right)^{-2},\quad
+    \Sigma_{\text{Exp}}(R)=e^{-R/r_d},\quad
+    \Sigma_{\text{Mixed}}(R)\propto e^{-R/r_d}\left(1+\left(\tfrac{R}{r_c}\right)^{2}\right)^{-5/2}
+  `, document.getElementById('m_sigma'), {displayMode:true, throwOnError:false});
+  katex.render(String.raw`
+    p(R)\,\mathrm dR \;=\; \frac{\Sigma(R)\cdot 2\pi R\,\mathrm dR}{\int_0^{r_{\max}}\Sigma(r)\cdot 2\pi r\,\mathrm dr}
+    \;\propto\; \Sigma(R)\cdot R
+  `, document.getElementById('m_pdf'), {displayMode:true, throwOnError:false});
+  katex.render(String.raw`
+    \text{Mixed:}\quad
+    p(R)\,\mathrm dR \;\propto\; e^{-R/r_d}\,\left(1+\left(\tfrac{R}{r_c}\right)^{2}\right)^{-5/2}\,R\,\mathrm dR
+  `, document.getElementById('m_mix'), {displayMode:true, throwOnError:false});
+  katex.render(String.raw`
+    v_{\varphi}(R)=\sqrt{\frac{G\,M(<R)}{R}}\qquad\text{(centrifugal equilibrium)}
+  `, document.getElementById('m_vphi'), {displayMode:true, throwOnError:false});
+  katex.render(String.raw`
+    M(<R)=\int_{0}^{R}2\pi r\,\Sigma(r)\,\mathrm dr
+  `, document.getElementById('m_menc'), {displayMode:true, throwOnError:false});
+  katex.render(String.raw`
+    D_{N}=\sup_{R}\bigl|F_{N}(R)-F(R)\bigr|,\qquad
+    p_{\text{value}}=Q_{\text{KS}}\!\left(\sqrt{N}\,D_{N}\right)
+  `, document.getElementById('m_ks'), {displayMode:true, throwOnError:false});
+  katex.render(String.raw`
+    Q_{\text{KS}}(\lambda)=2\sum_{j=1}^{\infty}(-1)^{j-1}e^{-2j^{2}\lambda^{2}},\quad
+    D_{\alpha=0.05}\approx \frac{1.36}{\sqrt{N}}
+  `, document.getElementById('m_kc'), {displayMode:true, throwOnError:false});
+  return true;
+}
+
+/* ───────────────────────────────────────────────────────────────────────
+   Video panel — two side-by-side N-body simulations
+   ─────────────────────────────────────────────────────────────────────── */
+let rebuildSims = () => {};   // defined inside setupVideo
+
+(function setupVideo() {
+  const host = document.getElementById('video_host');
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(window.devicePixelRatio || 1);
+  host.appendChild(renderer.domElement);
+
+  function sizeRenderer() {
+    const w = host.clientWidth;
+    const h = host.clientHeight;
+    renderer.setSize(w, h, false);
+    if (w === 0 || h === 0) return false;
+    return true;
+  }
+
+  function makeScene() {
+    const s = new THREE.Scene();
+    s.background = null;
+    const cam = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
+    cam.position.set(0, state.rmax * 0.95, state.rmax * 0.95);
+    cam.lookAt(0, 0, 0);
+    return { scene: s, camera: cam };
+  }
+  const left  = makeScene();
+  const mid   = makeScene();
+  const right = makeScene();
+
+  function starfield(scene, n=180) {
+    const g = new THREE.BufferGeometry();
+    const pos = new Float32Array(n*3);
+    const R = state.rmax * 4;
+    for (let i=0;i<n;i++) {
+      pos[3*i]   = (Math.random()-0.5)*R*2;
+      pos[3*i+1] = (Math.random()-0.5)*R*2;
+      pos[3*i+2] = (Math.random()-0.5)*R*2;
+    }
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const m = new THREE.PointsMaterial({ color: 0x4a5377, size: 0.04, sizeAttenuation: true, transparent: true, opacity: 0.7 });
+    scene.add(new THREE.Points(g, m));
+  }
+  starfield(left.scene); starfield(mid.scene); starfield(right.scene);
+
+  function discGlow(scene, color) {
+    const g = new THREE.RingGeometry(state.rmax*0.2, state.rmax*1.05, 64);
+    const m = new THREE.MeshBasicMaterial({ color, transparent:true, opacity:0.05, side: THREE.DoubleSide });
+    const ring = new THREE.Mesh(g, m);
+    ring.rotation.x = -Math.PI/2;
+    scene.add(ring);
+  }
+  discGlow(left.scene,  0xc4b5fd);
+  discGlow(mid.scene,   0x7ee787);
+  discGlow(right.scene, 0xffb86b);
+
+  function makePoints(color, n) {
+    const g = new THREE.BufferGeometry();
+    const positions = new Float32Array(n * 3);
+    g.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const m = new THREE.PointsMaterial({
+      color, size: 0.05, sizeAttenuation: true,
+      transparent: true, opacity: 0.95, depthWrite: false,
+    });
+    return { points: new THREE.Points(g, m), positions };
+  }
+  const maxN = 800;
+  const mx = makePoints(0xc4b5fd, maxN);
+  const ex = makePoints(0x7ee787, maxN);
+  const pl = makePoints(0xffb86b, maxN);
+  left.scene.add(mx.points);
+  mid.scene.add(ex.points);
+  right.scene.add(pl.points);
+
+  function makeSim(label, pdfFn) {
+    let seedOffset;
+    if (label === 'mixed')      seedOffset = 17;
+    else if (label === 'exp')   seedOffset = 65;
+    else                        seedOffset = 113;
+    const rng = makeRng(currentSeed + seedOffset);
+    const N = Math.min(state.N, 800);
+    const R = sampleFromPDF(pdfFn, state.rmax, N, rng);
+    const phi = new Float64Array(N);
+    for (let i=0;i<N;i++) phi[i] = rng()*2*Math.PI;
+
+    const mass = new Float64Array(N);
+    let sum = 0;
+    for (let i=0;i<N;i++) {
+      const u = rng();
+      const m_ = 0.5 * Math.pow(10, u * Math.log10(10));
+      mass[i] = m_; sum += m_;
+    }
+    for (let i=0;i<N;i++) mass[i] /= sum;
+
+    const pos = new Float64Array(N*3);
+    const vel = new Float64Array(N*3);
+    const MofR_curve = enclosedMassCurve(pdfFn, state.rmax, 4000);
+
+    for (let i=0;i<N;i++) {
+      const x = R[i]*Math.cos(phi[i]);
+      const y = R[i]*Math.sin(phi[i]);
+      const z = state.sz * gaussian(rng);
+      pos[3*i]   = x;  pos[3*i+1] = y;  pos[3*i+2] = z;
+      const Mc = Math.max(interp1(MofR_curve.Rs, MofR_curve.Ms, R[i]), 1e-12);
+      const vphi = Math.sqrt(Math.max(G_DISP * Mc / R[i], 1e-12));
+      vel[3*i]   = -Math.sin(phi[i]) * vphi;
+      vel[3*i+1] =  Math.cos(phi[i]) * vphi;
+      vel[3*i+2] = 0;
+    }
+    const acc = computeAccel(pos, mass, N);
+    const e0 = totalE(pos, vel, mass, N);
+
+    return { N, pos, vel, acc, mass, e0, dt: 0.005 };
+  }
+
+  function gaussian(rng) {
+    let u1 = Math.max(rng(), 1e-12), u2 = rng();
+    return Math.sqrt(-2*Math.log(u1)) * Math.cos(2*Math.PI*u2);
+  }
+
+  const EPS = 0.10;
+  const SOFT2 = EPS*EPS;
+
+  function computeAccel(pos, mass, N) {
+    const acc = new Float64Array(N*3);
+    for (let i=0;i<N;i++) {
+      let ax=0, ay=0, az=0;
+      for (let j=0;j<N;j++) {
+        if (i===j) continue;
+        const dx = pos[3*j]   - pos[3*i];
+        const dy = pos[3*j+1] - pos[3*i+1];
+        const dz = pos[3*j+2] - pos[3*i+2];
+        const r2 = dx*dx + dy*dy + dz*dz + SOFT2;
+        const inv = G_DISP * mass[j] / (r2 * Math.sqrt(r2));
+        ax += dx*inv; ay += dy*inv; az += dz*inv;
+      }
+      acc[3*i]   = ax;
+      acc[3*i+1] = ay;
+      acc[3*i+2] = az;
+    }
+    return acc;
+  }
+
+  function totalE(pos, vel, mass, N) {
+    let ke = 0, pe = 0;
+    for (let i=0;i<N;i++) {
+      const vx = vel[3*i], vy = vel[3*i+1], vz = vel[3*i+2];
+      ke += 0.5 * mass[i] * (vx*vx + vy*vy + vz*vz);
+    }
+    for (let i=0;i<N;i++) {
+      for (let j=i+1;j<N;j++) {
+        const dx = pos[3*j]   - pos[3*i];
+        const dy = pos[3*j+1] - pos[3*i+1];
+        const dz = pos[3*j+2] - pos[3*i+2];
+        const r = Math.sqrt(dx*dx + dy*dy + dz*dz + SOFT2);
+        pe -= G_DISP * mass[i] * mass[j] / r;
+      }
+    }
+    return ke + pe;
+  }
+
+  function step(sim) {
+    const { pos, vel, acc, mass, N, dt } = sim;
+    for (let k=0;k<N*3;k++) vel[k] += 0.5 * acc[k] * dt;
+    for (let k=0;k<N*3;k++) pos[k] += vel[k] * dt;
+    const acc_new = computeAccel(pos, mass, N);
+    for (let k=0;k<N*3;k++) vel[k] += 0.5 * acc_new[k] * dt;
+    sim.acc = acc_new;
+  }
+
+  let simMx = null, simEx = null, simPl = null;
+  const MAX_FRAMES = 1500;
+  let frameIdx = 0;
+  let subSteps = 1;
+  let playing = false;
+  let lastT = performance.now();
+  let fpsEMA = 0;
+
+  rebuildSims = function() {
+    simMx = makeSim('mixed',   r => dR_pdf_mixed(r, state.rc, state.rd));
+    simEx = makeSim('exp',     r => dR_pdf_exponential(r, state.rd));
+    simPl = makeSim('plummer', r => dR_pdf_plummer(r, state.rc));
+    frameIdx = 0;
+    setMath('vid_total', String(MAX_FRAMES));
+    document.getElementById('vid_scrub').max = MAX_FRAMES;
+    document.getElementById('vid_scrub').value = 0;
+    setMath('vid_step', '0');
+    setMath('vid_t', '0.000');
+    pushPoints();
+    updateEnergyReadouts();
+  };
+
+  function pushPoints() {
+    const nMx = simMx ? simMx.N : 0;
+    const nEx = simEx ? simEx.N : 0;
+    const nPl = simPl ? simPl.N : 0;
+    mx.positions.fill(0);
+    ex.positions.fill(0);
+    pl.positions.fill(0);
+    if (simMx) mx.positions.set(simMx.pos.subarray(0, nMx*3));
+    if (simEx) ex.positions.set(simEx.pos.subarray(0, nEx*3));
+    if (simPl) pl.positions.set(simPl.pos.subarray(0, nPl*3));
+    mx.points.geometry.attributes.position.needsUpdate = true;
+    ex.points.geometry.attributes.position.needsUpdate = true;
+    pl.points.geometry.attributes.position.needsUpdate = true;
+  }
+
+  function updateEnergyReadouts() {
+    if (!simMx || !simEx || !simPl) return;
+    const eMx = totalE(simMx.pos, simMx.vel, simMx.mass, simMx.N);
+    const eEx = totalE(simEx.pos, simEx.vel, simEx.mass, simEx.N);
+    const ePl = totalE(simPl.pos, simPl.vel, simPl.mass, simPl.N);
+    const dMx = ((eMx - simMx.e0) / Math.abs(simMx.e0)) || 0;
+    const dEx = ((eEx - simEx.e0) / Math.abs(simEx.e0)) || 0;
+    const dPl = ((ePl - simPl.e0) / Math.abs(simPl.e0)) || 0;
+    const fmt = v => (v>=0?'+':'') + v.toExponential(2);
+    setMath('vid_e_mx', '\\Delta E/E_0\\;=\\;' + fmt(dMx));
+    setMath('vid_e_ex', '\\Delta E/E_0\\;=\\;' + fmt(dEx));
+    setMath('vid_e_pl', '\\Delta E/E_0\\;=\\;' + fmt(dPl));
+  }
+
+  function setCameraViewport(cam, x, w) {
+    const w_px = renderer.domElement.clientWidth;
+    const h_px = renderer.domElement.clientHeight;
+    const vw = Math.max(1, Math.floor(w * w_px));
+    const vh = h_px;
+    const vx = Math.max(0, Math.floor(x * w_px));
+    renderer.setViewport(vx, 0, vw, vh);
+    renderer.setScissor(vx, 0, vw, vh);
+    renderer.setScissorTest(true);
+    cam.aspect = vw / vh;
+    cam.updateProjectionMatrix();
+  }
+
+  function rotateCam(t, cam) {
+    const R = state.rmax * 0.95;
+    cam.position.x = Math.cos(t * 0.12) * R;
+    cam.position.z = Math.sin(t * 0.12) * R;
+    cam.position.y = state.rmax * 0.45;
+    cam.lookAt(0, 0, 0);
+  }
+
+  function loop(now) {
+    requestAnimationFrame(loop);
+    if (!sizeRenderer()) return;
+
+    const dt_real = (now - lastT) / 1000;
+    lastT = now;
+    const instFPS = dt_real > 0 ? 1/dt_real : 0;
+    fpsEMA = fpsEMA === 0 ? instFPS : fpsEMA*0.9 + instFPS*0.1;
+    setMath('vid_fps', fpsEMA.toFixed(0));
+
+    if (playing && simMx && simEx && simPl) {
+      for (let s=0;s<subSteps;s++) {
+        if (frameIdx >= MAX_FRAMES) { playing = false; document.getElementById('vid_play').textContent='▶ Play'; break; }
+        step(simMx); step(simEx); step(simPl);
+        frameIdx++;
+      }
+      pushPoints();
+      updateEnergyReadouts();
+      document.getElementById('vid_scrub').value = frameIdx;
+      setMath('vid_step', String(frameIdx));
+      setMath('vid_t', (frameIdx * simMx.dt * subSteps).toFixed(3));
+    }
+
+    rotateCam(performance.now()/1000, left.camera);
+    setCameraViewport(left.camera, 0, 1/3);
+    renderer.render(left.scene, left.camera);
+
+    rotateCam(performance.now()/1000, mid.camera);
+    setCameraViewport(mid.camera, 1/3, 1/3);
+    renderer.render(mid.scene, mid.camera);
+
+    rotateCam(performance.now()/1000, right.camera);
+    setCameraViewport(right.camera, 2/3, 1/3);
+    renderer.render(right.scene, right.camera);
+
+    renderer.setScissorTest(false);
+    renderer.setViewport(0, 0, renderer.domElement.clientWidth, renderer.domElement.clientHeight);
+  }
+
+  const btnPlay = document.getElementById('vid_play');
+  btnPlay.addEventListener('click', () => {
+    if (frameIdx >= MAX_FRAMES) { rebuildSims(); }
+    playing = !playing;
+    btnPlay.textContent = playing ? '⏸ Pause' : '▶ Play';
+  });
+  document.getElementById('vid_step1').addEventListener('click', () => {
+    if (simMx && simEx && simPl && frameIdx < MAX_FRAMES) {
+      step(simMx); step(simEx); step(simPl); frameIdx++;
+      pushPoints(); updateEnergyReadouts();
+      document.getElementById('vid_scrub').value = frameIdx;
+      setMath('vid_step', String(frameIdx));
+      setMath('vid_t', (frameIdx * simMx.dt).toFixed(3));
+    }
+  });
+  document.getElementById('vid_reset').addEventListener('click', () => {
+    playing = false; btnPlay.textContent = '▶ Play';
+    rebuildSims();
+  });
+  document.getElementById('vid_scrub').addEventListener('input', e => {
+    const target = parseInt(e.target.value, 10);
+    rebuildSims();
+    for (let f=0;f<target;f++) { step(simMx); step(simEx); step(simPl); frameIdx = f+1; }
+    pushPoints(); updateEnergyReadouts();
+    setMath('vid_step', String(frameIdx));
+    setMath('vid_t', (frameIdx * simMx.dt).toFixed(3));
+  });
+  document.getElementById('vid_speed').addEventListener('change', e => {
+    subSteps = parseInt(e.target.value, 10);
+  });
+  subSteps = 1;
+
+  rebuildSims();
+  requestAnimationFrame(loop);
+})();
+
+/* ───────────────────────────────────────────────────────────────────────
+   Bootstrap
+   ─────────────────────────────────────────────────────────────────────── */
+// Parse the hash first, then sample+draw, then try to render math (KaTeX
+// loads with `defer`, so it may not be ready yet on first paint).
+applyHash();
+sampleAll();
+drawAll();
+writeHash();
+
+// KaTeX may not be loaded yet; retry until it is.
+let mathTries = 0;
+function tryRenderMath() {
+  if (renderMath()) return;
+  if (mathTries++ < 60) setTimeout(tryRenderMath, 100);
+}
+tryRenderMath();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script>
+document.getElementById('downloadBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('downloadBtn');
+  btn.disabled = true;
+  btn.textContent = 'Generating...';
+  try {
+    const canvas = await html2canvas(document.body, { scrollX: 0, scrollY: 0, windowWidth: document.documentElement.scrollWidth, windowHeight: document.documentElement.scrollHeight });
+    const link = document.createElement('a');
+    link.download = 'galactic_disc_models.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } catch (e) {
+    alert('Failed to generate image: ' + e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Download PNG';
+  }
+});
+</script>
+</body>
+</html>
