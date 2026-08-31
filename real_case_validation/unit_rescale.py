@@ -88,14 +88,19 @@ def scale_for_preset(bodies: list[dict], preset: dict) -> UnitScale:
 
     # Length unit.
     override_au = preset.get("characteristic_radius_au")
-    if override_au is not None:
+    if preset.get("in_distribution", False):
+        # In-distribution disc data is dimensionless (code units,
+        # see ic_loader._load_in_distribution_disc, which pins
+        # make_scale(M=1, L=1) and never routes here). Applying an
+        # AU-metre-based scale to it would silently corrupt every
+        # position/velocity, so refuse instead.
+        raise ValueError(
+            "'in_distribution' presets must go through "
+            "ic_loader._load_in_distribution_disc (dimensionless "
+            "code units); scale_for_preset() is only for real "
+            "physical (AU) inputs.")
+    elif override_au is not None:
         L_m = override_au * AU_M
-    elif preset.get("in_distribution", False):
-        # In the synthetic disc unit system, the natural length is the
-        # disc scale radius R_d. simulation_3d places R_d at ~1 in its
-        # dimensionless units; we pick a physical scale R_d = 5 kpc
-        # (typical spiral).
-        L_m = 5.0e3 * 3.0857e16
     else:
         # Outermost body distance from the origin. For the Solar-System
         # presets the Sun is at the origin so this is the outermost

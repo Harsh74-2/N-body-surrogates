@@ -1,6 +1,6 @@
 # P3 verification — trajectory animations
 
-The supervisor asked for animations showing book vs predicted trajectories with positions and all the data.
+The deliverable was animations showing reference vs predicted trajectories with positions and all the data.
 This file is the canonical record of what was produced, how, and the honest reading of each animation.
 
 ## Pipeline
@@ -46,26 +46,33 @@ python run_animations.py --report-root real_case_validation/animations_run \
     --n 50 --variants mlp
 ```
 
-## Files produced (this run, on the supervisor chart candidates)
+## Files produced
 
-Per-N `preds.npy` is in `real_case_validation/animations_run/N{n}/preset_<name>/`.
+Per-(N, preset) `preds.npy` dumps live in `report_dump/N{n}/preset_<name>/`
+(gitignored). Rendered mp4s land in `animations_run/N{n}/preset_<name>/`
+during rendering and are collected into `animations/` for distribution.
 Per-(variant, view) mp4 is in `real_case_validation/animations/N{n}_{preset}_{Model}.mp4`.
 
 Naming: `N{n}` is included so that two different presets' mp4s cannot collide on filename,
 and `{Model}` uses the human name (`MLP`, `MLP_stable`, `LSTM`, `LSTM_stable`, `GNN`, `GNN_stable`).
 
-| preset | N=50 (6 mp4s each) | N=100 (6 mp4s each) |
-|---|---|---|
-| jupiter_galileans | done | done |
-| sun_earth_only   | done | done |
-| moon (sun_planets_moon) | in flight | in flight |
-| inner_planets    | in flight | in flight |
-| outer (full_solar_system) | in flight | in flight |
-| extended (solar_system_extended) | in flight | in flight |
-| dist (disc_imf_in_distribution_baseline) | in flight | in flight |
+All presets × all 6 variants × all 4 body counts are complete.
 
-This is a minimum of `4 × 6 = 24 mp4s` per N × 2 N = `84 mp4s` total, ~1 hour each at
-30 fps × 600 frames on CPU. File sizes 200 KB – 3.9 MB depending on motion content.
+| preset | N=10 | N=25 | N=50 | N=100 |
+|---|---|---|---|---|
+| jupiter_galileans | done | done | done | done |
+| sun_earth_only   | done | done | done | done |
+| moon (sun_planets_moon) | done | done | done | done |
+| inner_planets    | done | done | done | done |
+| outer (full_solar_system) | done | done | done | done |
+| extended (solar_system_extended) | done | done | done | done |
+| dist (disc_imf_in_distribution_baseline) | done | done | done | done |
+
+That is 7 presets × 6 variants × 4 N = `168 mp4s` in
+`animations/N{n}_{preset}_{Model}.mp4` (flat names, no `preset_` prefix).
+Render timing varies from seconds (sun_earth_only) to ~1 hour (the densest
+presets) at 30 fps × 200–600 frames on CPU; file sizes 200 KB – 3.9 MB
+depending on motion content.
 
 ## Honest reading of the animations
 
@@ -98,12 +105,12 @@ omit it) so the runner regenerates the preds first.
   `(N, preset)` and variant stacked along axis 0.
 - `real_case_validation/animations_run/{N50,N100}/preset_*/preds_meta.json` — per-model
   prediction counts and shape (so `make_animations.py` can pick models without re-running).
-- `real_case_validation/animations/N{n}_{preset}_{Model}.mp4` — supervisor-facing video clips.
+- `real_case_validation/animations/N{n}_{preset}_{Model}.mp4` — the final video clips.
 
 ## Bottom line
 
-Animations are a supervisor deliverable, not a model-accuracy claim. They show the
+Animations are a qualitative deliverable, not a model-accuracy claim. They show the
 qualitative gap between surrogate and reference on a real-system trajectory — the same gap
 the numbers in `cross_N_audit_single_step.md` quantify. They confirm that the surrogate
 trajectory is qualitatively meaningful on `jupiter_galileans` and breaks down visibly
-on the wider OOD presets, exactly as the cross-N-4 audit predicts.
+on the wider OOD presets, exactly as the cross-N audit predicts.

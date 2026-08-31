@@ -282,7 +282,7 @@ def plot_eval_benchmark(cross_n_audit_md: Path,
     ax.set_xticks(x_lat)
     ax.set_xticklabels([f"N={n}" for n in N_VALUES])
     ax.set_yscale("log")
-    ax.set_ylabel("ms / batch (log)")
+    ax.set_ylabel("ms / frame (log)")
     ax.legend(fontsize=8, labelcolor=THEME["text"],
               facecolor=THEME["bg"], edgecolor=THEME["spine"])
     _style_ax(ax, "Latency vs leapfrog  (single-frame, CPU)")

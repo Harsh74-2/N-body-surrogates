@@ -35,7 +35,7 @@ Usage:
     python bench_solver_latency.py
     python bench_solver_latency.py --n 10 25 50 100 200 --repeats 40
 
-Falls back to results/N{n}/metrics.json if a checkpoint cannot be loaded.
+Checkpoints are expected under the sweep layout training_runs/N{n}/{mlp,lstm,gnn}/model_best.pt.
 """
 from __future__ import annotations
 

@@ -91,7 +91,7 @@ def _render_md(report_dir: Path,
         "each surrogate predicts forward from its own previous "
         "output. Errors compound; the per-step prediction becomes "
         "the *warm-up window* for the next. This is the **stress "
-        "test** the user cares about: *how far can the model "
+        "stress test: *how far can the model "
         "extrapolate before it loses the orbit?*")
     lines.append(
         "- **Single-step variant** (in `preset_*/ss_summary.json`) — "

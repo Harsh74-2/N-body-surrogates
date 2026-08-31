@@ -110,35 +110,81 @@ def reference_leapfrog(pos0: np.ndarray,
 
 def reference_kepler(primary_mass: float,
                       secondary_mass: float,
-                      a: float,
-                      e: float,
+                      r_vec0: np.ndarray,
+                      v_vec0: np.ndarray,
                       t: np.ndarray,
                       g: float = DEFAULT_GRAVITY_G) -> dict:
     """
-    Closed-form 2-body Keplerian orbit (primary at origin).
+    Closed-form 2-body Keplerian orbit propagated from the caller's
+    actual relative state at t=0 (primary at origin).
 
     Returns the same dict shape as `reference_leapfrog` so the runner
-    is reference-agnostic. Useful for the Sun-Earth-only preset.
+    is reference-agnostic. Useful for the Sun-Earth-only preset, and
+    as the "book" orbit generator in `real_case_runner`.
+
+    The orbit's semi-major axis, eccentricity AND the initial phase /
+    orbital-plane orientation are all derived from the initial state
+    (r_vec0, v_vec0), so the propagated orbit passes through the IC at
+    t = 0 exactly — not through an arbitrary periapsis-passage point
+    on a fixed in-plane axis.
 
     Parameters
     ----------
     primary_mass   : float, M1 in the same units as `secondary_mass`
     secondary_mass : float, M2
-    a              : float, semi-major axis (same length unit as the
-                              caller's system; dimensionless here)
-    e              : float, eccentricity, 0 ≤ e < 1
+    r_vec0         : (3,) : secondary-minus-primary position at t=0
+                             (same length unit as the caller's system;
+                             dimensionless here)
+    v_vec0         : (3,) : secondary-minus-primary velocity at t=0
     t              : (T,) : sample times (same time unit as the
                               caller's system; dimensionless here)
     g              : float, gravitational constant (= 1 in N-body
                               units; matches the rest of the runner)
     """
+    r_vec0 = np.asarray(r_vec0, dtype=np.float64)
+    v_vec0 = np.asarray(v_vec0, dtype=np.float64)
     mu = g * (primary_mass + secondary_mass)
-    h  = math.sqrt(mu * a * (1.0 - e * e))
+
+    r0 = float(np.linalg.norm(r_vec0))
+    v0 = float(np.linalg.norm(v_vec0))
+    # Osculating elements straight from the relative state.
+    a = 1.0 / (2.0 / r0 - v0 ** 2 / mu)
+    if a <= 0:
+        raise ValueError("non-positive semi-major axis in Kepler reference "
+                         "(hyperbolic input state)")
+    rv_dot = float(np.dot(r_vec0, v_vec0))
+    e_vec = ((v0 ** 2 - mu / r0) * r_vec0 - rv_dot * v_vec0) / mu
+    e = float(np.linalg.norm(e_vec))
+    if e < 1e-12:
+        e = 0.0
+
+    # Perifocal basis from the IC: p_hat points at periapsis (or at
+    # the body itself for a perfect circle, where periapsis is
+    # degenerate), w_hat along the angular momentum, q_hat completes
+    # the right-handed frame.
+    if e > 0.0:
+        p_hat = e_vec / e
+    else:
+        p_hat = r_vec0 / r0
+    h_vec = np.cross(r_vec0, v_vec0)
+    h_mag = float(np.linalg.norm(h_vec))
+    if h_mag < 1e-30:
+        raise ValueError("degenerate (purely radial) Kepler input state")
+    w_hat = h_vec / h_mag
+    q_hat = np.cross(w_hat, p_hat)
+
+    # Initial anomalies: nu0 from the basis, M0 from E0 so the closed
+    # form is anchored to the IC instead of to periapsis passage.
+    nu0 = math.atan2(float(np.dot(r_vec0, q_hat)), float(np.dot(r_vec0, p_hat)))
+    E0 = math.atan2(math.sqrt(max(1.0 - e * e, 0.0)) * math.sin(nu0),
+                    e + math.cos(nu0))
+    M0 = E0 - e * math.sin(E0)
+    n_mean = math.sqrt(mu / a ** 3)
 
     pos_list, vel_list, e_list = [], [], []
     for ti in t:
         # Solve Kepler's equation M = E - e sin E.
-        M = math.sqrt(mu / a ** 3) * ti
+        M = M0 + n_mean * ti
         E = M
         for _ in range(10):
             E = E - (E - e * math.sin(E) - M) / (1.0 - e * math.cos(E))
@@ -146,14 +192,15 @@ def reference_kepler(primary_mass: float,
                               math.sqrt(1.0 - e)  * math.cos(E / 2.0))
         r  = a * (1.0 - e * math.cos(E))
 
-        # Secondary in perifocal frame (primary at origin).
+        # Secondary in perifocal frame (primary at foci).
         x = r * math.cos(nu)
         y = r * math.sin(nu)
-        vx = -mu * math.sin(nu) / h
-        vy =  mu * (e + math.cos(nu)) / h
+        vx = -mu * math.sin(nu) / h_mag
+        vy =  mu * (e + math.cos(nu)) / h_mag
 
-        pos_s = np.array([x, y, 0.0])
-        vel_s = np.array([vx, vy, 0.0])
+        # Rotate back into the global frame (keeps inclination).
+        pos_s = x * p_hat + y * q_hat
+        vel_s = vx * p_hat + vy * q_hat
 
         # Primary is stationary at origin in this frame, but to match
         # the convention (pos, vel for *both* bodies) we compute the

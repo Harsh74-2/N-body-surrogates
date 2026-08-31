@@ -10,7 +10,6 @@ End-to-end pipeline for the rollout animations:
         1. call real_case_runner with --ckpt <variant> --dump-preds
         2. make_animations.py reads preds.npy -> *.mp4
 
-This is the supervisor's "trajectory animations" deliverable.
 Inference-only (no retraining), CPU-compatible, ~hours of wall clock.
 
 Skips presets that are obviously OOD-heavy and long (e.g. full_solar_system
@@ -114,6 +113,11 @@ def main() -> None:
 
     for n in args.n:
         for preset in presets:
+            # Canonicalize short aliases (moon/outer/extended/dist) once,
+            # up front: the runner, the preds dir, and make_animations all
+            # key on the canonical preset name — resolving only at the
+            # runner call would desync the three.
+            preset = _canonical_preset(preset)
             # Build one runner invocation that loads every requested
             # variant at once. The runner writes one preds.npy with
             # all variants stacked along axis 0 — that is the only
@@ -161,12 +165,9 @@ def main() -> None:
                     print(f"  [reuse] {preset_dir}/preds.npy",
                           flush=True)
                 else:
-                    # Resolve any short alias to the canonical preset
-                    # name the runner actually understands.
-                    canonical_preset = _canonical_preset(preset)
                     cmd = [sys.executable, "-m",
                            "real_case_validation.real_case_runner",
-                           "--preset", canonical_preset,
+                           "--preset", preset,
                            "--out", str(run_out),
                            "--dump-preds",
                            "--quick"]

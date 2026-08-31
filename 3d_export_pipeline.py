@@ -279,6 +279,25 @@ def process_and_export(raw_dir: str = RAW_DIR,
         print("No usable trajectories produced any windows, nothing to export.")
         return None
 
+    # Fail loudly on heterogeneous raw files rather than letting
+    # np.concatenate / np.stack surface a cryptic broadcast error later:
+    # every simulation shares one stacked mass table, so all inputs must
+    # have the same body count N. (X windows are (n, W, N, 6).)
+    body_counts = {arr.shape[-2] for arr in all_X}
+    if len(body_counts) != 1:
+        raise ValueError(
+            f"Heterogeneous body counts across raw files: {sorted(body_counts)}. "
+            "All simulations must have the same N because they are stacked "
+            "along axis 0 with a single shared mass table; re-run the "
+            "simulation for the mismatched files or export them separately."
+        )
+
+    if keep_mass and len(mass_list) != len(all_X):
+        print(f"  [warn] {len(all_X) - len(mass_list)} of {len(all_X)} raw files "
+              "had no 'mass' key; exporting without a mass table "
+              "(a partial table would mis-align with the simulation axis).")
+        mass_list = []
+
     master_X = np.concatenate(all_X, axis=0)
     master_y = np.concatenate(all_y, axis=0)
     del all_X, all_y  # free memory before save

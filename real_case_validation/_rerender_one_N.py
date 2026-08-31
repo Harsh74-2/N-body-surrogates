@@ -1,5 +1,5 @@
 """
-One-off regen helper for the supervisor's per-preset trajectory /
+One-off regen helper for per-preset trajectory /
 energy / error-vs-reference plots after the dashed=ref / solid=predicted
 convention change.
 
