@@ -288,6 +288,7 @@ def run_single_step(preset_spec: str,
 
     # ── Per-model single-step predictions ──────────────────────────────
     per_model: dict = {}
+    pred_stack: dict[str, np.ndarray] = {}   # name -> (n_skip, N, 6)
     char_L = ric.characteristic_length_m / ric.scale.L           # = 1.0
     n_skip = n_samples - W
     for lm in loaded_models:
@@ -341,7 +342,10 @@ def run_single_step(preset_spec: str,
         print(f"    ✓ {n_skip} single-step predictions  "
               f"mean_err = {mean_err_L:.3e} L  "
               f"= {100.0 * mean_err_L:.3f} %")
-        del preds
+        if dump_preds:
+            pred_stack[lm.name] = preds
+        else:
+            del preds
 
     payload = {
         "name":             ric.name,
@@ -364,6 +368,45 @@ def run_single_step(preset_spec: str,
                   if hasattr(o, "item") else str(o))
     print(f"  → {preset_dir}/ss_summary.json  "
           f"(elapsed {payload['wallclock_s']:.1f}s)")
+
+    # Optional: persist the single-step arrays to disk so external tools
+    # (notably `build_interactive_animations.py`) can rebuild trajectory
+    # visualisations without re-running the surrogates. Files:
+    #   preset_dir/preds.npy       — (n_models, n_skip, N, 6) float32
+    #   preset_dir/ref_pos.npy     — (n_skip, N, 3) float64, the
+    #                                reference positions the windows were
+    #                                built from (= ref_state[W:])
+    #   preset_dir/preds_meta.json — model list + frame count + dt_N + W
+    # Because every prediction was compared against exactly
+    # `ref_state[W:]`, `ref_pos.npy` is the same slice the errors in
+    # `ss_summary.json` were computed from — dump and summary agree by
+    # construction.
+    if dump_preds:
+        models_dumped = list(pred_stack.keys())
+        preds_stack = np.stack(
+            [pred_stack[m] for m in models_dumped], axis=0)
+        np.save(preset_dir / "preds.npy",
+                preds_stack.astype(np.float32))
+        np.save(preset_dir / "ref_pos.npy",
+                ref_state[W:, :, :3].astype(np.float64))
+        scale = ric.scale.to_dict()
+        meta = {
+            "preset":         ric.name,
+            "n_bodies":       n_total,
+            "n_predictions":  int(n_skip),
+            "models":         models_dumped,
+            "dt_N":           dt_N,
+            "W":              W,
+            "reference":      ric.reference,
+            "L_m":            scale["L_m"],
+            "T_s":            scale["T_s"],
+        }
+        with open(preset_dir / "preds_meta.json", "w",
+                  encoding="utf-8") as mf:
+            json.dump(meta, mf, indent=2)
+        print(f"  → {preset_dir}/preds.npy {preds_stack.shape}  "
+              f"+ ref_pos.npy + preds_meta.json")
+
     return payload
 
 
@@ -1309,14 +1352,9 @@ def main() -> None:
     # compounding). Writes to <out>/single_step/.
     if args.single_step:
         if args.dump_preds:
-            # run_single_step does not currently implement the dump
-            # branch (only run_preset does); warn loudly so the user
-            # doesn't expect preds.npy / preds_meta.json on disk.
-            print("[runner] WARNING: --dump-preds is ignored in "
-                  "--single-step mode (only the rollout path writes "
-                  "preds.npy). Remove --single-step or --dump-preds "
-                  "if you need the per-frame predictions on disk.",
-                  file=sys.stderr)
+            print("[runner] --dump-preds: single-step arrays will be "
+                  "written to <out>/single_step/preset_*/ "
+                  "(preds.npy, ref_pos.npy, preds_meta.json).")
         ss_out = out_path / "single_step"
         ss_out.mkdir(parents=True, exist_ok=True)
         ss_payloads: list[dict] = []
