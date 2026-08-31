@@ -161,7 +161,8 @@ DEFAULT_ROLLOUT_K: int = 10
 EVAL_BATCH_SIZE: int = 64
 DEFAULT_DEVICE_PREFERENCE: str = "auto"   # cuda -> mps -> cpu
 
-# Scaling sweep defaults (used by scaling_sweep.py + plot_scaling.py)
+# Scaling sweep defaults (used by scaling_sweep.py and
+# stability/eval scripts)
 SWEEP_N_VALUES: list[int] = [10, 25, 50, 100]
 SWEEP_ROLLOUT_K: int = 50
 

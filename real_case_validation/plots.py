@@ -33,7 +33,7 @@ THEME = _val_mod.THEME
 # Each of the 6 variants gets its OWN colour so a stranger can read
 # the difference at a glance — the previous map conflated stable and
 # non-stable variants (GNN ≡ GNN_stable, etc.) which made the chart
-# unreadable per the supervisor's complaint. The non-stable variants
+# unreadable on dark backgrounds. The non-stable variants
 # use saturated fills; the stable variants use a darker fill + bright
 # edge so the family is still distinguishable but the *variant* is
 # unambiguous.
@@ -232,11 +232,15 @@ def _galactic_displacement(preset_name: str, n_frames: int) -> np.ndarray | None
     keep the orbits readable but large enough to make the spiral
     obvious.
 
-    Returns None for sun_galileans / planetocentric presets where the
-    primary is not the Sun.
+    Returns None for presets where the transform is meaningless:
+    jupiter_galileans (planetocentric — its primary is Jupiter, not the
+    Sun) and disc_imf_in_distribution_baseline (an in-distribution
+    dimensionless synthetic disc with neither a Sun nor any galaxy
+    motion — adding a sweep here would fabricate one).
     """
-    if preset_name == "jupiter_galileans":
-        return None  # planetocentric — no galaxy motion
+    if preset_name in ("jupiter_galileans",
+                       "disc_imf_in_distribution_baseline"):
+        return None
     # Approximate a 2 L* sweep across the simulation window, along +x.
     # The exact scale depends on the preset's L*; for the in-extension
     # presets L* ≈ 30 AU so 2 L* is reasonable. We use 2 L* as the
@@ -251,7 +255,7 @@ def plot_trajectory(preset_name: str,
                     out_path: str,
                     char_length_label: str = "L (N-body units)") -> None:
     """
-    DEPRECATED: kept for backward compatibility. The supervisor asked for
+    DEPRECATED: kept for backward compatibility. Originally provided
     one PNG per model (so each model gets its own page rather than all 6
     overlaid). Use `plot_trajectory_per_model` instead. This legacy
     function still works and writes a single combined file at `out_path`.
@@ -563,7 +567,7 @@ def plot_error_vs_reference(preset_name: str,
     plt.close(fig)
 
 
-# ── Per-small-body "predicted vs book" scatter (supervisor review) ───────────
+# ── Per-small-body "predicted vs book" scatter ───────────
 def plot_predicted_vs_book(preset_name: str,
                            ric,                          # RescaledIC
                            ref_pos_slice: np.ndarray,    # (T, N, 3)
@@ -581,7 +585,7 @@ def plot_predicted_vs_book(preset_name: str,
     is overplotted for free. A perfect prediction collapses onto the
     diagonal y=x.
 
-    This is the supervisor's "show the small body in its predicted
+    This is the "show the small body in its predicted
     position vs book position" chart, made per-model so a stranger can
     read each variant separately rather than picking 6 colours out of
     one hodge-podge.
@@ -595,7 +599,7 @@ def plot_predicted_vs_book(preset_name: str,
       * Right — single-number chart: scatter of (mean |r_book|, mean
                 |r_predicted − r_book|) for THIS model + the
                 reference. The legend label carries the mean error so
-                the supervisor can read off a single number.
+                the reader can read off a single number.
 
     Parameters
     ----------
@@ -667,7 +671,7 @@ def plot_predicted_vs_book(preset_name: str,
         ax.set_facecolor(THEME["panel"])
         # Clip the x/y range to ±clip_factor × max(|book|) so the
         # scatter doesn't smear into a vertical line at x=0 when
-        # predictions diverge (the supervisor's "fuzzy" complaint).
+        # predictions diverge (the lines become unreadably fuzzy).
         # Use the maximum absolute value of the BOOK component only —
         # predicted values can be much larger when the surrogate
         # diverges, which would clip the book orbit to nothing.
@@ -866,7 +870,7 @@ def plot_dashboard(per_preset_payloads: list[dict], out_path: str) -> None:
     plt.close(fig)
 
 
-# ── Per-small-body vs book-reference plot (supervisor review) ──────────────
+# ── Per-small-body vs book-reference plot ──────────────
 def plot_small_bodies_vs_book(preset_name: str,
                               ric,                          # RescaledIC
                               ref_pos_slice: np.ndarray,    # (T, N, 3) ref trajectory
@@ -877,7 +881,7 @@ def plot_small_bodies_vs_book(preset_name: str,
                               primary_idx: int = 0,
                               primary_for_body: np.ndarray | None = None) -> None:
     """
-    Per-body diagnostic for supervisor review — *one figure per surrogate
+    Per-body diagnostic — *one figure per surrogate
     variant*. Each row shows the closed-form Kepler (book) orbit, the
     leapfrog reference, and the *single* chosen surrogate trajectory in
     the body's primary frame. Three lines per row, dedicated legend on
@@ -892,7 +896,7 @@ def plot_small_bodies_vs_book(preset_name: str,
         should overlap perfectly when perturbations are negligible;
         any visible separation is the perturbation from other bodies.
       * radial error vs book:  |r_surrogate(t) - r_book(t)| vs
-        |r_ref(t) - r_book(t)|, so the supervisor can read off the
+        |r_ref(t) - r_book(t)|, so the reader can read off the
         numerical divergence from the closed-form solution directly.
 
     The Sun (primary_idx) is skipped since its "book orbit" is a

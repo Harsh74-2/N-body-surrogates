@@ -44,12 +44,13 @@ of 10⁵ (Sun:Earth) or higher. So the numbers in `real_case_report.md`
 measure **out-of-distribution generalisation**, not domain fit.
 
 The runner also ships an in-distribution baseline preset
-(`disc_imf_in_distribution_baseline`) built from the same
-`init_galaxy_disc` generator with a real-IMF mass range
-(m ∈ [0.1, 50] M☉). It should produce errors comparable to the
-existing `plots/eval_metrics_*.json`; if it doesn't, the rescaling or
-the autoregressive warm-up is broken and the OOD numbers are not
-meaningful.
+(`disc_imf_in_distribution_baseline`) built directly in the trained
+dimensionless units from the same `init_galaxy_disc` generator and
+training mass range (mass ratios ≲ 10, m ∈ [0.5, 5] in code units).
+Its errors should sit at the in-distribution level seen in the
+`report_N*/single_step/single_step_report.md` tables; if they don't,
+the warm-up or the checkpoint loading is broken and the OOD numbers
+are not meaningful.
 
 ## Built-in presets
 
@@ -59,15 +60,18 @@ meaningful.
 | `full_solar_system` | Sun + 8 planets | 200 yr | leapfrog |
 | `jupiter_galileans` | Jupiter + Io/Europa/Ganymede/Callisto (toy circular orbits) | 1 yr | leapfrog |
 | `sun_earth_only` | Sun + Earth (Keplerian) | 10 yr | kepler (analytical) |
-| `disc_imf_in_distribution_baseline` | synthetic 25-body disc, real IMF | 5 crossing times | leapfrog |
+| `sun_planets_moon` | Sun + 4 rocky planets + Jupiter/Saturn + Moon | 27 yr | leapfrog |
+| `solar_system_extended` | Sun + 8 planets + Moon + Galileans (19 bodies) | 27 yr | leapfrog |
+| `disc_imf_in_distribution_baseline` | synthetic 25-body disc (in-distribution) | 5 crossing times | leapfrog |
 
-The position/velocity tables come from the NASA Planetary Fact Sheet
-(Williams 2024) with J2000 heliocentric ecliptic elements; velocities
-are derived from vis-viva at J2000 mean anomaly.
+The planetary initial states are NASA JPL Horizons geometric
+ecliptic-of-J2000.0 state vectors at epoch 2026-08-07 (JD 2461259.5),
+retrieved from the Horizons system; dwarf-planet states and the
+Galilean-moon toy orbits are documented in `presets.py`.
 
 ## Adding a custom IC
 
-Drop a JSON file anywhere and pass `--ic path/to/your_ic.json`. The
+Drop a JSON file anywhere and pass `--preset path/to/your_ic.json`. The
 schema is exactly the per-preset dict from `presets.py`:
 
 ```json
@@ -86,9 +90,10 @@ schema is exactly the per-preset dict from `presets.py`:
 ```
 
 The runner validates the schema, rescales the IC into N-body units
-(M = Σm so Σm=1, L = outermost body semi-major axis), runs the
-reference + surrogates, and writes the per-preset artefacts into
-`report/preset_<name>/`.
+(M = Σm so Σm=1, L = a characteristic radius with per-preset overrides),
+runs the reference + surrogates, and writes the per-preset artefacts into
+`<out>/preset_<name>/` (default `--out real_case_validation/report`;
+the committed reports use `report_N{n}`).
 
 To add a new *built-in* preset, append a dict to `PRESETS` in
 `presets.py` and re-run the runner.
@@ -147,10 +152,10 @@ sub-stepping, finishes in <30 s on CPU, and writes
 
 - **No retraining**. The existing checkpoints are used as-is. Fine-tuning
   the surrogates on Solar-System data is a separate work item.
-- **No edit** to `Project_Mathematics_native_math.docx`. The user can
-  paste the table from `real_case_report.md` into a new section themselves.
-- **No external ephemerides** (NASA Horizons API, jplephem, REBOUND).
-  The reference is our own high-precision leapfrog, keeping the
-  pipeline self-contained.
+- **No runtime ephemeris dependency** (jplephem, REBOUND, network calls).
+  The initial states were retrieved from NASA Horizons once and are
+  hardcoded in `presets.py`; the reference trajectory is our own
+  high-precision leapfrog, keeping the pipeline self-contained and
+  offline.
 - **No GPU requirements**. CPU works for every preset (≤25 bodies ×
   ~500 frames per preset).

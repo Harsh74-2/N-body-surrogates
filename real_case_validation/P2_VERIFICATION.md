@@ -5,8 +5,8 @@ record of what the three new inference knobs can and cannot do.
 
 ## Configurations
 
-All runs on N=50 ckpts, single preset `jupiter_galileans` (the supervisor
-chart candidate), all 6 ckpts (MLP / LSTM / GNN × single / stable).
+All runs on N=50 ckpts, single preset `jupiter_galileans` (the primary
+Galilean-chart candidate), all 6 ckpts (MLP / LSTM / GNN × single / stable).
 
 | Tag | Args | Purpose |
 |---|---|---|
@@ -49,7 +49,7 @@ explicitly:
 ```
 
 Reaching `W=20` would require retraining the MLP/LSTM ckpts at W=20, which
-is forbidden by the submission deadline. The clamp is the honest way to express
+is excluded by the no-retraining constraint. The clamp is the honest way to express
 that constraint. **The flag is kept for the day after submission.**
 
 ### Finding 2 — ensemble does not lower the best-single error
@@ -83,17 +83,18 @@ The per-body linear drift calibration (P2B) was tested in prior session
 and the corrected MSE dropped < 5 % on the OOD jupiter_galileans case.
 The calibration R² is reported per body so a reader can see whether the
 linear fit is meaningful; for the OOD Galileans it is not. Calibration
-is wired into the runner's `per_model_calibrated` block; it is honest
+is wired into the runner's per-model `calibrated` metrics block; it is honest
 to omit it from the headline because it doesn't change the OOD picture
 materially.
 
 ## Verification artefacts
 
-- Per-config `summary.json` and `ss_summary.json` were written to
-  `C:\Users\HP\AppData\Local\Temp\p2_{A,B,C,D}\` during the run.
-- The runner's `--warmup N` clamp is at `real_case_runner.py:484-498`
-  (rollout) and `real_case_runner.py:251-265` (single-step).
-- The `--ensemble` flag is wired at `real_case_runner.py:609-634`.
+- Per-config `summary.json` and `ss_summary.json` were written
+  to run-local temporary config directories during the verification runs.
+- The runner's `--warmup N` clamp lives in the rollout and single-step
+  validation blocks of `real_case_runner.py` (search for "clamping").
+- The `--ensemble` flag is wired through `run_real_case_validation`
+  into the per-preset evaluation call.
 - The `--single-step` flag has been part of the runner since the prior
   OOD audit; no further verification needed.
 
@@ -106,5 +107,5 @@ Inference-time knobs cannot bring OOD error down to the in-distribution
 - **OOD: 100-260 % rollout, 27-85 % single-step** — the cost of
   distribution shift.
 - **Ensemble: lower variance, not lower MSE** — a stability tool.
-- **Warmup: would help with retraining** — out of scope per deadline.
+- **Warmup: would help with retraining** — out of scope here.
 - **Calibration: reports R² per body** — honesty tool, not a fix.

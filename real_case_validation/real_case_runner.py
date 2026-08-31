@@ -56,6 +56,23 @@ YEAR_S = 365.25 * DAY_S
 WINDOW_SIZE = REAL_CASE_WARMUP_WINDOW  # the W the surrogates were trained with
 
 
+def _strict_json(obj):
+    """Recursively replace non-finite floats with None so written JSON is
+    strict RFC-8259. The literal NaN/Infinity tokens json.dump emits are
+    rejected by every non-Python parser (jq, serde, JS JSON.parse, Go),
+    and they only ever appear in the kepler_check rows (bodies whose
+    orbit is longer than the simulation window), where null is the
+    honest encoding."""
+    if isinstance(obj, dict):
+        return {k: _strict_json(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_strict_json(v) for v in obj]
+    if isinstance(obj, float) and not math.isfinite(obj):
+        return None
+    return obj
+
+
+
 # Load `losses.py` for the per-model energy helper.
 _loss_mod = load_sibling_module("nbody_losses", "losses.py")
 total_energy_torch = _loss_mod.total_energy
@@ -760,7 +777,7 @@ def run_preset(preset_spec,                    # name | path-to-JSON
     # For every non-primary body we propagate an *independent* 2-body
     # closed-form Kepler orbit using the body's osculating (a, e) from
     # its ICs and the Sun's mass (treating Sun+body as isolated). This
-    # gives the supervisor a "book" prediction of where each small
+    # gives a "book" prediction of where each small
     # body should be, ignoring perturbations from other planets —
     # exactly the trajectory an introductory astronomy textbook would
     # compute for that body. The leapfrog reference differs from the
@@ -798,7 +815,7 @@ def run_preset(preset_spec,                    # name | path-to-JSON
                     "error": repr(e),
                 }
         # Per-model plots: one figure per (preset, model_variant) so the
-        # supervisor sees a clean 3-line plot (book + reference + this
+        # the plot stays a clean 3-line plot (book + reference + this
         # one surrogate) rather than a 6-line hodge-podge. The runner
         # owns the filename convention: <base>_<MODEL>.png.
         for model_name, traj in surrogate_trajs.items():
@@ -817,7 +834,7 @@ def run_preset(preset_spec,                    # name | path-to-JSON
             # "Predicted vs book" 2D scatter: the body's predicted
             # position is plotted against its closed-form Kepler
             # position (in the body's primary frame). A perfect model
-            # sits on the y = x diagonal. This is the supervisor's
+            # sits on the y = x diagonal. This is the
             # most direct read-off of how close this surrogate is to
             # the 2-body analytical answer, separate from how close it
             # is to the leapfrog. Per-model so the user can read off
@@ -872,7 +889,7 @@ def run_preset(preset_spec,                    # name | path-to-JSON
         print(f"  [kepler] skipped (in-distribution baseline)")
     with open(preset_dir / "summary.json", "w",
               encoding="utf-8") as f:
-        json.dump(payload, f, indent=2, default=lambda o: float(o)
+        json.dump(_strict_json(payload), f, indent=2, default=lambda o: float(o)
                   if hasattr(o, "item") else str(o))
     print(f"  → {preset_dir}/  (elapsed {payload['wallclock_s']:.1f}s)")
 
@@ -954,21 +971,14 @@ def _run_kepler_reference(ric: ic_loader.RescaledIC, n_samples: int,
     """
     # Index 0 is the Sun (primary), index 1 is Earth (secondary).
     M1, M2 = float(ric.mass[0]), float(ric.mass[1])
-    mu = M1 + M2
+    # Pass the actual relative state: reference_kepler derives the
+    # osculating elements AND the initial phase / orbital-plane
+    # orientation from it, so the closed-form orbit passes through the
+    # preset's IC at t = 0 (including its true anomaly and inclination).
     r_vec = ric.pos[1] - ric.pos[0]
     v_vec = ric.vel[1] - ric.vel[0]
-    r0 = float(np.linalg.norm(r_vec))
-    v0 = float(np.linalg.norm(v_vec))
-    # Compute osculating a and e directly from the 2-body state so the
-    # closed-form reference matches the preset's actual eccentricity.
-    rv_dot = float(np.dot(r_vec, v_vec))
-    e_vec = ((v0 ** 2 - mu / r0) * r_vec - rv_dot * v_vec) / mu
-    e = float(np.linalg.norm(e_vec))
-    a = 1.0 / (2.0 / r0 - v0 ** 2 / mu)
-    if a <= 0:
-        raise ValueError("non-positive semi-major axis in Kepler reference")
     t = np.arange(n_samples) * dt_N
-    return references.reference_kepler(M1, M2, a, e, t, g=1.0)
+    return references.reference_kepler(M1, M2, r_vec, v_vec, t, g=1.0)
 
 
 def _default_primary_for_body(ric: ic_loader.RescaledIC,
@@ -1038,7 +1048,7 @@ def _compute_book_orbits(ric: ic_loader.RescaledIC, n_steps: int,
 
     This is the "book" reference: where each body would be if
     *only* its primary's gravity acted on it. Used by
-    `plot_small_bodies_vs_book` to give the supervisor a visual
+    `plot_small_bodies_vs_book` to give a visual
     comparison — leapfrog-vs-book shows the size of the
     perturbations, surrogate-vs-book shows the total prediction
     error.
@@ -1093,11 +1103,12 @@ def _compute_book_orbits(ric: ic_loader.RescaledIC, n_steps: int,
             # fall back to the body's IC.
             book_pos[:, body_i, :] = ric.pos[body_i]
             continue
-        # Closed-form 2-body Kepler. M2 ≈ 0 keeps the primary
-        # fixed in the perifocal frame; we translate by the
-        # primary's IC to put it back in the global frame.
+        # Closed-form 2-body Kepler, anchored to the body's actual
+        # relative state (phase + plane orientation preserved). M2 ≈ 0
+        # keeps the primary fixed in the perifocal frame; we translate
+        # by the primary's IC to put it back in the global frame.
         kepler_traj = references.reference_kepler(
-            M_primary, 1e-30, a, e, t, g=1.0)
+            M_primary, 1e-30, r_vec, v_vec, t, g=1.0)
         book_pos[:, body_i, :] = kepler_traj["pos"][:, 1, :] + primary_pos_0
 
     return book_pos
@@ -1305,6 +1316,14 @@ def main() -> None:
             ensemble_models.append(type_to_display[key])
         if len(ensemble_models) < 2:
             sys.exit("[runner] --ensemble needs at least 2 model names")
+        if getattr(args, "single_step", False):
+            # Ensemble evaluation is only wired into the rollout path;
+            # run_single_step has no ensemble branch, so combining the
+            # two flags would silently drop the ensemble row from the
+            # report. Refuse instead of silently ignoring.
+            sys.exit("[runner] --ensemble is not supported together with "
+                     "--single-step (the single-step path has no ensemble "
+                     "branch); run them separately.")
 
     # The list-presets flag should work even with no --ckpt (and even on
     # a machine that has no torch installed).
@@ -1373,7 +1392,7 @@ def main() -> None:
         # JSON dump with the per-model arrays removed.
         ss_json = ss_out / "single_step_report.json"
         with open(ss_json, "w", encoding="utf-8") as f:
-            json.dump(ss_payloads, f, indent=2)
+            json.dump(_strict_json(ss_payloads), f, indent=2)
         print(f"[single-step] {ss_json}")
         return
 
@@ -1416,7 +1435,7 @@ def main() -> None:
                               if not k.startswith("_")})
     json_path = out_path / "real_case_report.json"
     with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(json_payloads, f, indent=2)
+        json.dump(_strict_json(json_payloads), f, indent=2)
     print(f"[json] {json_path}")
 
 

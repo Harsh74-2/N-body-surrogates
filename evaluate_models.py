@@ -397,8 +397,11 @@ def main() -> None:
     p = argparse.ArgumentParser(
         description="Benchmark trained MLP/LSTM/GNN surrogates on 4 project metrics."
     )
-    p.add_argument("--ckpt", action="append", required=True,
-                   help="Checkpoint spec 'path.pt:model_type'. Repeatable.")
+    p.add_argument("--ckpt", action="append", default=None,
+                   help="Checkpoint spec 'path.pt:model_type'. Repeatable. "
+                        "If omitted, every sweep checkpoint found under "
+                        "training_runs/N*/{mlp,lstm,gnn}/model_best.pt is "
+                        "evaluated against its matching w{N} dataset.")
     p.add_argument("--npz", default=DEFAULT_NPZ,
                    help="Dataset archive.")
     p.add_argument("--split", default="test", choices=["train", "val", "test"],
@@ -417,43 +420,72 @@ def main() -> None:
     device = pick_device()
     print(f"[device] {device}")
 
+    # Resolve checkpoint groups. Each group = (npz_path, [(ckpt, type), ...]).
+    if args.ckpt:
+        groups: list[tuple[str, list[str]]] = [(args.npz, args.ckpt)]
+    else:
+        groups = []
+        sweep_dirs = sorted(Path("training_runs").glob("N*"),
+                            key=lambda p: (len(p.name), p.name))
+        for n_dir in sweep_dirs:
+            found = []
+            for m in ModelType.values():
+                cand = n_dir / m / "model_best.pt"
+                if cand.is_file():
+                    found.append(f"{cand}:{m}")
+            if found:
+                groups.append((str(Path(f"ml_ready_data/dataset_3d_w{n_dir.name[1:]}h1s1r.npz")), found))
+        if not groups:
+            raise SystemExit(
+                "\n[eval] no checkpoints given and none found under "
+                "training_runs/N*/{mlp,lstm,gnn}/model_best.pt.\n"
+                "  Train first (scaling_sweep.py or the *_train.py scripts)\n"
+                "  or pass explicit --ckpt path.pt:model_type specs.")
+
     metrics_list: list[Metrics] = []
-    for spec in args.ckpt:
-        ckpt_path, model_type = _parse_ckpt(spec)
-        print(f"\n[eval] {model_type:5s} <- {ckpt_path}")
+    for npz_group, specs in groups:
+        for spec in specs:
+            try:
+                ckpt_path, model_type = _parse_ckpt(spec)
+            except ValueError as e:
+                raise SystemExit(f"\n[eval] bad --ckpt spec {spec!r}: {e}\n"
+                                 "  Expected 'path.pt:model_type' with "
+                                 f"model_type in {ModelType.values()}.")
+            print(f"\n[eval] {model_type:5s} <- {ckpt_path}")
 
-        # Build all three loaders, then pick the requested split.
-        try:
-            train_loader, val_loader, test_loader = get_dataloaders(
-                npz_path=args.npz,
-                model_type=model_type,
-                batch_size=args.batch_size,
-                include_mass=True,
-                num_workers=0,
-                pin_memory=False,
-            )
-        except Exception as e:
-            print(f"  ! loader build failed: {e!r}")
-            continue
+            # Build all three loaders, then pick the requested split.
+            try:
+                train_loader, val_loader, test_loader = get_dataloaders(
+                    npz_path=npz_group,
+                    model_type=model_type,
+                    batch_size=args.batch_size,
+                    include_mass=True,
+                    num_workers=0,
+                    pin_memory=False,
+                )
+            except Exception as e:
+                print(f"  ! loader build failed: {e!r} (npz: {npz_group})")
+                continue
 
-        loader = {"train": train_loader, "val": val_loader, "test": test_loader}[args.split]
+            loader = {"train": train_loader, "val": val_loader, "test": test_loader}[args.split]
 
-        try:
-            model = build_model(ckpt_path=ckpt_path, model_type=model_type,
-                                device=device)
-        except Exception as e:
-            print(f"  ! build failed: {e!r}")
-            continue
+            try:
+                model = build_model(ckpt_path=ckpt_path, model_type=model_type,
+                                    device=device)
+            except Exception as e:
+                print(f"  ! build failed: {e!r}")
+                continue
 
-        m = evaluate(model, model_type, loader, args.split, device,
-                     K=args.rollout_K, rollout_batches=args.rollout_batches)
-        print(f"  mse={m.mse:.3e}  |ΔE/E₀|={m.energy:.3e}  "
-              f"latency={m.latency_ms:.2f} ms/batch  rollout={m.rollout:.3e}")
-        metrics_list.append(m)
+            m = evaluate(model, model_type, loader, args.split, device,
+                         K=args.rollout_K, rollout_batches=args.rollout_batches)
+            print(f"  mse={m.mse:.3e}  |ΔE/E₀|={m.energy:.3e}  "
+                  f"latency={m.latency_ms:.2f} ms/batch  rollout={m.rollout:.3e}")
+            metrics_list.append(m)
 
     if not metrics_list:
-        print("\n[eval] no successful runs.")
-        return
+        print("\n[eval] no successful runs; every checkpoint failed to load "
+              "or had no matching dataset.")
+        raise SystemExit(1)
 
     print("\n" + format_metrics_table(metrics_list))
 

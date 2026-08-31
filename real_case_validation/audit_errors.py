@@ -24,8 +24,8 @@ gives large numbers regardless of model quality.
 Usage
 -----
     python -m real_case_validation.audit_errors \
-        --report-dir real_case_validation/report_all_N50_v2 \
-        --out       real_case_validation/report_all_N50_v2/error_audit.md
+        --report-dir real_case_validation/report_N50 \
+        --out       real_case_validation/report_N50/error_audit.md
 """
 from __future__ import annotations
 

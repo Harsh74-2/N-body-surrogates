@@ -23,8 +23,9 @@ the small body's orbit is visually anchored to a real body rather than a
 bare coordinate system.
 
 The script reads `preds.npy` + `book_pos.npy` + `preds_meta.json` from
-`real_case_validation/report_all_N50/preset_<NAME>/` (or a per-N variant)
-that the runner writes when `--dump-preds` is set.
+`real_case_validation/report_N{n}/preset_<NAME>/` (a per-N dir, defaulting
+to the numerically smallest `report_N*` sibling it can find) that the
+runner writes when `--dump-preds` is set.
 
 Pure CPU. Uses matplotlib's bundled `FFMpegWriter` + `PillowWriter` for
 .gif fallback. No new pip installs (no `imageio`).
@@ -37,8 +38,8 @@ CLI
 
 Notes
 -----
-* Default preset dir: `real_case_validation/report_all_N50/preset_<NAME>/`.
-  Set `--report-dir` to override.
+* Default preset dir: the first `report_N*/preset_<NAME>/` sibling found
+  under `real_case_validation/`. Set `--report-dir` to override.
 * For presets with `in_distribution = True` (the disc baseline), the
   surrogate is essentially noise-free, so the animation is still
   useful as a sanity check but the predicted panel will look like a
@@ -47,13 +48,16 @@ Notes
   panel also uses N-body units (matches the existing `predicted_vs_book`
   plot's units).
 * **Galaxy-frame mode** is enabled automatically for Sun-centred
-  presets (every preset except `jupiter_galileans`). A constant +x
-  velocity is added to every heliocentric position to simulate the
-  Sun's motion through the Milky Way at ~220 km/s; the planets
-  trace spring-like spirals and the primary body (Sun) moves across
-  the panel each frame. The radial error is invariant to this
-  transform (the additive shift cancels in the difference), so the
-  right panel is unchanged.
+  presets (every preset except `jupiter_galileans` and the
+  in-distribution disc baseline). A constant +x drift is added to
+  every heliocentric position to visualise the Sun's motion through
+  the Milky Way (~220 km/s local standard of rest, rendered as a
+  fixed drift in code units); the planets trace spring-like spirals
+  and the primary body (Sun) moves across the panel each frame. The
+  surrogate-vs-book *difference* is invariant to the common shift,
+  but the plotted radial error |‖s+g‖ − ‖b+g‖| is not exactly equal
+  to |‖s‖ − ‖b‖| — the invariant quantity is shown as the gap between
+  the two trajectory lines in each body panel.
 """
 
 from __future__ import annotations
@@ -582,7 +586,7 @@ def _animate_one(preset_name: str, model_name: str,
     # Build a subplot grid: 2 rows × 4 cols of body panels + 1 row of
     # 4 global radial-error subplots at the bottom. Each body panel
     # overlays the book orbit (faint grey) with the surrogate's trailing
-    # trajectory (model colour). The supervisor wanted one panel per
+    # trajectory (model colour). One panel per
     # body so the comparison reads at a glance.
     bodies_to_show = [i for i in range(n_bodies) if i != primary_idx]
     n_bodies_show = len(bodies_to_show)
@@ -630,13 +634,15 @@ def _animate_one(preset_name: str, model_name: str,
             ax_body = fig.add_subplot(gs[row_i, col_i], projection="3d")
         else:
             ax_body = fig.add_subplot(gs[row_i, col_i])
-        book_sun_pos = galaxy_disp[0] if in_galaxy else None
         # Combined book-vs-pred panel: book orbit (faint grey) +
-        # surrogate trailing line + head markers for both.
+        # surrogate trailing line + head markers for both. In galaxy
+        # frame the primary is drawn per-frame inside _update (its
+        # position moves), so the static setup draw would leave a
+        # ghost primary at the frame-0 position for the whole clip.
         _make_combined_panel(ax_body, body_name, primary_name,
                              book_view, surr_traj, model_name=model_name,
                              primary_radius=primary_radius,
-                             is_3d=is_3d, sun_pos=book_sun_pos)
+                             is_3d=is_3d, sun_pos=None)
         axes.append((ax_body, body_i, surr_traj, err, body_name, is_3d, book_view))
     # Global radial-error subplot spanning full width at the bottom.
     ax_err = fig.add_subplot(gs[n_body_rows, :])
@@ -878,7 +884,8 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--view", choices=("3d", "2d", "both"), default="3d")
     p.add_argument("--report-dir", default=None,
                    help="Directory with preset_<NAME>/ subdirs. Default: "
-                        "real_case_validation/report_all_N50")
+                        "the first valid report_N* under "
+                        "real_case_validation/")
     p.add_argument("--trail", type=int, default=60,
                    help="Trailing-line length in frames (default 60).")
     return p.parse_args()
@@ -887,13 +894,14 @@ def _parse_args() -> argparse.Namespace:
 def main() -> int:
     args = _parse_args()
     repo_root = Path(__file__).resolve().parent.parent
-    default_report_dir = repo_root / "real_case_validation" / "report_all_N50"
+    default_report_dir = repo_root / "real_case_validation" / "report_N50"
     report_dir = Path(args.report_dir) if args.report_dir else default_report_dir
     if not report_dir.exists():
-        # Fall back to the most recent per-N report_<N>/ that has preds.
+        # Fall back to the numerically smallest per-N report_N{N}/ that
+        # has preds (lexicographic would put N100 ahead of N25).
         candidates = sorted(
             (repo_root / "real_case_validation").glob("report_N*"),
-            key=lambda p: p.name,
+            key=lambda p: (len(p.name), p.name),
         )
         for c in candidates:
             if any((c / f"preset_{n}").exists() for n in _discover_presets(c)):

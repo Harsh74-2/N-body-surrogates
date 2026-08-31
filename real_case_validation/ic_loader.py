@@ -68,8 +68,9 @@ def load_preset(name: str) -> RescaledIC:
     Load a built-in preset by name and return a rescaled IC.
 
     The in-distribution disc-IMF baseline is generated via
-    `simulation_3d.init_galaxy_disc(N=25, m_min=0.1, m_max=50)` and
-    then Σ-normalised to match the trained unit convention.
+    `simulation_3d.init_galaxy_disc` with the same body count and IMF
+    mass range (IC_M_MIN / IC_M_MAX) the surrogates were trained on,
+    and is already Σ-normalised to the trained unit convention.
     """
     p = preset_mod.get_preset(name)
 

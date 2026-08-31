@@ -513,8 +513,10 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         description="Train a GNN surrogate on the 3D N-body dataset (Colab-friendly).",
     )
-    p.add_argument("--repo-dir", default="Universe-Simulation",
-                   help="Subdirectory of MyDrive containing this project.")
+    p.add_argument("--repo-dir", default="",
+                   help="Subdirectory of MyDrive containing this project "
+                        "(Colab only; leave empty for a local checkout, "
+                        "where the repo root is auto-detected).")
     p.add_argument("--npz",      default=None,
                    help="Override the .npz path "
                         "(default: <repo>/ml_ready_data/dataset_3d_w5h1s1r.npz).")
@@ -559,6 +561,15 @@ if __name__ == "__main__":
     drive_root = mount_drive_if_possible()
 
     repo_root = Path(drive_root) / args.repo_dir if args.repo_dir else Path(drive_root)
+    # Locate the root by checking where the dataset actually lives:
+    # on a local checkout `mount_drive_if_possible()` already returns the
+    # repo root (appending --repo-dir would double the path), while on
+    # Colab the documented layout is <MyDrive>/Universe-Simulation/.
+    if not (repo_root / DEFAULT_NPZ).exists():
+        if (Path(drive_root) / DEFAULT_NPZ).exists():
+            repo_root = Path(drive_root)
+        elif (Path(drive_root) / "Universe-Simulation" / DEFAULT_NPZ).exists():
+            repo_root = Path(drive_root) / "Universe-Simulation"
     npz_path  = Path(args.npz) if args.npz else repo_root / DEFAULT_NPZ
 
     if args.out:

@@ -78,7 +78,13 @@ def _discover_jobs(n_list: list | None, preset_filter: str | None,
             if preset_filter and not any(pf in preset_name for pf in preset_filter):
                 continue
             import json
-            with open(p_dir / "preds_meta.json") as f:
+            meta_path = p_dir / "preds_meta.json"
+            if not meta_path.is_file():
+                # Dump dir with preds.npy but no meta (interrupted run)
+                # — skip rather than crash discovery.
+                print(f"  [skip] {p_dir}: preds.npy without preds_meta.json")
+                continue
+            with open(meta_path) as f:
                 meta = json.load(f)
             for model in meta["models"]:
                 if model_filter and model != model_filter:

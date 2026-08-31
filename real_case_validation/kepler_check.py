@@ -3,7 +3,7 @@ kepler_check.py
 ===============
 Validate that the reference (high-precision leapfrog) integration of a
 real preset actually obeys **Kepler's 3rd law**, T² ∝ a³. This is the
-*physics* test the user asked for: even though the trained surrogates
+core *physics* test: even though the trained surrogates
 are out-of-distribution and may diverge, the reference integrator is
 deterministic and should preserve Kepler's law to a few parts in 10⁴
 over a 10-yr window for the inner planets.
@@ -19,11 +19,13 @@ the body masses, the module:
    the function falls back to the COM frame and skips Kepler's check
    (returning an empty result).
 2. For every other body, measures
-     - the **orbital period** T via the perihelion-crossing detector
-       (sign change of r·v along the orbit, in the primary's frame);
-     - the **mean orbital radius** <r> as a proxy for a (cheap and
-       reliable; for low-e orbits it's exact to O(e²));
-     - the **Kepler ratio** K = T² / <r>³ in N-body units, and the
+     - the **orbital period** T via the body-initial axis-crossing
+       detector (every second crossing of the body's initial
+       in-plane direction marks a full revolution);
+     - the **semi-major axis** a recovered as (r_min + r_max) / 2
+       (exact for a closed Keplerian orbit; <r> is biased high on
+       eccentric orbits, so it is not used);
+     - the **Kepler ratio** K = T² / a³ in N-body units, and the
        predicted K = 4π² / G·M_primary for comparison.
 3. Reports per-body deviation (K_measured / K_predicted − 1) as a
    percentage. The unit conversion from N-body to SI is performed
@@ -234,7 +236,11 @@ def _period_and_mean_r(rel_pos: np.ndarray,
     # second. Use the median spacing of these.
     full_orbits = half_orbits[1::2]
     if full_orbits.size < 2:
-        full_orbits = half_orbits
+        # Fewer than 2 full-orbit markers: the half-crossing spacing is
+        # a HALF period, so reporting it as T would under-estimate by 2x.
+        # Return NaN, matching the "fewer than 2 revolutions → nan"
+        # contract in the docstring.
+        return float("nan"), float(r.mean())
     diffs = np.diff(full_orbits)
     T_in_samples = float(np.median(diffs))
     T = T_in_samples * dt_N
@@ -358,14 +364,15 @@ def render_kepler_markdown(preset_name: str, preset_label: str,
         f"Reference integrator (high-precision leapfrog, dt_N = "
         f"{dt_N:.3e}, {n_samples} samples over {duration_years:g} yr). "
         f"For each non-primary body we report the orbital period T "
-        f"(median perihelion-to-perihelion spacing) and mean orbital "
-        f"radius ⟨r⟩ (proxy for a), then the Kepler ratio K = T²/⟨r⟩³. "
+        f"(median full-revolution spacing, axis-crossing detector) and "
+        f"the semi-major axis a = (r_min + r_max)/2, then the Kepler "
+        f"ratio K = T²/a³. "
         f"The predicted K = 4π²/(G·M_primary) is the same for every "
         f"body in this frame. Bodies whose orbit does not complete at "
         f"least one full period in the simulation window show NaN, "
         f"increase `duration_years` to bring them in.\n")
     lines.append(
-        "| body | is_primary | mass (kg) | T (yr) | ⟨r⟩ (AU) | T²/⟨r⟩³ | K_pred | deviation (%) |")
+        "| body | is_primary | mass (kg) | T (yr) | a (AU) | T²/a³ | K_pred | deviation (%) |")
     lines.append("|---|---|---|---|---|---|---|---|")
     for r in rows:
         if r["is_primary"]:

@@ -565,8 +565,14 @@ def _style_ax(ax, title: str, theme: dict = THEME) -> None:
     ax.grid(True, color=theme["grid"], linewidth=0.5, alpha=0.7)
 
 
-def plot_dashboard(results: dict, out_path: str, theme: dict = THEME) -> None:
-    """3x3 summary dashboard covering L1..L8 + a summary text panel."""
+def plot_dashboard(results: dict, out_path: str, theme: dict = THEME,
+                   layer_results: dict | None = None) -> None:
+    """3x3 summary dashboard covering L1..L8 + a summary text panel.
+
+    `results` carries the per-layer raw plot payloads; `layer_results`
+    (optional) carries the LayerResult objects whose name/status populate
+    the summary panel. Kept separate because both use the L1..L8 keys.
+    """
     fig = plt.figure(figsize=(15, 11))
     fig.patch.set_facecolor(theme["bg"])
     gs  = gridspec.GridSpec(3, 3, figure=fig, hspace=0.55, wspace=0.35)
@@ -664,12 +670,11 @@ def plot_dashboard(results: dict, out_path: str, theme: dict = THEME) -> None:
     ax9 = fig.add_subplot(gs[2, 2])
     ax9.set_facecolor(theme["panel"]); ax9.axis("off")
     lines = ["MATHEMATICAL VALIDATION SUMMARY", ""]
-    for key, res in results.items():
-        if not isinstance(res, dict) or "name" not in res:
+    for key, res in (layer_results or {}).items():
+        if not isinstance(res, LayerResult):
             continue
-        status = res["status"]
-        marker = {"PASS": "✓", "WARN": "!", "FAIL": "✗"}[status]
-        lines.append(f"{marker} {res['name']}: {status}")
+        marker = {"PASS": "✓", "WARN": "!", "FAIL": "✗"}[res.status]
+        lines.append(f"{marker} {res.name}: {res.status}")
     lines += ["", f"overall: {results['_overall']}",
               f"worst raw-data drift: {results['_worst_raw_drift']:.3e}%"]
     color_for = lambda s: theme["good"] if "PASS" in s else theme["warn"] if "WARN" in s else theme["bad"]
@@ -886,16 +891,16 @@ def run_validation_suite(out_dir: str = PLOTS_DIR, raw_dir: str = RAW_DIR,
 
     # ── Plots ───────────────────────────────────────────────────────────────
     print("\n  Writing plots…")
-    # Dashboard consumes both the per-layer payloads (for plotting) and the
-    # result objects (for status text in the summary panel). Stitch them.
+    # Dashboard consumes the per-layer raw dicts (for plotting) and the
+    # LayerResult objects (for the summary panel). Pass them separately:
+    # the raw dicts must stay keyed L1..L8, so the result objects cannot
+    # share the namespace.
     plot_payloads = dict(raw_payloads)
-    for k, v in results.items():
-        plot_payloads.setdefault(k, v)
     plot_payloads["_overall"] = overall
     plot_payloads["_worst_raw_drift"] = results["_worst_raw_drift"]
 
     dash = out_path / "validation_dashboard.png"
-    plot_dashboard(plot_payloads, str(dash))
+    plot_dashboard(plot_payloads, str(dash), layer_results=results)
     print(f"    ✓ {dash}")
 
     orb = out_path / "validation_orbit.png"

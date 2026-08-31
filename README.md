@@ -98,15 +98,17 @@ checkpoint against the true trajectory and records per-step metrics:
 - the slope of each metric versus step (the stability gradient),
 - the first divergence step, if the rollout blows up.
 
-The MLP and LSTM use a sliding-window rollout seeded with the true *W* = 5
-window, matching how they were trained. The GNN uses its native one-step
-interface. This is a deliberate methodological choice: to measure position and
-velocity error against ground truth, the rollout has to feed the model an
-in-distribution input, which means shifting the window forward each step.
+All three models use a sliding-window rollout seeded with the true *W* = 5
+window, matching how they were trained. This is a deliberate methodological
+choice: to measure position and velocity error against ground truth, the
+rollout has to feed the model an in-distribution input, which means shifting
+the window forward each step.
 
 Six checkpoints are benchmarked per *N* (three single-step plus three stable)
-at *N* ∈ {10, 25, 50}; *N* = 100 is excluded from the stability benchmark only,
-because backprop through *K* steps at *N* = 100 is memory-bound.
+at *N* ∈ {10, 25, 50, 100}. During *training* of the stable variants the
+backprop through *K* steps is memory-bound; at *N* = 100 only the GNN stable
+cell needs a reduced batch size (64) to fit, which the training script does
+automatically.
 
 ### Real-case out-of-distribution validation
 
@@ -137,15 +139,15 @@ lstm_train.py               LSTM trainer
 gnn_train.py                GNN trainer
 evaluate_models.py          Single-step and rollout evaluation, parameter count
 stability_benchmark.py      K-step rollout stability: per-step metrics and slopes
-train_stable_variants.sh    Retrains all 3 models with w_rollout=0.1 at N in {10,25,50}
+train_stable_variants.sh    Retrains all 3 models with w_rollout=0.1 at N in {10,25,50,100}
 real_case_validation/       Solar-System OOD validation package and reports
 plots/                      Reproducibility figures (eval, scaling, stability)
 results/                    JSON metrics and stability reports
 ```
 
-Checkpoints (`training_runs/*.pt`), raw datasets (`raw_data/`,
-`ml_ready_data/`), and the bulky per-preset plot directories are not
-committed. The committed reports and figures form the
+Checkpoints (`training_runs/`) and datasets (`raw_data/`, `ml_ready_data/`)
+are not committed. The per-preset plot directories, the committed reports in
+`real_case_validation/report_N*/`, and the figures in `plots/` form the
 verification bundle and can be regenerated from the scripts.
 
 ---
@@ -184,14 +186,18 @@ python evaluate_models.py
 ```
 
 Reports single-step MSE, rollout energy drift, and the parameter count per
-model.
+model. Without arguments the script auto-discovers the sweep-layout
+checkpoints (`training_runs/N*/{mlp,lstm,gnn}/model_best.pt`) and evaluates
+each model against its matching `ml_ready_data/dataset_3d_w{N}h1s1r.npz`
+dataset. Pass `--ckpt path:type[:label]` (repeatable) to evaluate specific
+checkpoints instead, and `--N` to restrict the body counts.
 
 ### 3. Train the stability variants and run the stability benchmark
 
 ```bash
 bash train_stable_variants.sh
 
-for N in 10 25 50; do
+for N in 10 25 50 100; do
   python stability_benchmark.py \
     --ckpt training_runs/N${N}/mlp/model_best.pt:mlp \
     --ckpt training_runs/N${N}/lstm/model_best.pt:lstm \
@@ -267,38 +273,49 @@ Three layers of testing, each in its own script:
 ## Results and conclusions
 
 The numbers below are representative; exact per-checkpoint, per-preset values
-are in `real_case_validation/report_*/real_case_report.md` and
-`results/*/stability.json`.
+are in `real_case_validation/report_N*/real_case_report.md` and the cross-N
+audit tables in `real_case_validation/cross_N_audit*.md`. The stability
+benchmark writes `results/N*/stability.json` when you run it; those raw JSONs
+are not committed, only the rendered `plots/stability_*.png`.
 
-- **The GNN generalises best out of distribution.** On `full_solar_system` the
-  GNN trained at *N* = 10 reaches a position MSE of about 0.07, where the MLP
-  and LSTM stay in the single-digit range. The GNN's pairwise message passing
-  is the only architecture that sees the spatial structure the others miss,
-  and it shows in the transfer.
-- **The GNN's error is nearly flat across the training body count.** A
-  smaller-*N* checkpoint works about as well as a larger-*N* one on the OOD
-  presets, so for the GNN the training body count is not the thing that limits
-  transfer.
-- **Stability training helps in distribution but hurts out of distribution.**
-  The rollout-energy term flattens the in-distribution stability curves, but on
-  the OOD presets it degrades the GNN substantially (for example
-  `full_solar_system` goes from about 0.07 to roughly 2.2). Optimising for
-  energy conservation on the training distribution trades away generalisation.
+- **In distribution, every checkpoint is accurate.** On the held-out test
+split of the training distribution, all six checkpoints per *N* (three
+single-step plus three stable) reach 1.2--4.0% single-step error across
+*N* ∈ {10, 25, 50, 100}; the LSTM is best at *N* ≥ 50 (1.22% at *N* = 100) and
+the GNN at *N* = 10 (1.46%).
+- **The LSTM generalises best out of distribution.** On the real Solar-System
+presets the LSTM transfers furthest: it wins or is near the top on most OOD
+presets (for example `full_solar_system`, `sun_planets_moon`, and
+`solar_system_extended`), which is consistent with its recurrent state acting
+as a low-pass filter on distribution shift.
+- **The GNN's OOD transfer is *N*-dependent.** A GNN checkpoint trained at
+*N* = 50 transfers distinctly worse than the other two body counts on the OOD
+presets, while *N* = 10/25/100 transfer on a par with the other architectures;
+its in-distribution stability is on par everywhere, so this is a genuine
+transfer weakness at that specific training count, not a bad checkpoint.
+- **Stability training has an architecture-dependent payoff.** The
+rollout-energy term consistently improves the LSTM's in-distribution energy
+drift at every *N*, but its effect on the MLP and GNN is mixed or negative and
+it does not improve the GNN's out-of-distribution transfer. Optimising for
+energy conservation on the training distribution is not automatically a
+transfer win.
 - **Body count is not the limiting factor at the limit preset.** On
-  `solar_system_extended` (19 bodies, aligned to the same horizon as
-  `sun_planets_moon`), the GNN still places bodies well at the smaller training
-  counts. The limiting factor is the mixed scale and the mass hierarchy, not N.
+`solar_system_extended` (19 bodies, aligned to the same horizon as
+`sun_planets_moon`), the models still place bodies well at the smaller
+training counts. The limiting factor is the mixed scale and the mass
+hierarchy, not *N*.
 - **The in-distribution baseline passes.** The 25-body disc sanity check
-  confirms the OOD failures come from distribution shift, not a pipeline bug.
+confirms the OOD failures come from distribution shift, not a pipeline bug.
 - **The reference is faithful.** Kepler's third law holds to below 0.1% for the
-  inner bodies, so the ground truth the surrogates are scored against is
-  trustworthy.
+inner bodies, so the ground truth the surrogates are scored against is
+trustworthy.
 
-The overall conclusion: for per-body N-body surrogates that must transfer
-across body count and across system family, a message-passing GNN trained with
-a plain single-step objective is the best of the three options tested, and
-adding rollout-aware stability training is a net negative for transfer even
-though it helps in distribution.
+The overall conclusion: a per-body architecture trained on synthetic discs
+transfers to real planetary systems once the units are rescaled consistently,
+the LSTM is the most robust of the three tested here and the only consistent
+beneficiary of rollout-aware stability training, and the GNN's message passing
+buys in-distribution accuracy at small *N* more than out-of-distribution
+robustness.
 
 ---
 
