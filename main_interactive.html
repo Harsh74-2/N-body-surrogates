@@ -289,6 +289,24 @@ Each cell is the *mean error %* averaged across every preset that ran for that N
 </section>
 
 <section>
+<h2>Interactive trajectory viewers &mdash; rollout and single-step</h2>
+<p>Every (N, preset, architecture) combination has two kinds of animated,
+scrub-able trajectory viewer. <strong>Rollout viewers</b> follow the
+autoregressive rollout: the surrogate feeds its own prediction back in, so
+small errors compound along the trajectory. <strong>Single-step viewers</strong>
+(suffixed <em>singlestep</em>) follow the single-step evaluation: each frame is
+one independent next-frame prediction from a warm-up window that is re-built
+from the reference every frame, so errors do not compound &mdash; the visual
+counterpart of the 1&ndash;3% in-distribution single-step error in the table
+above. In both, solid coloured markers = prediction, open grey markers +
+dashed grey lines = reference.</p>
+<ul>
+<li><a href="interactive_anim/index.html#N25">Rollout viewers &rarr;</a></li>
+<li><a href="interactive_anim/index.html#ss-N25">Single-step (next-frame) viewers &rarr;</a></li>
+</ul>
+</section>
+
+<section>
 <h2>What this benchmark measures</h2>
 <ul>
 <li><strong>Generalisation to real Solar-System initial conditions.</strong> Training is on synthetic disc IMF data; validation is on NASA JPL Horizons ephemerides. Three independent distribution shifts apply simultaneously: mass ratio (10<sup>5</sup>&times; vs 10&times;), timestep (~50&times; finer), and geometry (thin-disk vs Plummer sphere).</li>
