@@ -43,12 +43,17 @@ p.tag { font-size: .85rem; color: #555; margin-top: .4rem; }
     <option value="xz">X&ndash;Z</option>
     <option value="yz">Y&ndash;Z</option>
   </select>
+  <label style="font-size:.85rem"><input type="checkbox" id="smooth" checked>
+    smooth paths</label>
 </div>
 <div id="traj"></div>
 <p class="tag">Solid coloured markers = surrogate prediction (GNN_stable);
 open grey markers = closed-form reference; dashed grey lines = full
 reference paths; faint solid lines = full predicted paths. Each frame is
-one rollout step (dt = <span id="dtLbl"></span> yr). Positions are primary-centred, in AU. Hover a
+one rollout step (dt = <span id="dtLbl"></span> yr). Positions are primary-centred, in AU. The full
+paths are Catmull-Rom spline-smoothed for display only (checkbox above);
+the markers always show the exact dumped frames, and the smooth curve
+passes through every dumped point. Hover a
 body for coordinates. Drag the slider to scrub; buttons play/pause; the
 select sets playback speed. A <a href="../animations/N25_preset_full_solar_system_GNN_stable_3d.mp4">pre-rendered mp4</a> of the same rollout is also available.</p>
 <script>
@@ -63,6 +68,51 @@ function planeKeys() {
   const p = document.getElementById('plane').value;
   return { xy: ['x','y'], xz: ['x','z'], yz: ['y','z'] }[p];
 }
+// Catmull-Rom spline through the dumped points: display-only densification.
+// closed: wrap the interpolation if the path returns near its start
+// (orbit); per: subdivisions per input segment.
+function catmullRom(xs, ys, closed, per) {
+  const n = xs.length;
+  if (n < 3 || per < 2) return { x: xs.slice(), y: ys.slice() };
+  const outX = [], outY = [];
+  const segs = closed ? n : n - 1;
+  for (let i = 0; i < segs; i++) {
+    let a, b, c, d;
+    if (closed) {
+      const g = j => ((j % n) + n) % n;
+      a = g(i - 1); b = g(i); c = g(i + 1); d = g(i + 2);
+    } else {
+      a = Math.max(0, i - 1); b = i; c = i + 1; d = Math.min(n - 1, i + 2);
+    }
+    for (let s = 0; s < per; s++) {
+      const t = s / per, t2 = t * t, t3 = t2 * t;
+      outX.push(0.5 * (2 * xs[b] + (-xs[a] + xs[c]) * t +
+        (2 * xs[a] - 5 * xs[b] + 4 * xs[c] - xs[d]) * t2 +
+        (-xs[a] + 3 * xs[b] - 3 * xs[c] + xs[d]) * t3));
+      outY.push(0.5 * (2 * ys[b] + (-ys[a] + ys[c]) * t +
+        (2 * ys[a] - 5 * ys[b] + 4 * ys[c] - ys[d]) * t2 +
+        (-ys[a] + 3 * ys[b] - 3 * ys[c] + ys[d]) * t3));
+    }
+  }
+  if (!closed) { outX.push(xs[n - 1]); outY.push(ys[n - 1]); }
+  return { x: outX, y: outY };
+}
+function isClosed(xs, ys) {
+  const n = xs.length;
+  if (n < 4) return false;
+  let xmin = Infinity, xmax = -Infinity, ymin = Infinity, ymax = -Infinity;
+  for (let i = 0; i < n; i++) {
+    if (xs[i] < xmin) xmin = xs[i]; if (xs[i] > xmax) xmax = xs[i];
+    if (ys[i] < ymin) ymin = ys[i]; if (ys[i] > ymax) ymax = ys[i];
+  }
+  const scale = Math.max(xmax - xmin, ymax - ymin) || 1;
+  return Math.hypot(xs[n-1] - xs[0], ys[n-1] - ys[0]) < 0.15 * scale;
+}
+function pathData(raw_x, raw_y) {
+  if (!document.getElementById('smooth').checked) return { x: raw_x, y: raw_y };
+  const per = TMAX > 400 ? 2 : 8;
+  return catmullRom(raw_x, raw_y, isClosed(raw_x, raw_y), per);
+}
 function titleFor() {
   return 'Frame ' + frame + '/' + TMAX + '   t = ' + (frame*DT).toFixed(3) + ' yr';
 }
@@ -71,9 +121,11 @@ function setPlane() {
   const refs = [], surrs = [], names = [];
   for (let b = 0; b < NB; b++) {
     if (b === PRIMARY) continue;
-    refs.push({ x: D.ref[k[0]][b], y: D.ref[k[1]][b], mode: 'lines',
+    const rp = pathData(D.ref[k[0]][b], D.ref[k[1]][b]);
+    const sp = pathData(D.surr[k[0]][b], D.surr[k[1]][b]);
+    refs.push({ x: rp.x, y: rp.y, mode: 'lines',
       line: { color: '#aaa', width: 1, dash: 'dash' }, hoverinfo: 'skip' });
-    surrs.push({ x: D.surr[k[0]][b], y: D.surr[k[1]][b], mode: 'lines',
+    surrs.push({ x: sp.x, y: sp.y, mode: 'lines',
       line: { color: COLOUR, width: 1 }, opacity: 0.35, hoverinfo: 'skip' });
     names.push(D.names[b]);
   }
@@ -148,7 +200,8 @@ window.addEventListener('load', function () {
     pause(); updateFrame(parseInt(ev.target.value, 10));
   });
   document.getElementById('plane').onchange = setPlane;
+  document.getElementById('smooth').onchange = setPlane;
   setPlane();
 });
 </script>
-<hr><p style='color:#666;font-size:0.9rem;'>Built as a public benchmark by Harsh74-2, 2026.</p></body></html>
+</body></html>
