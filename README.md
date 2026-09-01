@@ -278,11 +278,16 @@ audit tables in `real_case_validation/cross_N_audit*.md`. The stability
 benchmark writes `results/N*/stability.json` when you run it; those raw JSONs
 are not committed, only the rendered `plots/stability_*.png`.
 
-- **In distribution, every checkpoint is accurate.** On the held-out test
-split of the training distribution, all six checkpoints per *N* (three
-single-step plus three stable) reach 1.2--4.0% single-step error across
-*N* ∈ {10, 25, 50, 100}; the LSTM is best at *N* ≥ 50 (1.22% at *N* = 100) and
-the GNN at *N* = 10 (1.46%).
+- **In distribution, every checkpoint is accurate.** On the in-distribution
+disc baseline preset, all six checkpoints per *N* (three single-step plus
+three stable) reach 1.4--8.6% single-step error across *N* ∈ {10, 25, 50,
+100}; from *N* ≥ 25 every checkpoint is within 1.4--3.2%. The GNN_stable
+variant is best at *N* = 10 (3.38%) and *N* = 25 (1.40%), the GNN at *N* = 50
+(1.59%), and the LSTM at *N* = 100 (1.87%). The full per-model, per-*N*
+table is `real_case_validation/cross_N_audit_single_step.md`. One caveat:
+the split is stride-1-overlapping (see Limitations), so these figures partly
+measure interpolation on frames seen during training; the split is identical
+for every model, so the cross-model comparison remains fair.
 - **The LSTM generalises best out of distribution.** On the real Solar-System
 presets the LSTM transfers furthest: it wins or is near the top on most OOD
 presets (for example `full_solar_system`, `sun_planets_moon`, and
