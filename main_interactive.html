@@ -35,13 +35,14 @@ footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #ccc;
          text-align: center; color: #666; font-size: 0.9rem; }
 .footer-credit a { color: #003a70; }
 </style></head><body>
-<nav><a href="index.html" style="text-decoration: underline">Interactive hub</a><a href="main_interactive.html" style="text-decoration: underline">Interactive hub</a><a href="animations.html">Animations</a><a href="plots.html">Plots</a><a href="n10.html">N=10</a><a href="n25.html">N=25</a><a href="n50.html">N=50</a><a href="n100.html">N=100</a></nav>
+<nav><a href="index.html">Overview</a><a href="main_interactive.html" style="text-decoration: underline">Interactive hub</a><a href="animations.html">Animations</a><a href="plots.html">Plots</a><a href="n10.html">N=10</a><a href="n25.html">N=25</a><a href="n50.html">N=50</a><a href="n100.html">N=100</a></nav>
 <h1>N-body ML Surrogates &mdash; Out-of-Distribution Benchmark</h1>
 <p class="lead"><strong>An open benchmark for machine-learning surrogates of gravitational N-body dynamics, validated against real Solar-System initial conditions.</strong></p>
 <p>Variable-body-count machine-learning surrogates for gravitational N-body
 dynamics, evaluated out-of-distribution on real Solar-System initial
 conditions. Three architectures (MLP, LSTM, GNN) are trained at
-N &isin; {10, 25, 50, 100} on an immutably-frozen disc IMF dataset, then
+N &isin; {10, 25, 50, 100} on a synthetic disc dataset drawn from a
+realistic initial-mass function, then
 rolled out on seven Solar-System presets sourced from NASA JPL Horizons
 ephemerides. This page is the visual companion to the benchmark;
 numerical audit tables, trajectory animations, static plots, and per-N
@@ -51,9 +52,9 @@ dashboards are linked below.</p>
 <p>Mean trajectory error after a full multi-step rollout, as a percentage of the reference trajectory radius. Lower is better. Values above 100% mean the predicted orbit is further from the true position than the orbit radius itself. Source file: <a href="audit/cross_N_audit.md"><code>cross_N_audit.md</code></a>.</p>
 <h1>Cross-N Real-Case Validation, Error-Percentage Audit</h1>
 
-Autoregressive rollout variant: each surrogate predicts **forward in time** from its own previous output. Errors compound over the rollout. Use this report to read the distribution-shift cost of the Solar System relative to the synthetic disc training set.
+Autoregressive rollout variant: each surrogate predicts forward in time from its own previous output. Errors compound over the rollout. Use this report to read the distribution-shift cost of the Solar System relative to the synthetic disc training set.
 
-Each cell is the *mean error %* averaged across every preset that ran for that N. The cell on the right (N=100) is the **best** any model in this family can do on the given training budget; the cell on the left (N=10) is the worst. Reading left-to-right should show the gradual improvement as the training budget grows.
+Each cell is the mean error % averaged across every preset that ran for that N. The cell on the right (N=100) is the best any model in this family can do on the given training budget; the cell on the left (N=10) is the worst. Reading left-to-right should show the gradual improvement as the training budget grows.
 
 <h2>Headline: mean error % by (N, model)</h2>
 
@@ -166,9 +167,9 @@ Each cell is the *mean error %* averaged across every preset that ran for that N
 <p>Mean one-step prediction error, the cleanest measure of surrogate quality without rollout amplification. Values stay in the 1&ndash;3% range for the in-distribution disc baseline. Source file: <a href="audit/cross_N_audit_single_step.md"><code>cross_N_audit_single_step.md</code></a>.</p>
 <h1>Cross-N Real-Case Validation, Error-Percentage Audit</h1>
 
-Single-step variant: each surrogate predicts the next frame only from a warm-up window of leapfrog frames. Errors do **not** compound because the window is always re-built from the reference. This is the headline 1-3 % single-step MSE the surrogates were trained on.
+Single-step variant: each surrogate predicts the next frame only from a warm-up window of leapfrog frames. Errors do not compound because the window is always re-built from the reference. This is the headline 1-3 % single-step MSE the surrogates were trained on.
 
-Each cell is the *mean error %* averaged across every preset that ran for that N. The cell on the right (N=100) is the **best** any model in this family can do on the given training budget; the cell on the left (N=10) is the worst. Reading left-to-right should show the gradual improvement as the training budget grows.
+Each cell is the mean error % averaged across every preset that ran for that N. The cell on the right (N=100) is the best any model in this family can do on the given training budget; the cell on the left (N=10) is the worst. Reading left-to-right should show the gradual improvement as the training budget grows.
 
 <h2>Headline: mean error % by (N, model)</h2>
 
@@ -291,7 +292,7 @@ Each cell is the *mean error %* averaged across every preset that ran for that N
 <section>
 <h2>Interactive trajectory viewers &mdash; rollout and single-step</h2>
 <p>Every (N, preset, architecture) combination has two kinds of animated,
-scrub-able trajectory viewer. <strong>Rollout viewers</b> follow the
+scrubbable trajectory viewer. <strong>Rollout viewers</strong> follow the
 autoregressive rollout: the surrogate feeds its own prediction back in, so
 small errors compound along the trajectory. <strong>Single-step viewers</strong>
 (suffixed <em>singlestep</em>) follow the single-step evaluation: each frame is

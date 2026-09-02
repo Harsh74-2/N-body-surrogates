@@ -2,7 +2,7 @@
 
 Standalone audit for the **N = 50** training-budget rerun. Two complementary modes are reported:
 
-- **Autoregressive rollout** (in `preset_*/summary.json`) — each surrogate predicts forward from its own previous output. Errors compound; the per-step prediction becomes the *warm-up window* for the next. This is the **stress test** the user cares about: *how far can the model extrapolate before it loses the orbit?*
+- **Autoregressive rollout** (in `preset_*/summary.json`) — each surrogate predicts forward from its own previous output. Errors compound; the per-step prediction becomes the *warm-up window* for the next. This is the **stress test** for the transfer question: *how far can the model extrapolate before it loses the orbit?*
 - **Single-step variant** (in `preset_*/ss_summary.json`) — each surrogate predicts the next frame *only*, with the warm-up window always re-built from the leapfrog reference (never from the model's own output). Errors do not compound. This is the **bare prediction error** and the headline 1-3 % number the surrogates were trained on.
 
 ## Headline (autoregressive rollout, mean err %)
