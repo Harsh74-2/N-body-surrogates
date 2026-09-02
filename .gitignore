@@ -73,7 +73,6 @@ Project_Mathematics_native_math.html
 
 # Local log files
 *.log
-!training_runs/**/history.json
 # Per-N rerun.log inside real_case_validation/report_N*/: per-run trace,
 # regenerable by re-running the runner with --quick + the same ckpts.
 real_case_validation/report_N*/rerun.log

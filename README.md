@@ -121,10 +121,10 @@ or an explicit override for satellite systems), and the time unit follows from
 network sees a zero-momentum state, as it was trained on.
 
 A high-precision leapfrog integrator provides the ground-truth reference
-trajectory. A Kepler's-third-law check on that reference confirms it is a
-faithful integrator on these initial conditions: deviation is below 0.1% for
-the inner bodies. Bodies whose period is longer than the simulation window
-show NaN, as expected.
+trajectory. A Kepler's-third-law check on that reference (closed-form orbit
+versus integrated orbit for the Sun-Earth preset) confirms it is a faithful
+integrator on these initial conditions. Bodies whose period is longer than
+the simulation window show NaN, as expected.
 
 ---
 
@@ -272,11 +272,13 @@ Three layers of testing, each in its own script:
 
 ## Results and conclusions
 
-The numbers below are representative; exact per-checkpoint, per-preset values
-are in `real_case_validation/report_N*/real_case_report.md` and the cross-N
-audit tables in `real_case_validation/cross_N_audit*.md`. The stability
-benchmark writes `results/N*/stability.json` when you run it; those raw JSONs
-are not committed, only the rendered `plots/stability_*.png`.
+The numbers below are representative; the exact per-checkpoint, per-preset
+values live in the cross-N audit tables
+(`real_case_validation/cross_N_audit.md` for rollout,
+`cross_N_audit_single_step.md` for single-step, both built from the per-N
+reports under `real_case_validation/report_N*/`). The stability benchmark
+writes `results/N*/stability.json` when you run it; those raw JSONs are not
+committed, only the rendered `plots/stability_*.png`.
 
 - **In distribution, every checkpoint is accurate.** On the in-distribution
 disc baseline preset, all six checkpoints per *N* (three single-step plus
@@ -288,22 +290,30 @@ table is `real_case_validation/cross_N_audit_single_step.md`. One caveat:
 the split is stride-1-overlapping (see Limitations), so these figures partly
 measure interpolation on frames seen during training; the split is identical
 for every model, so the cross-model comparison remains fair.
-- **The LSTM generalises best out of distribution.** On the real Solar-System
-presets the LSTM transfers furthest: it wins or is near the top on most OOD
-presets (for example `full_solar_system`, `sun_planets_moon`, and
-`solar_system_extended`), which is consistent with its recurrent state acting
-as a low-pass filter on distribution shift.
-- **The GNN's OOD transfer is *N*-dependent.** A GNN checkpoint trained at
-*N* = 50 transfers distinctly worse than the other two body counts on the OOD
-presets, while *N* = 10/25/100 transfer on a par with the other architectures;
-its in-distribution stability is on par everywhere, so this is a genuine
-transfer weakness at that specific training count, not a bad checkpoint.
-- **Stability training has an architecture-dependent payoff.** The
-rollout-energy term consistently improves the LSTM's in-distribution energy
-drift at every *N*, but its effect on the MLP and GNN is mixed or negative and
-it does not improve the GNN's out-of-distribution transfer. Optimising for
-energy conservation on the training distribution is not automatically a
-transfer win.
+- **The LSTM generalises best out of distribution, in the single-step
+regime.** Averaged across the OOD presets, the single-step LSTM has the lowest
+error at every *N* (37.8% at *N* = 10 down to 56.0% at *N* = 100, against
+55--80% for the MLP and 64--70% for the GNN; see
+`real_case_validation/cross_N_audit_single_step.md`). Under autoregressive
+rollout, where errors compound, no single model dominates: the GNN is best at
+*N* = 10 (109.3%), the stable GNN at *N* = 25 (119.3%), and the stable MLP at
+*N* = 50 and 100 (129.2% and 115.9%; see `real_case_validation/cross_N_audit.md`).
+- **The GNN scales best in the single-step regime and worst in rollout.** Its
+single-step OOD error is essentially flat in *N* (70.1% → 66.7%, the only
+family that improves with training budget) and it has the lowest rollout error
+of all six checkpoints at *N* = 10. But its rollout error grows with *N*
+(109.3% → 209.7% from *N* = 10 to 100, the largest increase of any model), and
+its stability-trained variant degrades in both regimes at high *N* (single-step
+61.3% → 118.1%). Message passing buys single-step accuracy and small-*N*
+rollout accuracy more than long-horizon robustness.
+- **Stability training pays off most for the MLP, and not at all
+consistently.** Under rollout it is the MLP that improves at both ends of the
+body-count range (−22.6 pp at *N* = 10, −79.5 pp at *N* = 100). For the LSTM
+it helps at *N* = 10 (−49.9 pp) but hurts at *N* = 100 (+19.4 pp), and on the
+in-distribution disc baseline the stable LSTM's rollout energy drift is worse
+at three of the four body counts (for example 2.90 → 8.13 at *N* = 25). For
+the GNN it is negative at *N* = 10 (+45.4 pp). Optimising for energy
+conservation on the training distribution is not automatically a transfer win.
 - **Body count is not the limiting factor at the limit preset.** On
 `solar_system_extended` (19 bodies, aligned to the same horizon as
 `sun_planets_moon`), the models still place bodies well at the smaller
@@ -311,16 +321,16 @@ training counts. The limiting factor is the mixed scale and the mass
 hierarchy, not *N*.
 - **The in-distribution baseline passes.** The 25-body disc sanity check
 confirms the OOD failures come from distribution shift, not a pipeline bug.
-- **The reference is faithful.** Kepler's third law holds to below 0.1% for the
-inner bodies, so the ground truth the surrogates are scored against is
-trustworthy.
+- **The reference is faithful.** A Kepler's-third-law check on the closed-form
+Sun-Earth orbit confirms the leapfrog reference the surrogates are scored
+against is trustworthy.
 
 The overall conclusion: a per-body architecture trained on synthetic discs
-transfers to real planetary systems once the units are rescaled consistently,
-the LSTM is the most robust of the three tested here and the only consistent
-beneficiary of rollout-aware stability training, and the GNN's message passing
-buys in-distribution accuracy at small *N* more than out-of-distribution
-robustness.
+transfers to real planetary systems once the units are rescaled consistently.
+The LSTM is the most robust of the three under single-step evaluation, the MLP
+benefits most from rollout-aware stability training, and the GNN's message
+passing buys in-distribution accuracy and small-*N* rollout accuracy more than
+out-of-distribution robustness.
 
 ---
 
