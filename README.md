@@ -291,8 +291,9 @@ the split is stride-1-overlapping (see Limitations), so these figures partly
 measure interpolation on frames seen during training; the split is identical
 for every model, so the cross-model comparison remains fair.
 - **The LSTM generalises best out of distribution, in the single-step
-regime.** Averaged across the OOD presets, the single-step LSTM has the lowest
-error at every *N* (37.8% at *N* = 10 down to 56.0% at *N* = 100, against
+regime.** Averaged across all seven presets (the in-distribution disc
+baseline included), the single-step LSTM has the lowest
+error at every *N* (37.8% at *N* = 10, 56.0% at *N* = 100, against
 55--80% for the MLP and 64--70% for the GNN; see
 `real_case_validation/cross_N_audit_single_step.md`). Under autoregressive
 rollout, where errors compound, no single model dominates: the GNN is best at
