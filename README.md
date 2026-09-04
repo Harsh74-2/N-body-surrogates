@@ -297,23 +297,23 @@ error at every *N* (37.8% at *N* = 10, 56.0% at *N* = 100, against
 55--80% for the MLP and 64--70% for the GNN; see
 `real_case_validation/cross_N_audit_single_step.md`). Under autoregressive
 rollout, where errors compound, no single model dominates: the GNN is best at
-*N* = 10 (109.3%), the stable GNN at *N* = 25 (119.3%), and the stable MLP at
-*N* = 50 and 100 (129.2% and 115.9%; see `real_case_validation/cross_N_audit.md`).
+*N* = 10 (108.4%), the stable GNN at *N* = 25 (120.5%), and the stable MLP at
+*N* = 50 and 100 (130.0% and 116.6%; see `real_case_validation/cross_N_audit.md`).
 - **The GNN scales best in the single-step regime and worst in rollout.** Its
 single-step OOD error is essentially flat in *N* (70.1% → 66.7%, the only
 family that improves with training budget) and it has the lowest rollout error
 of all six checkpoints at *N* = 10. But its rollout error grows with *N*
-(109.3% → 209.7% from *N* = 10 to 100, the largest increase of any model), and
+(108.4% → 210.7% from *N* = 10 to 100, the largest increase of any model), and
 its stability-trained variant degrades in both regimes at high *N* (single-step
 61.3% → 118.1%). Message passing buys single-step accuracy and small-*N*
 rollout accuracy more than long-horizon robustness.
 - **Stability training pays off most for the MLP, and not at all
 consistently.** Under rollout it is the MLP that improves at both ends of the
-body-count range (−22.6 pp at *N* = 10, −79.5 pp at *N* = 100). For the LSTM
-it helps at *N* = 10 (−49.9 pp) but hurts at *N* = 100 (+19.4 pp), and on the
+body-count range (−23.3 pp at *N* = 10, −79.8 pp at *N* = 100). For the LSTM
+it helps at *N* = 10 (−46.4 pp) but hurts at *N* = 100 (+20.7 pp), and on the
 in-distribution disc baseline the stable LSTM's rollout energy drift is worse
 at three of the four body counts (for example 2.90 → 8.13 at *N* = 25). For
-the GNN it is negative at *N* = 10 (+45.4 pp). Optimising for energy
+the GNN it is negative at *N* = 10 (+46.1 pp). Optimising for energy
 conservation on the training distribution is not automatically a transfer win.
 - **Body count is not the limiting factor at the limit preset.** On
 `solar_system_extended` (19 bodies, aligned to the same horizon as
