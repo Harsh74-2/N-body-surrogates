@@ -11,12 +11,12 @@ Each cell is the mean of `mean_err_%` over the presets that ran, normalised by L
 
 | model | in-distribution | Solar-System OOD | all |
 |---|---|---|---|
-| MLP | 365.6 % | 216.4 % | 237.7 % |
-| MLP_stable | 186.7 % | 119.6 % | 129.2 % |
-| LSTM | 219.8 % | 213.0 % | 213.9 % |
-| LSTM_stable | 295.2 % | 334.7 % | 329.0 % |
-| GNN | 176.3 % | 127.8 % | 134.7 % |
-| GNN_stable | 300.2 % | 227.9 % | 238.2 % |
+| MLP | 365.6 % | 217.1 % | 238.3 % |
+| MLP_stable | 186.7 % | 120.5 % | 130.0 % |
+| LSTM | 219.8 % | 215.8 % | 216.4 % |
+| LSTM_stable | 295.2 % | 335.7 % | 329.9 % |
+| GNN | 176.3 % | 128.2 % | 135.1 % |
+| GNN_stable | 300.2 % | 228.4 % | 238.7 % |
 
 ## Headline (single-step, mean err %)
 
@@ -35,9 +35,9 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 | family | single mean err % | stable mean err % | Δ (pp) |
 |---|---|---|---|
-| MLP | 216.42 % | 119.63 % | -96.79 |
-| LSTM | 212.97 % | 334.66 % | +121.69 |
-| GNN | 127.78 % | 227.85 % | +100.07 |
+| MLP | 217.15 % | 120.52 % | -96.62 |
+| LSTM | 215.79 % | 335.71 % | +119.92 |
+| GNN | 128.24 % | 228.40 % | +100.16 |
 
 ## Stable vs single, per family (single-step)
 
@@ -64,45 +64,45 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 | model | mean err % | max err % | frames ≤ ½L | energy drift | MSE pos |
 |---|---|---|---|---|---|
-| MLP | 284.79 % | 520.11 % | 0 | 1.61e+02 | 3.006e+00 |
+| MLP | 284.78 % | 520.11 % | 0 | 1.61e+02 | 3.006e+00 |
 | MLP_stable | 117.15 % | 504.95 % | 0 | 3.69e+00 | 5.482e-01 |
-| LSTM | 355.43 % | 528.98 % | 0 | 3.90e+01 | 4.767e+00 |
-| LSTM_stable | 757.95 % | 1166.79 % | 0 | 4.64e+00 | 2.386e+01 |
-| GNN | 197.14 % | 426.61 % | 0 | 1.15e+02 | 1.802e+00 |
-| GNN_stable | 344.46 % | 960.82 % | 0 | 8.09e+02 | 5.185e+00 |
+| LSTM | 361.90 % | 528.98 % | 0 | 3.90e+01 | 4.909e+00 |
+| LSTM_stable | 758.55 % | 1166.79 % | 0 | 4.64e+00 | 2.389e+01 |
+| GNN | 197.21 % | 426.51 % | 0 | 1.15e+02 | 1.803e+00 |
+| GNN_stable | 344.49 % | 959.30 % | 0 | 8.09e+02 | 5.186e+00 |
 
 ### `inner_planets` — Inner planets (Mercury → Mars + Sun) (OOD)
 
 | model | mean err % | max err % | frames ≤ ½L | energy drift | MSE pos |
 |---|---|---|---|---|---|
-| MLP | 94.33 % | 221.81 % | 0 | 6.94e+01 | 4.257e-01 |
-| MLP_stable | 119.39 % | 298.21 % | 0 | 3.91e+00 | 5.686e-01 |
-| LSTM | 88.18 % | 234.21 % | 0 | 7.60e+01 | 3.546e-01 |
-| LSTM_stable | 91.93 % | 233.62 % | 0 | 2.29e+00 | 3.851e-01 |
-| GNN | 73.12 % | 225.31 % | 0 | 7.36e+01 | 2.712e-01 |
-| GNN_stable | 94.45 % | 245.26 % | 0 | 2.36e+02 | 3.901e-01 |
+| MLP | 94.49 % | 221.83 % | 0 | 6.94e+01 | 4.261e-01 |
+| MLP_stable | 119.35 % | 298.21 % | 0 | 3.91e+00 | 5.685e-01 |
+| LSTM | 87.80 % | 234.21 % | 0 | 7.60e+01 | 3.536e-01 |
+| LSTM_stable | 91.63 % | 233.61 % | 0 | 2.29e+00 | 3.839e-01 |
+| GNN | 73.18 % | 225.36 % | 0 | 7.36e+01 | 2.714e-01 |
+| GNN_stable | 94.51 % | 237.99 % | 0 | 2.36e+02 | 3.910e-01 |
 
 ### `jupiter_galileans` — Jupiter + 4 Galilean moons (toy circular orbits) (OOD)
 
 | model | mean err % | max err % | frames ≤ ½L | energy drift | MSE pos |
 |---|---|---|---|---|---|
-| MLP | 328.99 % | 734.57 % | 0 | 6.46e+01 | 4.397e+00 |
+| MLP | 328.97 % | 734.57 % | 0 | 6.46e+01 | 4.397e+00 |
 | MLP_stable | 129.99 % | 259.07 % | 0 | 3.86e+00 | 6.693e-01 |
 | LSTM | 264.65 % | 519.36 % | 2 | 7.03e+01 | 3.004e+00 |
 | LSTM_stable | 492.48 % | 1022.84 % | 2 | 2.24e+00 | 1.298e+01 |
-| GNN | 123.46 % | 478.02 % | 0 | 7.10e+01 | 7.584e-01 |
-| GNN_stable | 253.76 % | 646.03 % | 0 | 2.24e+02 | 2.662e+00 |
+| GNN | 123.49 % | 478.04 % | 0 | 7.10e+01 | 7.588e-01 |
+| GNN_stable | 253.76 % | 646.50 % | 0 | 2.24e+02 | 2.662e+00 |
 
 ### `solar_system_extended` — Sun + 8 planets + Moon + 5 dwarfs + 4 Galilean moons (19 bodies) (OOD)
 
 | model | mean err % | max err % | frames ≤ ½L | energy drift | MSE pos |
 |---|---|---|---|---|---|
-| MLP | 262.86 % | 1057.56 % | 0 | 4.33e+01 | 2.792e+00 |
-| MLP_stable | 115.77 % | 498.83 % | 0 | 3.83e+00 | 5.632e-01 |
-| LSTM | 257.70 % | 555.05 % | 0 | 3.97e+01 | 2.670e+00 |
-| LSTM_stable | 323.87 % | 645.35 % | 0 | 2.33e+00 | 3.927e+00 |
-| GNN | 168.14 % | 447.04 % | 0 | 4.73e+01 | 1.275e+00 |
-| GNN_stable | 350.83 % | 1017.93 % | 0 | 1.17e+02 | 6.119e+00 |
+| MLP | 267.44 % | 1057.55 % | 0 | 4.33e+01 | 2.909e+00 |
+| MLP_stable | 121.12 % | 498.83 % | 0 | 3.83e+00 | 6.364e-01 |
+| LSTM | 264.40 % | 555.05 % | 0 | 3.97e+01 | 2.803e+00 |
+| LSTM_stable | 329.10 % | 645.73 % | 0 | 2.33e+00 | 4.069e+00 |
+| GNN | 170.84 % | 447.02 % | 0 | 4.73e+01 | 1.315e+00 |
+| GNN_stable | 353.90 % | 1014.41 % | 0 | 1.17e+02 | 6.229e+00 |
 
 ### `sun_earth_only` — Sun–Earth 2-body (Keplerian reference) (OOD)
 
@@ -119,12 +119,12 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 | model | mean err % | max err % | frames ≤ ½L | energy drift | MSE pos |
 |---|---|---|---|---|---|
-| MLP | 191.78 % | 516.35 % | 0 | 5.53e+02 | 1.644e+00 |
-| MLP_stable | 98.72 % | 504.95 % | 0 | 3.91e+00 | 4.389e-01 |
-| LSTM | 193.39 % | 471.44 % | 0 | 3.80e+01 | 1.946e+00 |
-| LSTM_stable | 209.85 % | 499.47 % | 0 | 4.57e+00 | 2.103e+00 |
-| GNN | 117.60 % | 426.68 % | 0 | 9.70e+01 | 8.922e-01 |
-| GNN_stable | 199.47 % | 960.26 % | 0 | 1.37e+03 | 2.917e+00 |
+| MLP | 191.42 % | 516.35 % | 0 | 5.53e+02 | 1.639e+00 |
+| MLP_stable | 98.74 % | 504.95 % | 0 | 3.91e+00 | 4.391e-01 |
+| LSTM | 197.52 % | 471.46 % | 0 | 3.80e+01 | 2.012e+00 |
+| LSTM_stable | 210.60 % | 499.43 % | 0 | 4.57e+00 | 2.115e+00 |
+| GNN | 117.51 % | 426.58 % | 0 | 9.70e+01 | 8.894e-01 |
+| GNN_stable | 199.60 % | 958.98 % | 0 | 1.37e+03 | 2.920e+00 |
 
 ## Per-preset detail (single-step)
 
