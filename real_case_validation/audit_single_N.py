@@ -190,7 +190,7 @@ def _render_md(report_dir: Path,
             tag = "in-distribution" if payload.get("in_distribution") else "OOD"
             lines.append(f"### `{preset_name}` — {payload.get('label', '')} ({tag})\n")
             lines.append("| model | mean err % | max err % | frames ≤ ½L | "
-                         "energy drift | MSE pos |")
+                         "max energy drift | MSE pos |")
             lines.append("|---|---|---|---|---|---|")
             for m in MODEL_ORDER:
                 r = _row(payload, m, single_step=False)
@@ -211,7 +211,7 @@ def _render_md(report_dir: Path,
             tag = "in-distribution" if payload.get("in_distribution") else "OOD"
             lines.append(f"### `{preset_name}` — {payload.get('label', '')} ({tag})\n")
             lines.append("| model | mean err % | max err % | "
-                         "energy drift | MSE pos |")
+                         "mean energy drift | MSE pos |")
             lines.append("|---|---|---|---|---|")
             for m in MODEL_ORDER:
                 r = _row(payload, m, single_step=True)

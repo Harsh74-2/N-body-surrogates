@@ -51,7 +51,7 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 ### `disc_imf_in_distribution_baseline` — 25-body galaxy disc, training IMF (in-distribution sanity) (in-distribution)
 
-| model | mean err % | max err % | frames ≤ ½L | energy drift | MSE pos |
+| model | mean err % | max err % | frames ≤ ½L | max energy drift | MSE pos |
 |---|---|---|---|---|---|
 | MLP | 365.56 % | 774.72 % | 48 | 2.36e+00 | 5.376e+00 |
 | MLP_stable | 186.69 % | 557.74 % | 30 | 2.10e+00 | 1.449e+00 |
@@ -62,7 +62,7 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 ### `full_solar_system` — All 8 planets + Sun (OOD)
 
-| model | mean err % | max err % | frames ≤ ½L | energy drift | MSE pos |
+| model | mean err % | max err % | frames ≤ ½L | max energy drift | MSE pos |
 |---|---|---|---|---|---|
 | MLP | 284.78 % | 520.11 % | 0 | 1.61e+02 | 3.006e+00 |
 | MLP_stable | 117.15 % | 504.95 % | 0 | 3.69e+00 | 5.482e-01 |
@@ -73,7 +73,7 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 ### `inner_planets` — Inner planets (Mercury → Mars + Sun) (OOD)
 
-| model | mean err % | max err % | frames ≤ ½L | energy drift | MSE pos |
+| model | mean err % | max err % | frames ≤ ½L | max energy drift | MSE pos |
 |---|---|---|---|---|---|
 | MLP | 94.49 % | 221.83 % | 0 | 6.94e+01 | 4.261e-01 |
 | MLP_stable | 119.35 % | 298.21 % | 0 | 3.91e+00 | 5.685e-01 |
@@ -84,7 +84,7 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 ### `jupiter_galileans` — Jupiter + 4 Galilean moons (toy circular orbits) (OOD)
 
-| model | mean err % | max err % | frames ≤ ½L | energy drift | MSE pos |
+| model | mean err % | max err % | frames ≤ ½L | max energy drift | MSE pos |
 |---|---|---|---|---|---|
 | MLP | 328.97 % | 734.57 % | 0 | 6.46e+01 | 4.397e+00 |
 | MLP_stable | 129.99 % | 259.07 % | 0 | 3.86e+00 | 6.693e-01 |
@@ -95,7 +95,7 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 ### `solar_system_extended` — Sun + 8 planets + Moon + 5 dwarfs + 4 Galilean moons (19 bodies) (OOD)
 
-| model | mean err % | max err % | frames ≤ ½L | energy drift | MSE pos |
+| model | mean err % | max err % | frames ≤ ½L | max energy drift | MSE pos |
 |---|---|---|---|---|---|
 | MLP | 267.44 % | 1057.55 % | 0 | 4.33e+01 | 2.909e+00 |
 | MLP_stable | 121.12 % | 498.83 % | 0 | 3.83e+00 | 6.364e-01 |
@@ -106,7 +106,7 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 ### `sun_earth_only` — Sun–Earth 2-body (Keplerian reference) (OOD)
 
-| model | mean err % | max err % | frames ≤ ½L | energy drift | MSE pos |
+| model | mean err % | max err % | frames ≤ ½L | max energy drift | MSE pos |
 |---|---|---|---|---|---|
 | MLP | 135.79 % | 205.50 % | 0 | 6.94e+01 | 7.374e-01 |
 | MLP_stable | 136.79 % | 258.20 % | 0 | 3.92e+00 | 7.275e-01 |
@@ -117,7 +117,7 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 ### `sun_planets_moon` — Sun + 8 planets + Earth's Moon (10 bodies) (OOD)
 
-| model | mean err % | max err % | frames ≤ ½L | energy drift | MSE pos |
+| model | mean err % | max err % | frames ≤ ½L | max energy drift | MSE pos |
 |---|---|---|---|---|---|
 | MLP | 191.42 % | 516.35 % | 0 | 5.53e+02 | 1.639e+00 |
 | MLP_stable | 98.74 % | 504.95 % | 0 | 3.91e+00 | 4.391e-01 |
@@ -130,7 +130,7 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 ### `disc_imf_in_distribution_baseline` — 25-body galaxy disc, training IMF (in-distribution sanity) (in-distribution)
 
-| model | mean err % | max err % | energy drift | MSE pos |
+| model | mean err % | max err % | mean energy drift | MSE pos |
 |---|---|---|---|---|
 | MLP | 1.95 % | 12.68 % | 8.05e-02 | 1.925e-04 |
 | MLP_stable | 2.81 % | 17.24 % | 1.13e-01 | 3.576e-04 |
@@ -141,7 +141,7 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 ### `full_solar_system` — All 8 planets + Sun (OOD)
 
-| model | mean err % | max err % | energy drift | MSE pos |
+| model | mean err % | max err % | mean energy drift | MSE pos |
 |---|---|---|---|---|
 | MLP | 69.53 % | 460.04 % | 8.44e-01 | 4.044e-01 |
 | MLP_stable | 110.76 % | 513.38 % | 5.03e+00 | 9.630e-01 |
@@ -152,7 +152,7 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 ### `inner_planets` — Inner planets (Mercury → Mars + Sun) (OOD)
 
-| model | mean err % | max err % | energy drift | MSE pos |
+| model | mean err % | max err % | mean energy drift | MSE pos |
 |---|---|---|---|---|
 | MLP | 71.39 % | 132.89 % | 3.05e+02 | 2.253e-01 |
 | MLP_stable | 120.19 % | 215.36 % | 2.79e+03 | 6.037e-01 |
@@ -163,7 +163,7 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 ### `jupiter_galileans` — Jupiter + 4 Galilean moons (toy circular orbits) (OOD)
 
-| model | mean err % | max err % | energy drift | MSE pos |
+| model | mean err % | max err % | mean energy drift | MSE pos |
 |---|---|---|---|---|
 | MLP | 52.66 % | 128.77 % | 6.21e+00 | 1.336e-01 |
 | MLP_stable | 84.65 % | 169.12 % | 6.13e+01 | 2.911e-01 |
@@ -174,7 +174,7 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 ### `solar_system_extended` — Sun + 8 planets + Moon + 5 dwarfs + 4 Galilean moons (19 bodies) (OOD)
 
-| model | mean err % | max err % | energy drift | MSE pos |
+| model | mean err % | max err % | mean energy drift | MSE pos |
 |---|---|---|---|---|
 | MLP | 168.03 % | 467.14 % | 1.18e+00 | 1.343e+00 |
 | MLP_stable | 252.03 % | 517.33 % | 2.40e+00 | 2.863e+00 |
@@ -185,7 +185,7 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 ### `sun_earth_only` — Sun–Earth 2-body (Keplerian reference) (OOD)
 
-| model | mean err % | max err % | energy drift | MSE pos |
+| model | mean err % | max err % | mean energy drift | MSE pos |
 |---|---|---|---|---|
 | MLP | 75.10 % | 150.10 % | 1.08e+03 | 3.187e-01 |
 | MLP_stable | 128.96 % | 262.03 % | 9.86e+03 | 9.150e-01 |
@@ -196,7 +196,7 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 ### `sun_planets_moon` — Sun + 8 planets + Earth's Moon (10 bodies) (OOD)
 
-| model | mean err % | max err % | energy drift | MSE pos |
+| model | mean err % | max err % | mean energy drift | MSE pos |
 |---|---|---|---|---|
 | MLP | 74.05 % | 458.97 % | 9.36e-01 | 4.241e-01 |
 | MLP_stable | 124.74 % | 512.63 % | 6.70e+00 | 1.112e+00 |

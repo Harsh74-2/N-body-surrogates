@@ -53,6 +53,7 @@ real_case_validation/report_N*/single_step/preset_*/preds_meta.json
 # + the listed hyperparameters).
 training_runs/
 results/N*/
+results/stability_summary.json
 
 # Notebook + interactive state
 .ipynb_checkpoints/
