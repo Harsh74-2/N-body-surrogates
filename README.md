@@ -6,6 +6,24 @@ discs and then tested out of distribution on real Solar-System initial
 conditions, with a rollout-stability benchmark that contrasts single-step
 training against a stability-trained variant.
 
+## Simulations & interactive viewers
+
+Everything on this repo can be watched, not just read. The
+[live site](https://harsh74-2.github.io/N-body-surrogates/) hosts:
+
+- **[Animation gallery](https://harsh74-2.github.io/N-body-surrogates/animations.html)**
+  — 168 embedded trajectory videos: leapfrog reference vs. learned surrogate
+  for every training body count (N = 10/25/50/100), preset, and model variant.
+- **[Interactive viewers](https://harsh74-2.github.io/N-body-surrogates/interactive_anim/index.html)**
+  — 336 Plotly viewers with frame scrubbing, playback speed, plane selection
+  (XY/XZ/YZ), and smoothing toggles, for both rollout and single-step modes.
+- **[Static plot gallery](https://harsh74-2.github.io/N-body-surrogates/plots.html)**
+  — predicted-vs-reference orbits, error curves, and per-preset diagnostics.
+- Per-N detail pages: [N=10](https://harsh74-2.github.io/N-body-surrogates/n10.html) ·
+  [N=25](https://harsh74-2.github.io/N-body-surrogates/n25.html) ·
+  [N=50](https://harsh74-2.github.io/N-body-surrogates/n50.html) ·
+  [N=100](https://harsh74-2.github.io/N-body-surrogates/n100.html).
+
 The goal is to measure how well a learned force model trained on one
 distribution (rotating discs of roughly equal-mass particles) transfers to a
 very different one (the Solar System, with mass ratios of ~10⁵ and Keplerian
