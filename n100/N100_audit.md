@@ -11,12 +11,12 @@ Each cell is the mean of `mean_err_%` over the presets that ran, normalised by L
 
 | model | in-distribution | Solar-System OOD | all |
 |---|---|---|---|
-| MLP | 227.8 % | 190.0 % | 195.4 % |
-| MLP_stable | 183.1 % | 104.7 % | 115.9 % |
-| LSTM | 222.3 % | 148.1 % | 158.7 % |
-| LSTM_stable | 232.2 % | 169.0 % | 178.0 % |
-| GNN | 295.9 % | 195.4 % | 209.7 % |
-| GNN_stable | 234.2 % | 216.8 % | 219.3 % |
+| MLP | 227.8 % | 191.2 % | 196.4 % |
+| MLP_stable | 183.1 % | 105.6 % | 116.6 % |
+| LSTM | 222.3 % | 148.0 % | 158.6 % |
+| LSTM_stable | 232.2 % | 170.5 % | 179.3 % |
+| GNN | 295.9 % | 196.5 % | 210.7 % |
+| GNN_stable | 234.2 % | 217.1 % | 219.5 % |
 
 ## Headline (single-step, mean err %)
 
@@ -35,9 +35,9 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 | family | single mean err % | stable mean err % | Δ (pp) |
 |---|---|---|---|
-| MLP | 189.96 % | 104.66 % | -85.30 |
-| LSTM | 148.07 % | 169.01 % | +20.95 |
-| GNN | 195.36 % | 216.84 % | +21.48 |
+| MLP | 191.19 % | 105.57 % | -85.62 |
+| LSTM | 147.97 % | 170.50 % | +22.53 |
+| GNN | 196.50 % | 217.06 % | +20.56 |
 
 ## Stable vs single, per family (single-step)
 
@@ -51,62 +51,62 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 ### `disc_imf_in_distribution_baseline` — 25-body galaxy disc, training IMF (in-distribution sanity) (in-distribution)
 
-| model | mean err % | max err % | frames ≤ ½L | energy drift | MSE pos |
+| model | mean err % | max err % | frames ≤ ½L | max energy drift | MSE pos |
 |---|---|---|---|---|---|
 | MLP | 227.79 % | 621.02 % | 30 | 4.80e+00 | 2.286e+00 |
 | MLP_stable | 183.14 % | 478.64 % | 23 | 4.30e+00 | 1.349e+00 |
 | LSTM | 222.30 % | 551.89 % | 68 | 8.84e+00 | 2.104e+00 |
 | LSTM_stable | 232.16 % | 744.33 % | 40 | 8.93e+00 | 2.444e+00 |
 | GNN | 295.93 % | 895.16 % | 65 | 2.11e+00 | 4.039e+00 |
-| GNN_stable | 234.19 % | 691.90 % | 115 | 1.45e+00 | 2.501e+00 |
+| GNN_stable | 234.19 % | 691.89 % | 115 | 1.45e+00 | 2.501e+00 |
 
 ### `full_solar_system` — All 8 planets + Sun (OOD)
 
-| model | mean err % | max err % | frames ≤ ½L | energy drift | MSE pos |
+| model | mean err % | max err % | frames ≤ ½L | max energy drift | MSE pos |
 |---|---|---|---|---|---|
-| MLP | 267.36 % | 731.01 % | 0 | 5.01e+01 | 2.958e+00 |
-| MLP_stable | 99.27 % | 232.44 % | 0 | 2.11e+01 | 3.940e-01 |
-| LSTM | 166.71 % | 331.18 % | 0 | 6.66e+01 | 1.046e+00 |
-| LSTM_stable | 288.19 % | 749.49 % | 0 | 1.68e+01 | 4.148e+00 |
-| GNN | 366.39 % | 588.90 % | 0 | 2.63e+01 | 5.430e+00 |
-| GNN_stable | 293.06 % | 947.40 % | 0 | 1.96e+01 | 3.901e+00 |
+| MLP | 267.44 % | 731.01 % | 0 | 5.01e+01 | 2.959e+00 |
+| MLP_stable | 99.26 % | 232.39 % | 0 | 2.11e+01 | 3.940e-01 |
+| LSTM | 158.26 % | 331.18 % | 0 | 6.66e+01 | 9.524e-01 |
+| LSTM_stable | 288.20 % | 749.49 % | 0 | 1.68e+01 | 4.148e+00 |
+| GNN | 368.38 % | 588.90 % | 0 | 2.63e+01 | 5.472e+00 |
+| GNN_stable | 290.79 % | 905.56 % | 0 | 1.96e+01 | 3.853e+00 |
 
 ### `inner_planets` — Inner planets (Mercury → Mars + Sun) (OOD)
 
-| model | mean err % | max err % | frames ≤ ½L | energy drift | MSE pos |
+| model | mean err % | max err % | frames ≤ ½L | max energy drift | MSE pos |
 |---|---|---|---|---|---|
-| MLP | 109.64 % | 234.54 % | 0 | 3.81e+01 | 5.102e-01 |
-| MLP_stable | 108.84 % | 240.08 % | 0 | 2.12e+01 | 4.746e-01 |
-| LSTM | 94.41 % | 219.59 % | 0 | 1.13e+02 | 4.178e-01 |
-| LSTM_stable | 109.41 % | 252.39 % | 0 | 1.10e+01 | 5.111e-01 |
-| GNN | 87.23 % | 268.25 % | 0 | 9.24e+00 | 3.343e-01 |
-| GNN_stable | 78.30 % | 234.22 % | 0 | 1.04e+01 | 2.939e-01 |
+| MLP | 110.06 % | 234.70 % | 0 | 3.81e+01 | 5.116e-01 |
+| MLP_stable | 108.82 % | 240.08 % | 0 | 2.12e+01 | 4.744e-01 |
+| LSTM | 94.04 % | 219.60 % | 0 | 1.13e+02 | 4.169e-01 |
+| LSTM_stable | 109.02 % | 252.41 % | 0 | 1.10e+01 | 5.089e-01 |
+| GNN | 86.77 % | 249.14 % | 0 | 9.24e+00 | 3.304e-01 |
+| GNN_stable | 78.78 % | 234.22 % | 0 | 1.04e+01 | 2.959e-01 |
 
 ### `jupiter_galileans` — Jupiter + 4 Galilean moons (toy circular orbits) (OOD)
 
-| model | mean err % | max err % | frames ≤ ½L | energy drift | MSE pos |
+| model | mean err % | max err % | frames ≤ ½L | max energy drift | MSE pos |
 |---|---|---|---|---|---|
-| MLP | 280.67 % | 744.25 % | 0 | 3.90e+01 | 3.685e+00 |
-| MLP_stable | 111.88 % | 250.89 % | 0 | 2.08e+01 | 4.907e-01 |
+| MLP | 280.52 % | 742.58 % | 0 | 3.90e+01 | 3.679e+00 |
+| MLP_stable | 111.88 % | 250.89 % | 0 | 2.08e+01 | 4.908e-01 |
 | LSTM | 147.75 % | 259.88 % | 2 | 1.08e+02 | 7.792e-01 |
-| LSTM_stable | 166.69 % | 328.00 % | 0 | 1.08e+01 | 1.069e+00 |
-| GNN | 298.78 % | 661.81 % | 0 | 8.65e+00 | 4.215e+00 |
-| GNN_stable | 191.16 % | 490.53 % | 0 | 1.03e+01 | 1.699e+00 |
+| LSTM_stable | 166.70 % | 328.01 % | 0 | 1.08e+01 | 1.070e+00 |
+| GNN | 298.79 % | 661.86 % | 0 | 8.65e+00 | 4.215e+00 |
+| GNN_stable | 190.39 % | 471.72 % | 0 | 1.03e+01 | 1.680e+00 |
 
 ### `solar_system_extended` — Sun + 8 planets + Moon + 5 dwarfs + 4 Galilean moons (19 bodies) (OOD)
 
-| model | mean err % | max err % | frames ≤ ½L | energy drift | MSE pos |
+| model | mean err % | max err % | frames ≤ ½L | max energy drift | MSE pos |
 |---|---|---|---|---|---|
-| MLP | 218.48 % | 722.66 % | 0 | 3.66e+01 | 1.913e+00 |
-| MLP_stable | 90.35 % | 244.64 % | 0 | 2.31e+01 | 3.472e-01 |
-| LSTM | 222.79 % | 517.27 % | 0 | 7.58e+01 | 1.966e+00 |
-| LSTM_stable | 181.65 % | 409.77 % | 0 | 1.05e+01 | 1.384e+00 |
-| GNN | 199.30 % | 586.88 % | 0 | 7.39e+00 | 2.076e+00 |
-| GNN_stable | 422.95 % | 1044.60 % | 0 | 8.44e+00 | 8.056e+00 |
+| MLP | 224.78 % | 721.51 % | 0 | 3.66e+01 | 2.053e+00 |
+| MLP_stable | 95.88 % | 460.25 % | 0 | 2.31e+01 | 4.203e-01 |
+| LSTM | 230.69 % | 517.29 % | 0 | 7.58e+01 | 2.113e+00 |
+| LSTM_stable | 191.12 % | 479.38 % | 0 | 1.05e+01 | 1.530e+00 |
+| GNN | 204.41 % | 586.73 % | 0 | 7.39e+00 | 2.171e+00 |
+| GNN_stable | 427.92 % | 1044.58 % | 0 | 8.44e+00 | 8.173e+00 |
 
 ### `sun_earth_only` — Sun–Earth 2-body (Keplerian reference) (OOD)
 
-| model | mean err % | max err % | frames ≤ ½L | energy drift | MSE pos |
+| model | mean err % | max err % | frames ≤ ½L | max energy drift | MSE pos |
 |---|---|---|---|---|---|
 | MLP | 127.72 % | 211.94 % | 0 | 3.81e+01 | 6.190e-01 |
 | MLP_stable | 133.22 % | 219.22 % | 0 | 2.12e+01 | 6.641e-01 |
@@ -117,20 +117,20 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 ### `sun_planets_moon` — Sun + 8 planets + Earth's Moon (10 bodies) (OOD)
 
-| model | mean err % | max err % | frames ≤ ½L | energy drift | MSE pos |
+| model | mean err % | max err % | frames ≤ ½L | max energy drift | MSE pos |
 |---|---|---|---|---|---|
-| MLP | 135.89 % | 354.29 % | 0 | 4.62e+01 | 8.383e-01 |
-| MLP_stable | 84.40 % | 232.44 % | 0 | 1.96e+01 | 3.144e-01 |
-| LSTM | 124.11 % | 246.14 % | 0 | 6.67e+01 | 6.851e-01 |
-| LSTM_stable | 123.45 % | 510.23 % | 0 | 1.68e+01 | 8.570e-01 |
-| GNN | 107.81 % | 482.39 % | 0 | 3.58e+01 | 6.852e-01 |
-| GNN_stable | 220.81 % | 699.21 % | 0 | 1.81e+01 | 3.045e+00 |
+| MLP | 136.60 % | 354.23 % | 0 | 4.62e+01 | 8.465e-01 |
+| MLP_stable | 84.35 % | 232.39 % | 0 | 1.96e+01 | 3.144e-01 |
+| LSTM | 124.45 % | 246.14 % | 0 | 6.67e+01 | 6.897e-01 |
+| LSTM_stable | 123.27 % | 510.23 % | 0 | 1.68e+01 | 8.536e-01 |
+| GNN | 107.97 % | 482.32 % | 0 | 3.58e+01 | 6.888e-01 |
+| GNN_stable | 219.73 % | 698.97 % | 0 | 1.81e+01 | 3.021e+00 |
 
 ## Per-preset detail (single-step)
 
 ### `disc_imf_in_distribution_baseline` — 25-body galaxy disc, training IMF (in-distribution sanity) (in-distribution)
 
-| model | mean err % | max err % | energy drift | MSE pos |
+| model | mean err % | max err % | mean energy drift | MSE pos |
 |---|---|---|---|---|
 | MLP | 2.73 % | 17.68 % | 1.20e-01 | 3.361e-04 |
 | MLP_stable | 3.20 % | 20.99 % | 2.00e-01 | 4.636e-04 |
@@ -141,7 +141,7 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 ### `full_solar_system` — All 8 planets + Sun (OOD)
 
-| model | mean err % | max err % | energy drift | MSE pos |
+| model | mean err % | max err % | mean energy drift | MSE pos |
 |---|---|---|---|---|
 | MLP | 63.88 % | 400.65 % | 4.15e+00 | 2.936e-01 |
 | MLP_stable | 73.94 % | 365.31 % | 2.55e+00 | 3.723e-01 |
@@ -152,7 +152,7 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 ### `inner_planets` — Inner planets (Mercury → Mars + Sun) (OOD)
 
-| model | mean err % | max err % | energy drift | MSE pos |
+| model | mean err % | max err % | mean energy drift | MSE pos |
 |---|---|---|---|---|
 | MLP | 77.72 % | 133.93 % | 2.47e+03 | 2.501e-01 |
 | MLP_stable | 112.24 % | 249.94 % | 1.30e+03 | 5.678e-01 |
@@ -163,7 +163,7 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 ### `jupiter_galileans` — Jupiter + 4 Galilean moons (toy circular orbits) (OOD)
 
-| model | mean err % | max err % | energy drift | MSE pos |
+| model | mean err % | max err % | mean energy drift | MSE pos |
 |---|---|---|---|---|
 | MLP | 54.29 % | 137.37 % | 5.39e+01 | 1.343e-01 |
 | MLP_stable | 86.90 % | 265.08 % | 2.83e+01 | 3.440e-01 |
@@ -174,7 +174,7 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 ### `solar_system_extended` — Sun + 8 planets + Moon + 5 dwarfs + 4 Galilean moons (19 bodies) (OOD)
 
-| model | mean err % | max err % | energy drift | MSE pos |
+| model | mean err % | max err % | mean energy drift | MSE pos |
 |---|---|---|---|---|
 | MLP | 119.44 % | 376.13 % | 2.26e+00 | 6.208e-01 |
 | MLP_stable | 111.70 % | 361.76 % | 1.52e+00 | 5.886e-01 |
@@ -185,7 +185,7 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 ### `sun_earth_only` — Sun–Earth 2-body (Keplerian reference) (OOD)
 
-| model | mean err % | max err % | energy drift | MSE pos |
+| model | mean err % | max err % | mean energy drift | MSE pos |
 |---|---|---|---|---|
 | MLP | 80.15 % | 161.35 % | 8.74e+03 | 3.540e-01 |
 | MLP_stable | 122.31 % | 295.27 % | 4.60e+03 | 8.234e-01 |
@@ -196,7 +196,7 @@ Each cell is the mean of `mean_err_%` over the presets that ran. The in-distribu
 
 ### `sun_planets_moon` — Sun + 8 planets + Earth's Moon (10 bodies) (OOD)
 
-| model | mean err % | max err % | energy drift | MSE pos |
+| model | mean err % | max err % | mean energy drift | MSE pos |
 |---|---|---|---|---|
 | MLP | 70.48 % | 388.78 % | 5.37e+00 | 3.325e-01 |
 | MLP_stable | 81.56 % | 365.17 % | 2.91e+00 | 4.164e-01 |
