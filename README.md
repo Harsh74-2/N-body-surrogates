@@ -178,8 +178,17 @@ but strongly recommended for training.
 ```bash
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
-pip install torch numpy scipy matplotlib
+pip install -r requirements.txt    # equivalent: pip install torch numpy matplotlib
 ```
+
+Only three third-party packages are required — everything else the scripts
+use comes from the Python standard library. Two optional extras, not needed
+for the core pipeline:
+
+- `pip install imageio-ffmpeg` (or any system `ffmpeg` on `PATH`) if you want
+  `real_case_validation/make_animations.py` to export `.mp4` videos.
+- `pip install python-docx` if you want to rebuild the Word report bundle
+  (`real_case_validation/md_to_docx.py`).
 
 There is no packaged install. Run the scripts from the repository root so the
 `pipeline_config` and `real_case_validation` imports resolve.

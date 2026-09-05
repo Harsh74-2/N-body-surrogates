@@ -1,0 +1,11 @@
+# Core dependencies for the N-body-surrogates pipeline.
+# Everything else the scripts use is the Python standard library.
+torch
+numpy
+matplotlib
+
+# Optional (uncomment if needed):
+#   imageio-ffmpeg  -- .mp4 export in real_case_validation/make_animations.py
+#                      (a system ffmpeg on PATH works too)
+#   python-docx     -- Word report bundle builder,
+#                      real_case_validation/md_to_docx.py
