@@ -29,12 +29,19 @@ import argparse
 import re
 from pathlib import Path
 
-from docx import Document
-from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.oxml.ns import qn
-from docx.oxml import OxmlElement
-from docx.shared import Cm, Pt, RGBColor
+try:
+    from docx import Document
+    from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
+    from docx.shared import Cm, Pt, RGBColor
+except ImportError as _e:  # pragma: no cover - environment guard
+    raise SystemExit(
+        "md_to_docx.py builds Word documents, which the standard library "
+        "alone cannot do. Install the one extra it needs:\n"
+        "    pip install python-docx\n"
+        f"(original import error: {_e})")
 
 
 # ── Reading order ───────────────────────────────────────────────────────
