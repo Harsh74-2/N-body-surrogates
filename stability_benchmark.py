@@ -106,7 +106,10 @@ total_energy = _eval_mod.total_energy
 #   (b) raw_data/N{N}/{mlp,lstm,gnn}/sim_...  , sweep layout (N10/50/100)
 # For a given (N, sim_idx) the trajectory is identical across model subdirs
 # (ICs are seeded by base_seed + N, not model type), so any one subdir is a
-# valid ground-truth source. We prefer the root layout, then the `mlp` subdir.
+# valid ground-truth source. We prefer the sweep layout, then the legacy
+# root: where both exist for the same N (e.g. N25), the root files were
+# generated under an older raw-data regime and shadow the canonical ones,
+# so the sweep subdir must win or benchmark runs silently load stale data.
 
 def resolve_raw_root(raw_dir: Path, N: int, subdir: str | None = None) -> Path:
     """Return the directory that actually holds sim_N{N}_*.npz for this N."""
@@ -114,8 +117,8 @@ def resolve_raw_root(raw_dir: Path, N: int, subdir: str | None = None) -> Path:
     if subdir:
         cands = [root / f"N{N}" / subdir, root]
     else:
-        cands = [root, root / f"N{N}" / "mlp", root / f"N{N}" / "lstm",
-                 root / f"N{N}" / "gnn", root / f"N{N}"]
+        cands = [root / f"N{N}" / "mlp", root / f"N{N}" / "lstm",
+                 root / f"N{N}" / "gnn", root / f"N{N}", root]
     for c in cands:
         if c.is_dir() and any(c.glob(f"sim_N{N}_*.npz")):
             return c
