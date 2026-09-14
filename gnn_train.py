@@ -84,6 +84,7 @@ from utils import (
     load_checkpoint,
     load_sibling_module,
     mount_drive_if_possible,
+    default_num_workers,
     pick_device,
     save_loss_curve,
     seed_everything,
@@ -439,7 +440,8 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
         model_type="gnn",
         batch_size=cfg.batch_size,
         include_mass=True,           # mass channel needed for energy loss
-        num_workers=2 if device.type == "cuda" else 0,  # 2 workers on GPU: 16GB/4vCPU VM has headroom; mmap dataset shares pages via COW
+        num_workers=(nw := default_num_workers(device)),
+        persistent_workers=(nw > 0),   # keep the workers alive across epochs
         pin_memory=(device.type == "cuda"),
     )
 

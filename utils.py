@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import contextlib
 import importlib.util
+import os
 import pickle
 import random
 import sys
@@ -78,6 +79,22 @@ def seed_everything(seed: int) -> None:
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+
+
+def default_num_workers(device: torch.device) -> int:
+    """
+    Data-loader worker count scaled to the host (audited tune, 2026-09-14).
+
+    On GPU the window-slicing dataset workers are the MLP/LSTM bottleneck,
+    and the old hardcoded `2` starved a many-core VM. Scale with cores but
+    cap at 8 (each worker holds COW-mapped npz pages; prefetching beyond
+    that buys nothing) and leave >=4 cores for the main process. On CPU,
+    workers add fork overhead without feeding a GPU, so 0.
+    """
+    if device.type != "cuda":
+        return 0
+    cores = os.cpu_count() or 2
+    return max(2, min(8, cores - 4))
 
 
 def load_sibling_module(name: str, filename: str, anchor: str | None = None):
