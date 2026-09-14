@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import contextlib
 import importlib.util
+import pickle
+import random
 import sys
 import time
 from itertools import islice
@@ -21,6 +23,7 @@ from typing import TYPE_CHECKING
 
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
@@ -42,6 +45,39 @@ def pick_device() -> torch.device:
     if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
         return torch.device("mps")
     return torch.device("cpu")
+
+
+def load_checkpoint(path):
+    """
+    torch.load with weights_only=True (safe: no arbitrary pickle code
+    execution), falling back to weights_only=False only when the safe
+    load rejects the file (legacy or third-party checkpoints).
+
+    Every checkpoint this project writes loads under weights_only=True:
+    they contain tensors plus plain dicts/lists/ints/floats/strings
+    (`model_state`, `config`, hyperparameters). The fallback keeps a
+    legacy file usable instead of crashing the run (audited change,
+    2026-09-14).
+    """
+    try:
+        return torch.load(path, map_location="cpu", weights_only=True)
+    except (pickle.UnpicklingError, RuntimeError, TypeError, EOFError):
+        return torch.load(path, map_location="cpu", weights_only=False)
+
+
+def seed_everything(seed: int) -> None:
+    """
+    Seed every RNG the training loops touch (python / numpy / torch /
+    cuda) so a training run is reproducible from its logged seed
+    (audited change, 2026-09-14). DataLoader shuffling derives from
+    torch's generator; the train/val/test split is seeded separately in
+    the dataloader (SPLIT_SEED) and is unaffected by this call.
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
 
 
 def load_sibling_module(name: str, filename: str, anchor: str | None = None):

@@ -33,28 +33,31 @@
 # Controlled experiment: the ONLY scientific difference vs the sweep's
 # single-step run (scaling_sweep.py) is --w-rollout 0.1. Same datasets, same
 # epochs (MLP=100, LSTM=80, GNN=50), same optimiser defaults, same batch
-# sizes (GNN=128 to match the sweep's single-step run). The checkpointing is
+# sizes (512 / 256 / 128, exactly the sweep's values). The checkpointing is
 # an implementation detail of the stable path only (the single-step sweep is
 # unchanged) and does not alter the loss being optimised.
 #
-# Batch sizes: LSTM and GNN are kept at the SWEEP values (256 / 128) so the
-# comparison is clean, only w_rollout differs. MLP is halved (512 -> 256):
-# the K=5 no-detach BPTT graph is O(K) in activation memory, and at b=512 the
-# MLP BPTT graph is unnecessarily large, so 256 is used.
+# Batch sizes: ALL THREE match the sweep exactly (MLP=512, LSTM=256, GNN=128)
+# so the comparison is clean and only w_rollout differs. (An earlier version
+# halved the MLP to 256 for BPTT memory, which silently confounded the
+# stable-vs-single-step contrast with a batch-size change -- audited fix,
+# 2026-09-14. The K=5 checkpointed BPTT graph at b=512 still fits the 48 GB
+# card with headroom; if it ever OOMs, fall back per-model with the command
+# below rather than changing this default.)
 #
 # Resumable: a model is skipped if its model_best.pt already exists.
 # Run AFTER the main sweep has produced ml_ready_data/N{N}/{mlp,lstm,gnn}/.
 #
 # Memory: target VM = 48 GB GPU (RTX 6000 Ada, isolated, one model at a time)
 # + 16 GB RAM. Datasets are <1 GB in RAM (N=100 GNN ~0.7 GB), so system RAM
-# is no issue. GPU peaks (activations + grads, BPTT K=5, rollout checkpointed):
-# MLP b=256 ~8 GB, LSTM b=256 ~1 GB, GNN b=128/N=50 ~11 GB, GNN b=128/N=100
-# ~42 GB (main forward ~21 GB + one checkpointed rollout recompute ~21 GB).
-# N=10/25/50 fit comfortably; N=100 GNN stable is the tightest cell and can
-# approach the 48 GB ceiling. If it OOMs (fragmentation / first-iteration
-# spike), fall back to a smaller batch -- peak memory scales with batch, and
-# the loss is a w=0.1 regulariser so a smaller batch does not change the
-# science:
+# is no issue. GPU peaks (activations + grads, BPTT K=5, rollout checkpointed)
+# scale with batch: MLP b=512 ~16 GB, LSTM b=256 ~1 GB, GNN b=128/N=50
+# ~11 GB, GNN b=128/N=100 ~42 GB (main forward ~21 GB + one checkpointed
+# rollout recompute ~21 GB). N=10/25/50 fit comfortably; N=100 GNN stable is
+# the tightest cell and can approach the 48 GB ceiling. If it OOMs
+# (fragmentation / first-iteration spike), fall back to a smaller batch for
+# THAT MODEL ONLY -- peak memory scales with batch, and the loss is a
+# w=0.1 regulariser so a smaller batch does not change the science:
 #   python gnn_train.py --npz ml_ready_data/N100/gnn/dataset_3d_w5h1s1r.npz \
 #     --out training_runs/N100/gnn_stable --epochs 50 --batch-size 64 \
 #     --w-rollout 0.1 --rollout-K 5
@@ -71,8 +74,12 @@ N_VALUES=(10 25 50 100)
 
 declare -A SCRIPT=( [mlp]=mlp_train.py [lstm]=lstm_train.py [gnn]=gnn_train.py )
 declare -A EPOCHS=( [mlp]=100 [lstm]=80  [gnn]=50 )
-declare -A BATCH=(  [mlp]=256  [lstm]=256 [gnn]=128 )
+declare -A BATCH=(  [mlp]=512  [lstm]=256 [gnn]=128 )
 declare -A ROLLK=(  [mlp]=5    [lstm]=5   [gnn]=5   )
+
+# Failed cells are recorded here and reported at the end: one OOM in a
+# 24-model queue must not kill the other 23 (audited fix, 2026-09-14).
+FAILED=()
 
 for N in "${N_VALUES[@]}"; do
     # Absolute paths: the trainers (gnn_train.py / lstm_train.py / mlp_train.py)
@@ -100,20 +107,38 @@ for N in "${N_VALUES[@]}"; do
         if [ ! -f "${NPZ}" ]; then
             echo "[error] dataset not found: ${NPZ}"
             echo "        Run the sweep's export step for N=${N} first."
-            exit 1
+            FAILED+=("N${N}/${m}_stable (no dataset)")
+            continue
         fi
 
         echo "[train] N=${N} stable ${m}  epochs=${EPOCHS[$m]}  " \
              "batch=${BATCH[$m]}  w_rollout=0.1  rollout_K=${ROLLK[$m]}"
-        python "${SCRIPT[$m]}" \
+        mkdir -p "${OUT}"
+        # tee keeps the full stdout for an unattended multi-hour run; the
+        # trainer's own exit status survives the pipe via PIPESTATUS.
+        if ! python "${SCRIPT[$m]}" \
             --npz        "${NPZ}" \
             --out        "${OUT}" \
             --epochs     "${EPOCHS[$m]}" \
             --batch-size "${BATCH[$m]}" \
             --w-rollout  0.1 \
-            --rollout-K  "${ROLLK[$m]}"
+            --rollout-K  "${ROLLK[$m]}" 2>&1 | tee "${OUT}/train.log"; then
+            echo "[FAIL] N=${N} stable ${m} -- continuing with the queue;" \
+                 "re-run this cell later (log: ${OUT}/train.log)"
+            FAILED+=("N${N}/${m}_stable (exit ${PIPESTATUS[0]})")
+        fi
     done
 done
 
 echo
+if [ "${#FAILED[@]}" -gt 0 ]; then
+    echo "============================================================"
+    echo "  ${#FAILED[@]} cell(s) FAILED -- stable checkpoints missing:"
+    for f in "${FAILED[@]}"; do
+        echo "    ${f}"
+    done
+    echo "Re-run this script once the cause is fixed; completed cells"
+    echo "are skipped via their existing model_best.pt."
+    exit 1
+fi
 echo "Done. Stable checkpoints under training_runs/N{10,25,50,100}/{mlp,lstm,gnn}_stable/model_best.pt"

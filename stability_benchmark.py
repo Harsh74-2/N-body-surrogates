@@ -70,6 +70,7 @@ import argparse
 import glob
 import json
 import math
+import pickle
 import sys
 from pathlib import Path
 
@@ -81,7 +82,12 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-from utils import configure_utf8_stdout, load_sibling_module, pick_device  # noqa: E402
+from utils import (  # noqa: E402
+    configure_utf8_stdout,
+    load_checkpoint,
+    load_sibling_module,
+    pick_device,
+)
 
 configure_utf8_stdout()
 
@@ -424,10 +430,9 @@ def run_one_model(ckpt_path: str, model_type: str, device: torch.device,
     # trained) so historical results still classify correctly.
     variant = None
     try:
-        ckpt_meta = torch.load(ckpt_path, map_location="cpu",
-                               weights_only=False)
+        ckpt_meta = load_checkpoint(ckpt_path)
         variant = ckpt_meta.get("variant")
-    except Exception:
+    except (OSError, pickle.UnpicklingError, RuntimeError, KeyError):
         variant = None
     if variant not in ("single_step", "stable"):
         variant = ("stable"

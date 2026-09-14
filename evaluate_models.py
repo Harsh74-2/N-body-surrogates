@@ -60,6 +60,7 @@ import torch
 
 from utils import (
     configure_utf8_stdout,
+    load_checkpoint,
     load_sibling_module,
     pick_device,
 )
@@ -109,7 +110,7 @@ def build_model(ckpt_path: str, model_type: str,
         hidden, depth/num_layers/num_passes
     so no CLI override is needed for IO dimensions.
     """
-    ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+    ckpt = load_checkpoint(ckpt_path)
 
     cfg_dict = ckpt.get("config", {}) or {}
     hidden     = ckpt.get("hidden",     cfg_dict.get("hidden",     128))
@@ -253,7 +254,6 @@ def evaluate(model: torch.nn.Module,
     rollout = float("nan")
     if K > 0 and rollout_batches > 0:
         drift_total = 0.0
-        denom_total = 0.0
         n_roll = 0
         with torch.no_grad():
             for i, batch in enumerate(loader):
@@ -273,7 +273,14 @@ def evaluate(model: torch.nn.Module,
                     N = mass.shape[-1]
                     y = y.view(-1, N, FEATURE_DIM)
                 e0 = total_energy(y[..., :3], y[..., 3:6], mass)
-                denom = e0.abs().clamp(min=1e-8).mean().item()
+                # Per-sample denominator: the metric is the MEAN OF PER-SAMPLE
+                # RATIOS mean(|ΔE|/|E₀|), matching the single-step energy
+                # metric above, `real_case_validation/metrics.py` and
+                # `stability_benchmark.py`. An earlier version divided
+                # mean(|ΔE|) by mean(|E₀|) (ratio-of-means), which is not the
+                # same quantity and made the rollout column incomparable to
+                # every other energy number (audited fix, 2026-09-14).
+                denom = e0.abs().clamp(min=1e-8)             # (B,)
                 drift_acc = 0.0
                 # In-distribution sliding W-window rollout for every model
                 # (matches stability_benchmark.rollout_sliding and the
@@ -301,13 +308,12 @@ def evaluate(model: torch.nn.Module,
                 for _ in range(K):
                     pred = model(window, mass)               # (B, N, F)
                     e = total_energy(pred[..., :3], pred[..., 3:6], mass)
-                    drift_acc += (e - e0).abs().mean().item()
+                    drift_acc += ((e - e0).abs() / denom).mean().item()
                     window = torch.cat([window[:, 1:], pred.unsqueeze(1)], dim=1)
                 drift_total += drift_acc / max(K, 1)
-                denom_total += denom
                 n_roll += 1
         if n_roll > 0:
-            rollout = (drift_total / max(n_roll, 1)) / max(denom_total / max(n_roll, 1), 1e-12)
+            rollout = drift_total / max(n_roll, 1)
 
     n_params = sum(p.numel() for p in model.parameters())
     return Metrics(

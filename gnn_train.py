@@ -81,10 +81,12 @@ from torch.utils.data import DataLoader
 from utils import (
     cap_dataloader,
     configure_utf8_stdout,
+    load_checkpoint,
     load_sibling_module,
     mount_drive_if_possible,
     pick_device,
     save_loss_curve,
+    seed_everything,
     timestamp,
 )
 
@@ -121,25 +123,30 @@ class GNNSurrogate(nn.Module):
     A small message-passing GNN over fully connected body nodes.
 
     Per timestep:
-        1. Embed raw node features (x, y, z, vx, vy, vz) → `hidden`
-        2. For `num_message_passes` rounds:
-              m_ij = message_mlp([h_i, h_j − h_i, ‖r_j − r_i‖])
-              m_i  = Σ_j m_ij              (sum aggregation)
+        1. Embed raw node features (x, y, z, vx, vy, vz) + mass → `hidden`
+        2. For `num_passes` rounds (each round recomputes h_i + h_t so
+           every round sees fresh messages):
+              m_ij = message_mlp([h_i, h_i − h_j,
+                                  r_i − r_j, ‖r_i − r_j‖])
+              m_i  = mean_j m_ij           (mean aggregation, N-independent
+                                            message scale -- audited change
+                                            2026-09-14; was sum)
               h_i  = GRU_cell(h_i, m_i)     (recurrent node update)
         3. After the timestep, run the next timestep with the updated
            embeddings. Repeat for all W timesteps.
         4. After the W-th timestep, pass each node's final embedding
-           through a per-node readout MLP to predict that body's next
-           state.
+           through a per-node readout MLP to predict that body's
+           next-state DELTA, added to the window's last frame
+           (residual prediction; final layer zero-initialised so the
+           untrained model is the identity).
 
     Vectorisation
     -------------
-    With N nodes per graph and B graphs in a batch, the pairwise
-    message tensor has shape (B, N, N, 3*hidden), that's the same
-    memory footprint as the upstream `compute_accelerations`, just
-    bigger because the message MLP has more parameters than Newton's
-    inverse-square law. For the default 3D pipeline (B=32, N=25, h=128)
-    this is ~3 MB per batch, well within GPU memory.
+    With N nodes per graph and B graphs in a batch, the pairwise edge
+    tensor has shape (B, N, N, 2*hidden + 4): for the default 3D pipeline
+    (B=32, N=25, h=128) that is ~21 MB per batch (plus `diff_h` and
+    `messages`, each (B, N, N, hidden) ≈ 10 MB), well within GPU memory
+    and the same O(N²) scaling as the upstream `compute_accelerations`.
 
     Parameters
     ----------
@@ -169,13 +176,19 @@ class GNNSurrogate(nn.Module):
             nn.LayerNorm(hidden),
         )
 
-        # ── Edge feature extractor: takes [h_i, h_j − h_i, ‖r‖] ────────────
-        # We split position from velocity in the input to extract ‖r‖.
-        # Caller supplies the position slice (first 3 channels of F).
-        # The MLP input is therefore:
-        #   2 * hidden   (h_i and h_j - h_i)
-        #   + 1          (scalar distance)
-        edge_in_dim = 2 * hidden + 1
+        # ── Edge feature extractor ─────────────────────────────────────────
+        # Physical edge features (audited change, 2026-09-14): alongside the
+        # learned-embedding difference, each edge now sees the RAW relative
+        # position r_i − r_j and its norm ‖r_i − r_j‖ straight from the state.
+        # For an inverse-square force surrogate, pairwise distance is the
+        # dominant input feature; forcing the message MLP to reconstruct it
+        # through a LayerNorm-warped encoder was the biggest
+        # physics-inductive-bias gap in the architecture. The MLP input is:
+        #   hidden       (h_i, the receiver's combined embedding)
+        #   + hidden     (h_i − h_j, embedding difference)
+        #   + 3          (r_i − r_j, raw relative position)
+        #   + 1          (‖r_i − r_j‖, raw distance)
+        edge_in_dim = 2 * hidden + 4
         self.message_mlp = nn.Sequential(
             nn.Linear(edge_in_dim, hidden),
             nn.GELU(),
@@ -186,30 +199,42 @@ class GNNSurrogate(nn.Module):
         # ── Node update: GRU cell, stable against long message-passing chains ─
         self.update_cell = nn.GRUCell(hidden, hidden)
 
-        # ── Per-node readout: hidden → next-state features ─────────────────
+        # ── Per-node readout: hidden → next-state DELTA ─────────────────────
         # Outputs enc_in channels (state + mass), but forward slices off
         # the last channel so callers see a clean (B, N, in_features).
+        # The final layer is zero-initialised because the prediction is
+        # RESIDUAL (audited change, 2026-09-14): the readout emits the
+        # change from the window's last frame, added before returning, so
+        # the untrained model is exactly the identity. See mlp_train.py.
         self.readout = nn.Sequential(
             nn.LayerNorm(hidden),
             nn.Linear(hidden, hidden),
             nn.GELU(),
             nn.Linear(hidden, enc_in),
         )
+        nn.init.zeros_(self.readout[-1].weight)
+        nn.init.zeros_(self.readout[-1].bias)
 
     @staticmethod
-    def _pairwise_features(h: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    def _pairwise_features(h: torch.Tensor,
+                           pos: torch.Tensor
+                           ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Build the per-edge feature tensors used by the message MLP.
 
-        h : (B, N, hidden)  node embeddings
-        Returns
-            diff  : (B, N, N, hidden)  h_j - h_i  for every pair (i, j)
-            delta : (B, N, N, 1)       ‖(h_j - h_i)‖  scalar distance proxy
+        h   : (B, N, hidden)  node embeddings
+        pos : (B, N, 3)       raw positions of this timestep
+        Returns (receiver index i, sender index j):
+            diff_h : (B, N, N, hidden)  h_i − h_j
+            diff_r : (B, N, N, 3)       r_i − r_j, raw relative position
+            dist   : (B, N, N, 1)       ‖r_i − r_j‖, raw distance
         """
-        # h_j - h_i via broadcasting, same trick simulation_3d uses for forces.
-        diff  = h.unsqueeze(2) - h.unsqueeze(1)            # (B, N, N, hidden)
-        delta = diff.norm(dim=-1, keepdim=True)            # (B, N, N, 1)
-        return diff, delta
+        # r_i − r_j and h_i − h_j via broadcasting (receiver i = dim 1,
+        # sender j = dim 2), the same trick simulation_3d uses for forces.
+        diff_h = h.unsqueeze(2) - h.unsqueeze(1)           # (B, N, N, hidden)
+        diff_r = pos.unsqueeze(2) - pos.unsqueeze(1)       # (B, N, N, 3)
+        dist   = diff_r.norm(dim=-1, keepdim=True)          # (B, N, N, 1)
+        return diff_h, diff_r, dist
 
     def forward(self, x: torch.Tensor, mass: torch.Tensor | None = None) -> torch.Tensor:
         """
@@ -225,8 +250,13 @@ class GNNSurrogate(nn.Module):
         The loader's gnn mode always supplies `mass`; the no-mass branch
         has been removed to keep the channel bookkeeping unambiguous.
         """
-        assert mass is not None, "GNN requires mass for now"
+        if mass is None:
+            raise ValueError("GNNSurrogate.forward requires mass (B, N)")
         B, W, N, F  = x.shape
+        # Raw state, kept BEFORE the mass channel is appended: needed for
+        # (a) physical edge features (positions of this timestep) and
+        # (b) the residual anchor (the window's last true frame).
+        x_raw       = x
         mass_b      = mass.view(B, 1, N, 1).expand(B, W, N, 1)
         x           = torch.cat([x, mass_b], dim=-1)         # (B, W, N, F+1)
         B, W, N, Fp = x.shape
@@ -236,22 +266,40 @@ class GNNSurrogate(nn.Module):
         h = self.node_encoder(x[:, 0, :, :])                # (B, N, hidden)
         for t in range(1, W):
             h_t = self.node_encoder(x[:, t, :, :])         # (B, N, hidden)
+            # Raw positions of THIS timestep feed the edge features
+            # (first 3 state channels = x, y, z).
+            pos_t = x_raw[:, t, :, :3]                     # (B, N, 3)
 
             # Message passing: combine the per-step embedding with the
             # carried-forward state by *summing* their hidden vectors
             # before each round of messaging. This is one of the simpler
             # "skip" connection strategies, empirically a sum works as
             # well as a concat here.
-            h_combined = h_t + h                           # (B, N, hidden)
+            # The combine is INSIDE the round loop: recomputing it each
+            # round is what makes rounds 2..num_passes propagate fresh
+            # messages (an earlier version hoisted it out, which froze
+            # `messages` bit-identical across rounds and reduced extra
+            # passes to a GRU seeing the same stimulus repeatedly --
+            # audited fix, 2026-09-14, flagged independently by two council
+            # seats).
             for _ in range(self.num_passes):
-                diff, delta = self._pairwise_features(h_combined)
-                # Concatenate the edge features along the channel axis.
+                h_combined = h_t + h                       # (B, N, hidden)
+                diff_h, diff_r, dist = self._pairwise_features(h_combined, pos_t)
+                # Concatenate the edge features along the channel axis:
+                # [h_i, h_i − h_j, r_i − r_j, ‖r_i − r_j‖].
                 edge_feat = torch.cat([h_combined.unsqueeze(2).expand(-1, -1, N, -1),
-                                       diff,
-                                       delta], dim=-1)     # (B, N, N, 2h+1)
+                                       diff_h,
+                                       diff_r,
+                                       dist], dim=-1)     # (B, N, N, 2h+4)
                 messages  = self.message_mlp(edge_feat)    # (B, N, N, hidden)
-                # Aggregate by sum over the source index.
-                agg       = messages.sum(dim=2)            # (B, N, hidden)
+                # MEAN over the source index (audited change, 2026-09-14):
+                # sum aggregation made the message magnitude scale ~linearly
+                # with N, shifting the GRU input distribution between
+                # N=10/25/50/100 training sets and arbitrary-N real-case
+                # presets -- undermining the variable-N/OOD claims. Mean
+                # keeps the input scale N-independent; self-messages (j=i)
+                # become a benign 1/N contribution.
+                agg       = messages.mean(dim=2)            # (B, N, hidden)
                 h         = self.update_cell(
                     agg.reshape(-1, self.hidden),
                     h.reshape(-1, self.hidden),
@@ -261,28 +309,21 @@ class GNNSurrogate(nn.Module):
         # The encoder was fed F+1 channels (state + mass); the readout
         # outputs F+1 channels too. We return only the first F (state)
         # so the loss functions see a clean (B, N, 6) tensor.
+        # The output is RESIDUAL (audited change, 2026-09-14): the readout
+        # predicts the delta from the window's last true frame and the
+        # final layer is zero-initialised, so the untrained model is
+        # exactly the identity (pred = last observed state).
         out = self.readout(h)                              # (B, N, F+1)
-        return out[..., :Fp - 1]
+        return out[..., :Fp - 1] + x_raw[:, -1, :, :]      # (B, N, F)
 
-    def step(self, state: torch.Tensor, mass: torch.Tensor) -> torch.Tensor:
-        """
-        Legacy single-step interface (W=1).
-
-        Wraps `state` as a 1-step window and calls `forward`. Kept for
-        reference only -- it is NOT used by the rollout-energy loss or by
-        any evaluation path, because with W=1 the message-passing loop
-        `for t in range(1, W)` in `forward` runs *zero* rounds: the GNN
-        would predict with no pairwise messages, an out-of-distribution
-        path that previously corrupted the stability-trained and OOD GNN
-        results. The rollout loss (`losses.rollout_energy_loss`) and all
-        evaluators now call the full W-window `forward` directly.
-
-        state : (B, N, F)
-        mass  : (B, N)
-        Returns: (B, N, F)
-        """
-        x = state.unsqueeze(1)                             # (B, 1, N, F)
-        return self.forward(x, mass=mass)                  # (B, N, F)
+    # NOTE (audited removal, 2026-09-14): a legacy `step(state, mass)`
+    # single-shot wrapper (W=1) used to live here. With W=1 the
+    # message-passing loop `for t in range(1, W)` in `forward` runs ZERO
+    # rounds, so the model predicted with no pairwise messages -- the
+    # out-of-distribution path that previously corrupted the
+    # stability-trained and OOD GNN results. It had no callers (the
+    # rollout loss and every evaluator use the full W-window `forward`),
+    # so it was deleted outright rather than kept as a footgun.
 
 
 # ── Train / eval ─────────────────────────────────────────────────────────────
@@ -304,6 +345,7 @@ class TrainConfig:
     rollout_K:     int   = DEFAULT_ROLLOUT_K
     eps:           float = DEFAULT_EPS
     g:             float = DEFAULT_GRAVITY_G
+    seed:          int   = 42
 
 
 def run_epoch(model: nn.Module,
@@ -355,6 +397,17 @@ def run_epoch(model: nn.Module,
                 l_roll  = pred.new_zeros(())
 
             if train:
+                # NaN guard (audited change, 2026-09-14): a single
+                # non-finite loss (energy-ratio spike, close-encounter
+                # transient) would otherwise produce NaN gradients that
+                # clip_grad_norm_ silently propagates into the weights --
+                # training dies while the loop keeps "running".
+                if not torch.isfinite(l_total):
+                    print(f"[warn] non-finite train loss "
+                          f"(mse={float(l_mse):.3e} E={float(l_energy):.3e}); "
+                          f"skipping batch")
+                    optimizer.zero_grad(set_to_none=True)
+                    continue
                 optimizer.zero_grad(set_to_none=True)
                 l_total.backward()
                 # Gradient clipping, message-passing GNNs can have
@@ -375,6 +428,8 @@ def run_epoch(model: nn.Module,
 def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
     out_path = Path(out_dir)
     out_path.mkdir(parents=True, exist_ok=True)
+    seed_everything(cfg.seed)
+    print(f"[seed] {cfg.seed}")
     device = pick_device()
     print(f"[device] {device}")
 
@@ -412,6 +467,9 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
     ).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.lr,
                                   weight_decay=cfg.weight_decay)
+    # Constant LR leaves the loss jittering near its floor in the final
+    # epochs; cosine annealing lets it settle (audited change, 2026-09-14).
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=cfg.epochs)
     loss_fn   = CombinedLoss(
         eps=cfg.eps, g=cfg.g,
         w_mse=cfg.w_mse, w_energy=cfg.w_energy,
@@ -430,13 +488,17 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
         t0 = time.perf_counter()
         train_loss = run_epoch(model, train_loader, loss_fn, optimizer, device, train=True)
         val_loss   = run_epoch(model, val_loader,   loss_fn, None,        device, train=False)
+        scheduler.step()
         elapsed    = time.perf_counter() - t0
 
+        # `train_mse`/`val_mse` hold the genuine MSE component (audited
+        # fix, 2026-09-14: they previously held the weighted total, which
+        # made the loss curves and any MSE-vs-epoch analysis misleading).
         history.append({
             "epoch":     epoch,
-            "train_mse": train_loss["total"],
+            "train_mse": train_loss["mse"],
             "train_components": train_loss,
-            "val_mse":   val_loss["total"],
+            "val_mse":   val_loss["mse"],
             "val_components":   val_loss,
             "seconds":   elapsed,
         })
@@ -455,7 +517,7 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
                 "hidden":        cfg.hidden,    # for evaluate_models.py
                 "num_passes":    cfg.num_passes,
                 "epoch":         epoch,
-                "val_mse":       val_loss["total"],
+                "val_mse":       val_loss["mse"],
                 "variant":       variant,
             }, best_path)
             marker = "  ✓ saved"
@@ -465,6 +527,16 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
               f"val={val_loss['total']:.4e}  ({elapsed:5.2f}s){marker}")
 
     # ── Final test metrics ──────────────────────────────────────────────────
+    # Measured on the BEST-VAL checkpoint, not the end-of-training weights:
+    # every downstream consumer (evaluate_models.py, stability_benchmark)
+    # loads model_best.pt, so history.json's test metrics must describe
+    # exactly those weights (audited fix, 2026-09-14 -- previously the
+    # final-epoch weights were evaluated, which can differ substantially
+    # when best-val landed early).
+    if best_path.exists():
+        ckpt = load_checkpoint(str(best_path))
+        model.load_state_dict(ckpt["model_state"])
+        print(f"[test] reloaded best checkpoint (epoch {ckpt.get('epoch', '?')})")
     print("[test] computing final test metrics...")
     model.eval()
     test_sums = {"mse": 0.0, "energy": 0.0, "total": 0.0}
@@ -552,6 +624,9 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                    help="Plummer softening for the energy loss.")
     p.add_argument("--g",         type=float, default=DEFAULT_GRAVITY_G,
                    help="Gravitational constant for the energy loss.")
+    p.add_argument("--seed",      type=int,   default=42,
+                   help="RNG seed (python/numpy/torch/cuda) for "
+                        "reproducible runs; logged in history.json.")
     return p
 
 
@@ -603,6 +678,7 @@ if __name__ == "__main__":
         rollout_K=args.rollout_K,
         eps=args.eps,
         g=args.g,
+        seed=args.seed,
     )
     print(f"[run] cfg={cfg}")
     print(f"[run] npz ={npz_path}")

@@ -57,10 +57,12 @@ from torch.utils.data import DataLoader
 from utils import (
     cap_dataloader,
     configure_utf8_stdout,
+    load_checkpoint,
     load_sibling_module,
     mount_drive_if_possible,
     pick_device,
     save_loss_curve,
+    seed_everything,
     timestamp,
 )
 
@@ -132,12 +134,24 @@ class MLPSurrogate(nn.Module):
             d = hidden
         layers.append(nn.Linear(d, body_out_dim))
         self.net = nn.Sequential(*layers)
+        # Residual/delta prediction (audited change, 2026-09-14): the head
+        # predicts the CHANGE from the window's last frame, and its final
+        # layer starts at zero so the untrained model is exactly the identity
+        # (pred = last observed state). With a small integrator step
+        # `next ≈ last + small Δ`, so the effective loss floor becomes
+        # Var(Δstate) instead of Var(state), and rollout errors stop
+        # compounding from an absolute-frame miscalibration.
+        nn.init.zeros_(self.net[-1].weight)
+        nn.init.zeros_(self.net[-1].bias)
 
     def forward(self, x: torch.Tensor, mass: torch.Tensor) -> torch.Tensor:
         """
         x    : (B, W, N, F) : windowed per-body states
         mass : (B, N)       : per-body mass, broadcast across W
         Returns: (B, N, F) predicted next states.
+
+        The prediction is RESIDUAL: the head outputs the delta from the
+        window's last frame, which is added before returning.
         """
         B, W, N, F = x.shape
         if W != self.window_size:
@@ -149,8 +163,10 @@ class MLPSurrogate(nn.Module):
         x_in = torch.cat([x, mass_b], dim=-1)                # (B, W, N, F+1)
         # Reshape to (B*N, W*(F+1)) so the same MLP runs on every body.
         x_flat = x_in.permute(0, 2, 1, 3).reshape(B * N, -1)  # (B*N, W*(F+1))
-        pred = self.net(x_flat)                                 # (B*N, F)
-        return pred.view(B, N, F)
+        delta = self.net(x_flat)                                # (B*N, F)
+        # Residual anchor: the window's last true frame, per body.
+        last = x[:, -1, :, :].reshape(B * N, F)                 # (B*N, F)
+        return (delta + last).view(B, N, F)
 
     def step(self, state: torch.Tensor, mass: torch.Tensor) -> torch.Tensor:
         """
@@ -176,6 +192,7 @@ class TrainConfig:
     batch_size:    int   = MLP_BATCH_SIZE
     lr:            float = DEFAULT_LR
     weight_decay:  float = DEFAULT_WEIGHT_DECAY
+    seed:          int   = 42         # reproducibility (weights, init, shuffle)
     quick:         bool  = False      # truncates dataset for fast smoke-test
     n_bodies:      int | None = None   # optional validation against dataset N
     hidden:        int   = MLP_HIDDEN
@@ -258,6 +275,17 @@ def run_epoch(model: nn.Module,
                 l_roll = pred.new_zeros(())
 
             if train:
+                # NaN guard (audited change, 2026-09-14): a single
+                # non-finite loss (energy-ratio spike, ejected-body
+                # transient) would otherwise produce NaN gradients that
+                # clip_grad_norm_ silently propagates into the weights --
+                # training dies while the loop keeps "running".
+                if not torch.isfinite(l_total):
+                    print(f"[warn] non-finite train loss "
+                          f"(mse={float(l_mse):.3e} E={float(l_energy):.3e}); "
+                          f"skipping batch")
+                    optimizer.zero_grad(set_to_none=True)
+                    continue
                 optimizer.zero_grad(set_to_none=True)
                 l_total.backward()
                 nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
@@ -306,6 +334,10 @@ def _final_test_metrics(model: nn.Module,
 def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
     out_path = Path(out_dir)
     out_path.mkdir(parents=True, exist_ok=True)
+    # Seed everything BEFORE model init / dataloaders so the run is
+    # reproducible from the logged seed (audited change, 2026-09-14).
+    seed_everything(cfg.seed)
+    print(f"[seed] {cfg.seed}")
     device = pick_device()
     print(f"[device] {device}")
 
@@ -344,6 +376,9 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
                              hidden=cfg.hidden,
                              depth=cfg.depth).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
+    # Constant LR leaves the loss jittering near its floor in the final
+    # epochs; cosine annealing lets it settle (audited change, 2026-09-14).
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=cfg.epochs)
     loss_fn   = CombinedLoss(
         eps=cfg.eps, g=cfg.g,
         w_mse=cfg.w_mse, w_energy=cfg.w_energy,
@@ -364,6 +399,7 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
                                  train=True,  W=W_window, F=in_features)
         val_losses   = run_epoch(model, val_loader,   loss_fn, None,        device,
                                  train=False, W=W_window, F=in_features)
+        scheduler.step()
         elapsed      = time.perf_counter() - t0
 
         history.append({
@@ -406,6 +442,16 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
               f"roll={val_losses['rollout']:.4e}  ({elapsed:5.2f}s){marker}")
 
     # ── Final test metrics ──────────────────────────────────────────────────
+    # Measured on the BEST-VAL checkpoint, not the end-of-training weights:
+    # every downstream consumer (evaluate_models.py, stability_benchmark)
+    # loads model_best.pt, so history.json's test metrics must describe
+    # exactly those weights (audited fix, 2026-09-14 -- previously the
+    # final-epoch weights were evaluated, which can differ substantially
+    # when best-val landed early).
+    if best_path.exists():
+        ckpt = load_checkpoint(str(best_path))
+        model.load_state_dict(ckpt["model_state"])
+        print(f"[test] reloaded best checkpoint (epoch {ckpt.get('epoch', '?')})")
     print("[test] computing final test metrics...")
     test_metrics = _final_test_metrics(model, test_loader, loss_fn, device,
                                        W=W_window, F=in_features)
@@ -450,6 +496,8 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                    help="Optional: validate that the dataset has this many bodies. "
                         "If omitted, N is inferred from the .npz.")
     p.add_argument("--batch-size",   type=int,   default=MLP_BATCH_SIZE)
+    p.add_argument("--seed",         type=int,   default=42,
+                   help="RNG seed for reproducible weight init and shuffling.")
     p.add_argument("--lr",           type=float, default=DEFAULT_LR)
     p.add_argument("--weight-decay", type=float, default=DEFAULT_WEIGHT_DECAY)
     p.add_argument("--hidden",       type=int,   default=MLP_HIDDEN)
@@ -509,6 +557,7 @@ if __name__ == "__main__":
         batch_size=args.batch_size,
         lr=args.lr,
         weight_decay=args.weight_decay,
+        seed=args.seed,
         quick=args.quick,
         n_bodies=args.N,
         hidden=args.hidden,

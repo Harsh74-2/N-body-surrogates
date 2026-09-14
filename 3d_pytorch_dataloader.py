@@ -7,7 +7,10 @@ PyTorch `Dataset` and `DataLoader` for the 3D N-body simulation produced by
 Consumes a single `.npz` archive with the layout written by the pipeline:
     X           : (n_windows, W, N, 6)        float32, (x, y, z, vx, vy, vz)
     y           : (n_windows, N, 6)           float32, next state
-    train_idx   : (n_train,)                  int64  , persisted split
+    train_idx   : (n_train,)                  int64  , persisted window split
+                                                     (IGNORED by get_dataloaders;
+                                                      see the simulation-level
+                                                      split rationale there)
     val_idx     : (n_val,)                    int64
     test_idx    : (n_test,)                   int64
     mass        : (n_sims, N)                 float64, optional, per-sim masses
@@ -63,6 +66,7 @@ from pipeline_config import (
     ModelType,
     SPLIT_SEED,
     STRIDE,
+    TEST_FRAC,
     VAL_FRAC,
     WINDOW_SIZE,
 )
@@ -240,32 +244,37 @@ class NBody3DDataset(Dataset):
         # ── Store the source path (used by _open_archive and __repr__) ─────
         self.npz_path = npz_path
 
-        # ── Per-window mass vector ──────────────────────────────────────────
-        # The pipeline stores mass per simulation; concatenate windows for
-        # each simulation in order so we can index by absolute window idx.
-        # If `mass` is not in the .npz we skip this whole step, there is
-        # nothing to assign, and `_recover_sim_ids` would otherwise divide
-        # by zero when called with n_sims=0.
-        if self._mass_per_sim is not None:
-            n_sims, _N = self._mass_per_sim.shape
-            if _N != self.n_bodies:
-                raise ValueError(
-                    f"Mass array has N={_N} but dataset has N={self.n_bodies}."
-                )
-            # The pipeline appends `n_windows_per_sim` per simulation in
-            # order. We don't have that list here, but we can recover
-            # simulation ids if the sidecar .json is present, or fall back
-            # to assuming all sims contributed equal windows (the default
-            # in the pipeline is exactly that).
-            sim_ids = self._recover_sim_ids(npz_path, n_sims, n_samples)
-            self._mass_per_window = self._mass_per_sim[sim_ids]   # (n_samples, N)
-        else:
-            self._mass_per_window = None
-
         # ── Sidecar .json metadata (best-effort) ───────────────────────────
         self.meta = self._load_sidecar(npz_path, n_sims=(
             self._mass_per_sim.shape[0] if self._mass_per_sim is not None else 0
         ))
+
+        # ── Per-window simulation ids ──────────────────────────────────────
+        # Recovered once here and reused for two things: the per-window
+        # mass lookup below, and the simulation-level train/val/test split
+        # in `get_dataloaders`. A window-level split leaks with STRIDE=1
+        # (adjacent windows share W-1 of their W frames, so near-duplicate
+        # samples land in different splits), which is why the split is
+        # done per simulation, not per window.
+        _n_sims = (self._mass_per_sim.shape[0]
+                   if self._mass_per_sim is not None
+                   else self.meta.n_simulations)
+        self._sim_ids = self._recover_sim_ids(npz_path, _n_sims, n_samples)
+
+        # ── Per-window mass vector ──────────────────────────────────────────
+        # The pipeline stores mass per simulation; index the per-sim table
+        # by each window's simulation id so every window knows its own
+        # mass vector. If `mass` is not in the .npz there is nothing to
+        # assign (and `_recover_sim_ids` returned an empty array).
+        if self._mass_per_sim is not None:
+            _n_mass, _N = self._mass_per_sim.shape
+            if _N != self.n_bodies:
+                raise ValueError(
+                    f"Mass array has N={_N} but dataset has N={self.n_bodies}."
+                )
+            self._mass_per_window = self._mass_per_sim[self._sim_ids]  # (n_samples, N)
+        else:
+            self._mass_per_window = None
 
         # ── Reporting ───────────────────────────────────────────────────────
         print(f"[NBody3DDataset] {Path(npz_path).name}")
@@ -365,6 +374,23 @@ class NBody3DDataset(Dataset):
         return None if self._train_idx is None else self._train_idx.copy()
 
     @property
+    def sim_ids(self) -> np.ndarray:
+        """
+        (n_samples,) simulation id of each window, or an empty array when
+        the ids could not be recovered (no mass table and no sidecar).
+        Ids are contiguous 0..n_simulations-1 because both recovery paths
+        (`n_windows_per_sim` sidecar and the equal-size fallback) repeat
+        `np.arange(n_sims)`; a skipped simulation (too few frames) simply
+        has no windows and no id.
+        """
+        return self._sim_ids.copy()
+
+    @property
+    def n_simulations(self) -> int:
+        """Number of distinct simulations the windows came from (0 if unknown)."""
+        return 0 if self._sim_ids.size == 0 else int(self._sim_ids.max()) + 1
+
+    @property
     def val_indices(self) -> np.ndarray | None:
         return None if self._val_idx is None else self._val_idx.copy()
 
@@ -421,6 +447,7 @@ def get_dataloaders(npz_path: str,
                     model_type: str = "mlp",
                     batch_size: int = 32,
                     val_frac: float = VAL_FRAC,
+                    test_frac: float = TEST_FRAC,
                     split_seed: int = SPLIT_SEED,
                     include_mass: bool = False,
                     channel_mask: np.ndarray | None = None,
@@ -431,19 +458,28 @@ def get_dataloaders(npz_path: str,
     """
     Build train, validation, and test DataLoaders.
 
-    The split is taken from `train_idx` / `val_idx` / `test_idx` inside the
-    .npz when present (the default output of the refined pipeline). When
-    absent, a fresh deterministic random split is generated with
-    `split_seed` (and *replaces* the in-memory split, but is not
-    persisted back to disk: re-run `3d_export_pipeline.py` to save it).
+    The split is SIMULATION-LEVEL: whole simulations are assigned to
+    train/val/test, then all of a simulation's windows go to its split.
+    The window-level split persisted inside the .npz (`train_idx` /
+    `val_idx` / `test_idx`) is deliberately IGNORED: with STRIDE=1,
+    adjacent windows share W-1 of their W frames, so scattering windows
+    across splits leaks near-duplicate samples between train, val and
+    test and reports artificially low val/test errors. The per-window
+    simulation ids are recovered from the sidecar
+    (`n_windows_per_sim`, written by `3d_export_pipeline`), so existing
+    .npz files keep working without re-exporting. Only when the ids
+    cannot be recovered (no mass table and no sidecar) does this fall
+    back to a window-level random split, with a warning.
 
     Parameters
     ----------
     npz_path        : ML-ready .npz archive
     model_type      : "mlp" | "lstm" | "gnn"
     batch_size      : batch size for all loaders
-    val_frac        : validation fraction (only used when no persisted split)
-    split_seed      : RNG seed for fallback split (must be fixed for project)
+    val_frac        : fraction of SIMULATIONS for validation
+    test_frac       : fraction of SIMULATIONS for test
+    split_seed      : RNG seed for the simulation assignment (must be fixed
+                      for project; also seeds the window-level fallback)
     include_mass    : if True, items are (x, y, mass_per_window)
     channel_mask    : optional (6,) boolean mask of features to keep
     num_workers     : DataLoader worker count
@@ -462,18 +498,58 @@ def get_dataloaders(npz_path: str,
         channel_mask=channel_mask,
     )
 
-    # ── Use the persisted split if it exists ────────────────────────────────
-    if (full_dataset.train_indices is not None and
-        full_dataset.val_indices is not None and
-        full_dataset.test_indices is not None):
-        train_subset = Subset(full_dataset, full_dataset.train_indices.tolist())
-        val_subset   = Subset(full_dataset, full_dataset.val_indices.tolist())
-        test_subset  = Subset(full_dataset, full_dataset.test_indices.tolist())
-        print(f"  using persisted split: "
-              f"train={len(train_subset)}  val={len(val_subset)}  "
-              f"test={len(test_subset)}  (seed={full_dataset.meta.split_seed})")
+    # ── Simulation-level split (see docstring for why the persisted
+    #    window-level split is ignored) ────────────────────────────────────
+    sim_ids = full_dataset.sim_ids
+    n_sims  = full_dataset.n_simulations
+    if sim_ids.size and n_sims >= 3:
+        rng = np.random.default_rng(split_seed)
+        perm = rng.permutation(n_sims)
+        n_test_sims = max(1, int(round(n_sims * test_frac)))
+        n_val_sims  = max(1, int(round(n_sims * val_frac)))
+        if n_test_sims + n_val_sims >= n_sims:
+            # Tiny n_sims: never let val+test consume every simulation.
+            n_test_sims = 1
+            n_val_sims  = 1
+        test_sims  = perm[:n_test_sims]
+        val_sims   = perm[n_test_sims:n_test_sims + n_val_sims]
+        train_sims = perm[n_test_sims + n_val_sims:]
+
+        train_idx = np.flatnonzero(np.isin(sim_ids, train_sims))
+        val_idx   = np.flatnonzero(np.isin(sim_ids, val_sims))
+        test_idx  = np.flatnonzero(np.isin(sim_ids, test_sims))
+        if train_idx.size == 0 or val_idx.size == 0 or test_idx.size == 0:
+            raise RuntimeError(
+                f"Simulation-level split produced an empty subset "
+                f"(train={train_idx.size}, val={val_idx.size}, "
+                f"test={test_idx.size}); refusing to continue with a "
+                f"degenerate split."
+            )
+
+        train_subset = Subset(full_dataset, train_idx.tolist())
+        val_subset   = Subset(full_dataset, val_idx.tolist())
+        test_subset  = Subset(full_dataset, test_idx.tolist())
+        if full_dataset.train_indices is not None:
+            print("  [warn] persisted window-level split ignored "
+                  "(leaks near-duplicate windows across splits with STRIDE=1)")
+        print(f"  simulation-level split: "
+              f"train={len(train_sims)}/{n_sims} sims ({len(train_subset)} windows)  "
+              f"val={len(val_sims)} sims ({len(val_subset)})  "
+              f"test={len(test_sims)} sims ({len(test_subset)})  "
+              f"(seed={split_seed})")
     else:
-        # Fall back to a deterministic random split.
+        # Fall back to a deterministic random WINDOW-level split. This is
+        # leaky with STRIDE=1 (see above); it only happens for datasets
+        # without a mass table or sidecar, i.e. nothing this project
+        # trains on.
+        if sim_ids.size:
+            raise RuntimeError(
+                f"Only {n_sims} simulations available; need >= 3 for a "
+                f"simulation-level split. Generate more simulations."
+            )
+        print("  [warn] cannot recover per-window simulation ids "
+              "(no mass table / no sidecar); falling back to a LEAKY "
+              "window-level random split")
         n_val   = int(round(len(full_dataset) * val_frac))
         n_test  = int(round(len(full_dataset) * 0.1))
         n_train = len(full_dataset) - n_val - n_test
@@ -481,7 +557,7 @@ def get_dataloaders(npz_path: str,
         train_subset, val_subset, test_subset = torch.utils.data.random_split(
             full_dataset, [n_train, n_val, n_test], generator=g,
         )
-        print(f"  no persisted split, generated one in-memory: "
+        print(f"  window-level fallback split: "
               f"train={n_train}  val={n_val}  test={n_test}  (seed={split_seed})")
 
     common = dict(

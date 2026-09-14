@@ -33,7 +33,6 @@ from pathlib import Path
 import numpy as np
 
 from pipeline_config import (
-    IC_BASE_SEED,
     IC_M_MAX,
     IC_M_MIN,
 )
@@ -41,6 +40,15 @@ from pipeline_config import (
 # The in-distribution synthetic-disc baseline uses a fixed body count.
 # This is a property of that specific preset, not a global default.
 DISC_BASELINE_N_BODIES: int = 25
+
+# Seed for the disc baseline's initial conditions. MUST stay outside the
+# training-seed range: `simulation_3d.generate_dataset` seeds its sims with
+# base_seed + sim_idx = IC_BASE_SEED + {0..n_sims-1} (n_sims <= 20 across
+# all presets, so 42..61), and init_galaxy_disc is deterministic in its
+# seed -- reusing IC_BASE_SEED here would regenerate training sim_000's
+# exact initial conditions, i.e. a memorisation test masquerading as an
+# in-distribution generalisation baseline (audited fix, 2026-09-14).
+DISC_BASELINE_SEED: int = 1042
 
 from . import presets as preset_mod
 from . import unit_rescale
@@ -131,7 +139,10 @@ def _load_in_distribution_disc(p: dict) -> RescaledIC:
     `simulation_3d.init_galaxy_disc(N=25, m_min=0.5, m_max=5)` -- the
     same body count and mass range the surrogates were trained on, so
     this preset is a genuine in-distribution sanity check rather than an
-    OOD-on-mass-ratio test. (The coarse time step is matched to training
+    OOD-on-mass-ratio test. The seed is deliberately OUTSIDE the
+    training-seed range (see DISC_BASELINE_SEED): same generator and
+    parameters, but initial conditions no training simulation has seen.
+    (The coarse time step is matched to training
     via `sample_per_year` in the preset, not here.)
 
     We re-scale to Σ mass = 1 (matching the trained unit convention) and
@@ -141,7 +152,7 @@ def _load_in_distribution_disc(p: dict) -> RescaledIC:
     from simulation_3d import init_galaxy_disc
 
     pos, vel, mass = init_galaxy_disc(
-        N=DISC_BASELINE_N_BODIES, seed=IC_BASE_SEED,
+        N=DISC_BASELINE_N_BODIES, seed=DISC_BASELINE_SEED,
         m_min=IC_M_MIN, m_max=IC_M_MAX,
     )
     # init_galaxy_disc already returns Σmass = 1; just sanity-check.

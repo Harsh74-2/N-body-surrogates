@@ -36,7 +36,12 @@ if __name__ == "__main__" and __package__ is None:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     __package__ = "real_case_validation"
 
-from utils import configure_utf8_stdout, load_sibling_module, pick_device
+from utils import (  # noqa: E402
+    configure_utf8_stdout,
+    load_checkpoint,
+    load_sibling_module,
+    pick_device,
+)
 
 configure_utf8_stdout()
 
@@ -115,7 +120,7 @@ def load_model(ckpt_path: str, model_type: str, device: torch.device,
     training N) would collide on the same key. Pass a distinct
     `display_name` per checkpoint to keep them separate.
     """
-    ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+    ckpt = load_checkpoint(ckpt_path)
     cfg_dict = ckpt.get("config", {}) or {}
     hidden     = ckpt.get("hidden",     cfg_dict.get("hidden",     128))
     depth      = ckpt.get("depth",      cfg_dict.get("depth",      4))
