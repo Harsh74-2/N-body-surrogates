@@ -126,6 +126,33 @@ for N in "${N_VALUES[@]}"; do
             echo "[FAIL] N=${N} stable ${m} -- continuing with the queue;" \
                  "re-run this cell later (log: ${OUT}/train.log)"
             FAILED+=("N${N}/${m}_stable (exit ${PIPESTATUS[0]})")
+            continue
+        fi
+        # Post-cell evaluation: same 4-metric table the sweep produces
+        # (MSE, |ΔE/E0|, latency, K=50 rollout drift). Output goes to
+        # results/N{N}_{m}_stable_metrics.json so the per-cell rollup is
+        # available immediately. If eval itself fails (e.g. the trainer
+        # finished but the ckpt is corrupt) we record but don't kill the
+        # queue — evaluation is recoverable; the training isn't.
+        if [ -f "${OUT}/model_best.pt" ]; then
+            mkdir -p results
+            echo
+            echo "[eval] N=${N} stable ${m} -> results/N${N}_${m}_stable_metrics.json"
+            if ! python evaluate_models.py \
+                --ckpt    "${OUT}/model_best.pt:${m}" \
+                --npz     "${NPZ}" \
+                --split   test \
+                --rollout-K 50 --rollout-batches 4 \
+                --json    "results/N${N}_${m}_stable_metrics.json" \
+                2>&1 | tee "${OUT}/eval.log"; then
+                echo "[FAIL] N=${N} stable ${m} eval failed (training ok); " \
+                     "continuing. Log: ${OUT}/eval.log"
+                FAILED+=("N${N}/${m}_stable (eval failed)")
+            fi
+        else
+            echo "[warn] N=${N} stable ${m} produced no model_best.pt; " \
+                 "skipping eval"
+            FAILED+=("N${N}/${m}_stable (no checkpoint)")
         fi
     done
 done

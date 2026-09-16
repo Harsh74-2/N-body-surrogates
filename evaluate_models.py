@@ -272,7 +272,6 @@ def evaluate(model: torch.nn.Module,
                 if model_type in ("mlp", "lstm"):
                     N = mass.shape[-1]
                     y = y.view(-1, N, FEATURE_DIM)
-                e0 = total_energy(y[..., :3], y[..., 3:6], mass)
                 # Per-sample denominator: the metric is the MEAN OF PER-SAMPLE
                 # RATIOS mean(|ΔE|/|E₀|), matching the single-step energy
                 # metric above, `real_case_validation/metrics.py` and
@@ -280,6 +279,35 @@ def evaluate(model: torch.nn.Module,
                 # mean(|ΔE|) by mean(|E₀|) (ratio-of-means), which is not the
                 # same quantity and made the rollout column incomparable to
                 # every other energy number (audited fix, 2026-09-14).
+                N = mass.shape[-1]
+                # Build the (B, W, N, F) input window the rollout will
+                # slide. The MLP/LSTM loaders return flat tensors so we
+                # reshape them here; the GNN loader already returns
+                # (B, W, N, F).
+                if model_type == "mlp":
+                    B = x.shape[0]
+                    W = model.window_size
+                    F = model.in_features
+                    window = x.view(B, W, N, F)              # (B, W, N, F)
+                elif model_type == "lstm":
+                    B, W, _NF = x.shape
+                    F = model.in_features
+                    window = x.view(B, W, N, F)              # (B, W, N, F)
+                else:  # gnn: x is already (B, W, N, F)
+                    window = x
+                # Anchor the rollout's E0 to the LAST FRAME OF THE INPUT
+                # WINDOW (the model's starting point), NOT the target
+                # frame `y`. The earlier version anchored to `y` and
+                # produced a metric of `|E(pred_k) - E(target)| /
+                # |E(target)|`, which is not the autoregressive rollout
+                # drift — it's how far the predictions drift from the
+                # ground-truth next state, an entirely different quantity.
+                # This is the fix that makes the K-step rollout column
+                # comparable to `stability_benchmark.py`'s energy_drift
+                # and `losses.rollout_energy_loss`'s reference (both anchor
+                # to the rollout's start frame).
+                e0 = total_energy(window[:, -1, :, :3],
+                                  window[:, -1, :, 3:6], mass)
                 denom = e0.abs().clamp(min=1e-8)             # (B,)
                 drift_acc = 0.0
                 # In-distribution sliding W-window rollout for every model
@@ -293,18 +321,6 @@ def evaluate(model: torch.nn.Module,
                 # the stability benchmark; it is now unified on the sliding
                 # window so the tab:eval K-step rollout column and the
                 # stability benchmark measure the same path.
-                N = mass.shape[-1]
-                if model_type == "mlp":
-                    B = x.shape[0]
-                    W = model.window_size
-                    F = model.in_features
-                    window = x.view(B, W, N, F)              # (B, W, N, F)
-                elif model_type == "lstm":
-                    B, W, _NF = x.shape
-                    F = model.in_features
-                    window = x.view(B, W, N, F)              # (B, W, N, F)
-                else:  # gnn: x is already (B, W, N, F)
-                    window = x
                 for _ in range(K):
                     pred = model(window, mass)               # (B, N, F)
                     e = total_energy(pred[..., :3], pred[..., 3:6], mass)
@@ -434,13 +450,31 @@ def main() -> None:
         sweep_dirs = sorted(Path("training_runs").glob("N*"),
                             key=lambda p: (len(p.name), p.name))
         for n_dir in sweep_dirs:
-            found = []
+            found: list[str] = []
+            # Single-step ckpts: training_runs/N{N}/{model}/model_best.pt
+            # Stable ckpts:    training_runs/N{N}/{model}_stable/model_best.pt
             for m in ModelType.values():
-                cand = n_dir / m / "model_best.pt"
-                if cand.is_file():
-                    found.append(f"{cand}:{m}")
+                for variant_dir in (m, f"{m}_stable"):
+                    cand = n_dir / variant_dir / "model_best.pt"
+                    if cand.is_file():
+                        found.append(f"{cand}:{m}")
             if found:
-                groups.append((str(Path(f"ml_ready_data/dataset_3d_w{n_dir.name[1:]}h1s1r.npz")), found))
+                # Filename is window-annotated (W=5, H=1, S=1, raw norm),
+                # NOT body-annotated. The body count N lives in the
+                # directory name, not the file. Use the constant
+                # w5h1s1r suffix for every N; an earlier version
+                # interpolated the body count into the filename and
+                # produced nonexistent paths like `w10h1s1r.npz`.
+                # Each ckpt's path encodes its model type as the second
+                # to-last component (`.../{model}/...` or
+                # `.../{model}_stable/...`); use that to point at the
+                # matching dataset.
+                for ckpt_spec in found:
+                    ckpt_path = ckpt_spec.split(":", 1)[0]
+                    model_type = ckpt_path.split("/")[-2].rstrip("_stable")
+                    npz_path = (Path("ml_ready_data") / f"N{n_dir.name[1:]}"
+                                / model_type / "dataset_3d_w5h1s1r.npz")
+                    groups.append((str(npz_path), [ckpt_spec]))
         if not groups:
             raise SystemExit(
                 "\n[eval] no checkpoints given and none found under "
