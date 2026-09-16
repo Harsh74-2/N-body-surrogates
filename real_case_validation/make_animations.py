@@ -238,7 +238,7 @@ def _make_3d_panel(ax, body_name: str, primary_name: str,
     - The reference (leapfrog) trajectory as a white solid line if present.
     """
     ax.set_facecolor(THEME["panel"])
-    ax.set_title(f"{body_name} (primary: {primary_name})", color=THEME["text"])
+    ax.set_title(body_name, color=THEME["text"])
     ax.set_xlabel("x [L*]", color=THEME["text"])
     ax.set_ylabel("y [L*]", color=THEME["text"])
     if is_3d:
@@ -356,7 +356,7 @@ def _make_3d_panel_book(ax, body_name: str, primary_name: str,
                         sun_pos: np.ndarray | None = None) -> None:
     """Left panel: ORIGINAL system (closed-form Kepler)."""
     ax.set_facecolor(THEME["panel"])
-    ax.set_title(f"ORIGINAL  ·  {body_name} (primary: {primary_name})",
+    ax.set_title(f"ORIGINAL  ·  {body_name}",
                  color=THEME["good"], fontsize=11)
     ax.set_xlabel("x [L*]", color=THEME["text"])
     ax.set_ylabel("y [L*]", color=THEME["text"])
@@ -397,7 +397,7 @@ def _make_3d_panel_surr(ax, body_name: str, primary_name: str,
                         sun_pos: np.ndarray | None = None) -> None:
     """Right panel: PREDICTED system (surrogate)."""
     ax.set_facecolor(THEME["panel"])
-    ax.set_title(f"PREDICTED  ·  {body_name} ({model_name})",
+    ax.set_title(f"PREDICTED  ·  {body_name}",
                  color=THEME["accent"], fontsize=11)
     ax.set_xlabel("x [L*]", color=THEME["text"])
     ax.set_ylabel("y [L*]", color=THEME["text"])
@@ -583,37 +583,33 @@ def _animate_one(preset_name: str, model_name: str,
     in_galaxy = galaxy_disp is not None
     galaxy_subtitle = "  ·  galaxy frame (Sun moves +x at ~220 km/s)" if in_galaxy else ""
 
-    # Build a subplot grid: 2 rows × 4 cols of body panels + 1 row of
-    # 4 global radial-error subplots at the bottom. Each body panel
-    # overlays the book orbit (faint grey) with the surrogate's trailing
-    # trajectory (model colour). One panel per
-    # body so the comparison reads at a glance.
-    bodies_to_show = [i for i in range(n_bodies) if i != primary_idx]
-    n_bodies_show = len(bodies_to_show)
-    if n_bodies_show == 0:
+    # Build a subplot grid: at most 6 per-body panels + 1 row of
+    # global radial-error subplots at the bottom. For presets with >6
+    # bodies (e.g. solar_system_extended with 19 bodies including dwarfs),
+    # we drop the dwarf/minor bodies — they trace essentially the same
+    # orbit as the Sun and add visual clutter without information.
+    # Cap at 6 panels (2 rows × 3 cols) so the figure stays compact.
+    bodies_to_show_all = [i for i in range(n_bodies) if i != primary_idx]
+    MAX_BODY_PANELS = 6  # clean visual: 2 rows × 3 cols
+    bodies_to_show = bodies_to_show_all[:MAX_BODY_PANELS]
+    if not bodies_to_show:
         return []
-    n_body_cols = 4
+    n_bodies_show = len(bodies_to_show)
+    n_body_cols = 3
     n_body_rows = (n_bodies_show + n_body_cols - 1) // n_body_cols  # ceil
-    fig_height = 3.6 * n_body_rows + 2.4  # extra row for global error
-    fig = plt.figure(figsize=(16.0, fig_height), facecolor=THEME["bg"])
+    fig_height = 2.6 * n_body_rows + 1.8  # compact: per-body 2.6", error row 1.8"
+    fig = plt.figure(figsize=(13.0, fig_height), facecolor=THEME["bg"])
     fig.suptitle(f"{preset_name}  ·  {model_name}  ·  {fmt.upper()}{galaxy_subtitle}",
-                 color=THEME["text"], fontsize=14)
-    # Frame-rate / sampling caption. The trajectories are integrated at a
-    # finite dt and the animation samples one frame per integration step,
-    # so the visible segments are the integration-sampling choice — not a
-    # rendering artefact. Dash = reference (book / leapfrog), solid = pre-
-    # dicted (surrogate). For Sun-centred presets the surrogate's reference
-    # frame may shift because the network sees a zero-momentum state; the
-    # body appears to wrap but the radial error (right panel) is invariant.
-    fig.text(0.5, 0.93,
-             "segments = integration-sampling (one frame per step);  "
-             "dashed = from the books, solid = predicted",
-             ha="center", va="top", color=THEME["text"], fontsize=9,
-             alpha=0.75)
+                 color=THEME["text"], fontsize=13)
     is_3d = (view == "3d")
+    # Clean layout (audited, 2026-09-17): removed the verbose
+    # "segments = integration-sampling..." caption (was cluttering the
+    # figure), reduced the per-row height from 3.6" to 2.6", and
+    # tightened hspace/wspace. The legend / colour mapping is still
+    # implicit via per-model colour from SURROGATE_COLORS.
     gs = fig.add_gridspec(n_body_rows + 1, n_body_cols,
-                          height_ratios=[3.6] * n_body_rows + [2.4],
-                          hspace=0.45, wspace=0.30)
+                          height_ratios=[2.6] * n_body_rows + [1.8],
+                          hspace=0.35, wspace=0.25)
     axes = []
     for cell_i, body_i in enumerate(bodies_to_show):
         row_i = cell_i // n_body_cols
