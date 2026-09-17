@@ -1,0 +1,189 @@
+[
+  {
+    "name": "sun_earth_only",
+    "label": "Sun\u2013Earth 2-body (Keplerian reference)",
+    "in_distribution": false,
+    "n_bodies": 2,
+    "n_samples": 120,
+    "dt_N": 0.5126514626560704,
+    "duration_years": 10,
+    "scale": {
+      "M_kg": 1.9884759722e+30,
+      "L_m": 151719838085.82532,
+      "T_s": 5129801.0277292235,
+      "V_m_per_s": 29576.16431235856,
+      "E_J": 1.739418353359874e+39
+    },
+    "per_model": {
+      "mlp": {
+        "mse_state": 0.3400611166830106,
+        "mse_position": 0.3317340494794887,
+        "max_error_over_L": 1.9722863249196454,
+        "mean_error_over_L": 0.6369158358380206,
+        "frames_before_half_L": 0,
+        "max_energy_drift": 0.028148494542332248,
+        "calibrated": {
+          "mse_state": 0.3213085190117842,
+          "mse_position": 0.3213085190117842,
+          "mean_err_pct": 62.462920809389274,
+          "max_err_pct": 99.06759916011659,
+          "n_predictions": 172,
+          "calibration": {
+            "1": {
+              "a": 3.756076225551476e-05,
+              "b": 0.9721636371223331,
+              "r2": 0.008640622741621473,
+              "n_cal": 29
+            }
+          }
+        }
+      },
+      "mlp_stable": {
+        "mse_state": 0.3400614271089362,
+        "mse_position": 0.33173130099426723,
+        "max_error_over_L": 1.9722893208641064,
+        "mean_error_over_L": 0.6369092387391869,
+        "frames_before_half_L": 0,
+        "max_energy_drift": 0.003490192808570018,
+        "calibrated": {
+          "mse_state": 0.3213130343461723,
+          "mse_position": 0.3213130343461723,
+          "mean_err_pct": 62.46285408433913,
+          "max_err_pct": 99.06816191042842,
+          "n_predictions": 172,
+          "calibration": {
+            "1": {
+              "a": 6.227146811965709e-06,
+              "b": 0.9721919231207833,
+              "r2": 0.008302829304117632,
+              "n_cal": 29
+            }
+          }
+        }
+      },
+      "lstm": {
+        "mse_state": 0.342349977852437,
+        "mse_position": 0.33630590636434643,
+        "max_error_over_L": 1.9984031351903508,
+        "mean_error_over_L": 0.645905219615738,
+        "frames_before_half_L": 0,
+        "max_energy_drift": 0.0018443338674632582,
+        "calibrated": {
+          "mse_state": 0.32675604937857977,
+          "mse_position": 0.32675604937857977,
+          "mean_err_pct": 63.576035959025276,
+          "max_err_pct": 101.08345723777232,
+          "n_predictions": 172,
+          "calibration": {
+            "1": {
+              "a": -1.7910724741147668e-06,
+              "b": 0.9721978255235479,
+              "r2": 0.0688457309646634,
+              "n_cal": 29
+            }
+          }
+        }
+      },
+      "lstm_stable": {
+        "mse_state": 0.3422994532033602,
+        "mse_position": 0.3362063581833639,
+        "max_error_over_L": 1.9978488487691557,
+        "mean_error_over_L": 0.6456547052749156,
+        "frames_before_half_L": 0,
+        "max_energy_drift": 0.0002531922984258391,
+        "calibrated": {
+          "mse_state": 0.32663784289834763,
+          "mse_position": 0.32663784289834763,
+          "mean_err_pct": 63.54495880249972,
+          "max_err_pct": 101.02976590824294,
+          "n_predictions": 172,
+          "calibration": {
+            "1": {
+              "a": 8.539486805355213e-08,
+              "b": 0.9721966345167481,
+              "r2": 1.0,
+              "n_cal": 29
+            }
+          }
+        }
+      },
+      "gnn": {
+        "mse_state": 0.3424063854497078,
+        "mse_position": 0.33641631987942744,
+        "max_error_over_L": 1.998583753069719,
+        "mean_error_over_L": 0.6477041234461264,
+        "frames_before_half_L": 0,
+        "max_energy_drift": 0.10808274652933875,
+        "calibrated": {
+          "mse_state": 0.3268174046771523,
+          "mse_position": 0.3268174046771523,
+          "mean_err_pct": 63.79615538359161,
+          "max_err_pct": 101.41542576548954,
+          "n_predictions": 172,
+          "calibration": {
+            "1": {
+              "a": -1.0540889362396983e-06,
+              "b": 0.9721968910446307,
+              "r2": 0.09551567151497053,
+              "n_cal": 29
+            }
+          }
+        }
+      },
+      "gnn_stable": {
+        "mse_state": 0.34240560889782923,
+        "mse_position": 0.33642166957182135,
+        "max_error_over_L": 1.998613817078236,
+        "mean_error_over_L": 0.6477152826345518,
+        "frames_before_half_L": 0,
+        "max_energy_drift": 0.0023005006370081255,
+        "calibrated": {
+          "mse_state": 0.3268215237560153,
+          "mse_position": 0.3268215237560153,
+          "mean_err_pct": 63.797297115871196,
+          "max_err_pct": 101.41728945649353,
+          "n_predictions": 172,
+          "calibration": {
+            "1": {
+              "a": 2.566022617369618e-06,
+              "b": 0.9721950942636092,
+              "r2": 0.004114700801261528,
+              "n_cal": 29
+            }
+          }
+        }
+      }
+    },
+    "wallclock_s": 6.608688783002435,
+    "kepler_check": [
+      {
+        "body": "Sun",
+        "is_primary": true,
+        "mass_kg": 1.98847e+30,
+        "T_N": null,
+        "a_N": null,
+        "T_s": null,
+        "a_m": null,
+        "a_au": null,
+        "T_yr": null,
+        "K_measured": null,
+        "K_predicted": 39.47853617441663,
+        "deviation_pct": null
+      },
+      {
+        "body": "Earth",
+        "is_primary": false,
+        "mass_kg": 5.9722e+24,
+        "T_N": 6.1537256503171385,
+        "a_N": 0.9862113445070866,
+        "T_s": 31567388.16536054,
+        "a_m": 149627825507.01926,
+        "a_au": 1.000200235517251,
+        "T_yr": 1.000310168243483,
+        "K_measured": 39.479012295712565,
+        "K_predicted": 39.47853617441663,
+        "deviation_pct": 0.0012060257093438054
+      }
+    ]
+  }
+]

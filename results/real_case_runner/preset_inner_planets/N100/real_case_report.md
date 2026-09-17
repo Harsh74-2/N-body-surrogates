@@ -1,0 +1,56 @@
+# Real-Case Validation Report
+
+Trained MLP / LSTM / GNN surrogates evaluated on real Solar-System initial conditions. All numbers are in the dimensionless N-body units the surrogates were trained on.
+
+## Out-of-distribution caveat
+
+The surrogates were trained on 25-body synthetic galaxy discs (`simulation_3d.init_galaxy_disc`, mass ratio ≲ 10, body count = 25, Σm = 1, G = 1, no central sink). The Solar System is a *very* different distribution: 8-10 bodies with mass ratios of 10⁵ (Sun:Earth) or higher. The numbers below therefore measure **out-of-distribution generalisation**, not domain fit. The `disc_imf_in_distribution_baseline` preset provides an in-distribution sanity check for comparison.
+
+## Per-preset summary
+
+### Reading key
+
+Every line in the plots uses one of the styles below. References are drawn in white. The book (closed-form Kepler) line is green. Surrogates use a different colour and linestyle per architecture:
+
+| line        | colour   | linestyle | meaning |
+|-------------|----------|-----------|---------|
+| book        | green    | solid     | Closed-form 2-body Kepler (primary + body, all other perturbations ignored) |
+| reference   | white    | solid     | Leapfrog at dt_ref = coarse dt / 100 |
+| GNN         | blue     | solid     | Trained GNN surrogate (`model_best.pt`) |
+| GNN_stable  | blue     | dashed    | GNN trained with stability loss (`model_best.pt` from `*/gnn_stable/`) |
+| LSTM        | orange   | dash-dot  | Trained LSTM surrogate (`model_best.pt` from `*/lstm/`) |
+| LSTM_stable | orange   | dotted    | LSTM trained with stability loss (`model_best.pt` from `*/lstm_stable/`) |
+| MLP         | violet   | dotted    | Trained MLP surrogate (`model_best.pt` from `*/mlp/`) |
+| MLP_stable  | violet   | densely dotted | MLP trained with stability loss (`model_best.pt` from `*/mlp_stable/`) |
+
+### inner_planets, Inner planets (Mercury → Mars + Sun)
+
+- N = 5, samples = 120, dt_N = 2.886e-01
+- scale: M = 1.988e+30 kg, L = 2.225e+11 m, T = 9.111e+06 s
+
+| model | MSE (pos) | MSE (state) | max err / L | mean err / L | frames to ½L error | max energy drift |
+|---|---|---|---|---|---|---|
+| mlp | 2.350e-01 | 6.537e-01 | 2.049e+00 | 6.144e-01 | 1 | 3.488e-02 |
+| mlp_stable | 2.351e-01 | 6.537e-01 | 2.050e+00 | 6.147e-01 | 1 | 1.952e-05 |
+| lstm | 2.347e-01 | 6.535e-01 | 2.048e+00 | 6.140e-01 | 1 | 1.167e-04 |
+| lstm_stable | 2.347e-01 | 6.535e-01 | 2.048e+00 | 6.139e-01 | 1 | 3.913e-04 |
+| gnn | 2.350e-01 | 6.537e-01 | 2.050e+00 | 6.146e-01 | 1 | 5.098e-03 |
+| gnn_stable | 2.349e-01 | 6.536e-01 | 2.049e+00 | 6.141e-01 | 1 | 2.343e-03 |
+
+## Kepler's 3rd-law check (reference integrator)
+
+For each preset we measure the orbital period T and semi-major axis a of every non-primary body from the reference trajectory, and compare T²/a³ to the predicted 4π²/(G·M_primary). All bodies in the same preset should give the same K = T²/a³ (that's the law). The deviation is reported as a percentage. Bodies that don't complete at least one full orbit in the simulation window show NaN: increase `duration_years` to bring them in.
+
+### inner_planets, Kepler 3rd-law check
+
+Reference integrator (high-precision leapfrog, dt_N = 2.886e-01, 120 samples over 10 yr). For each non-primary body we report the orbital period T (median full-revolution spacing, axis-crossing detector) and the semi-major axis a = (r_min + r_max)/2, then the Kepler ratio K = T²/a³. The predicted K = 4π²/(G·M_primary) is the same for every body in this frame. Bodies whose orbit does not complete at least one full period in the simulation window show NaN, increase `duration_years` to bring them in.
+
+| body | is_primary | mass (kg) | T (yr) | a (AU) | T²/a³ | K_pred | deviation (%) |
+|---|---|---|---|---|---|---|---|
+| Sun | ✓ | 1.988e+30 | — | — | — | 3.9479e+01 | — |
+| Mercury |   | 3.301e+23 | 0.2442 | 0.3872 | 4.0571e+01 | 3.9479e+01 | +2.7665 |
+| Venus |   | 4.868e+24 | 0.615 | 0.7233 | 3.9449e+01 | 3.9479e+01 | -0.0739 |
+| Earth |   | 5.972e+24 | 1 | 1 | 3.9479e+01 | 3.9479e+01 | +0.0013 |
+| Mars |   | 6.417e+23 | 1.881 | 1.524 | 3.9475e+01 | 3.9479e+01 | -0.0090 |
+
+_The shortest-period body in this preset completes ≈ 40 full orbits in the simulation window; the longest-period body shown above completes fewer, so its T estimate is noisier._

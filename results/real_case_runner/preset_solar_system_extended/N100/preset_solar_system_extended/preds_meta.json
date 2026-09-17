@@ -1,0 +1,15 @@
+{
+  "preset": "solar_system_extended",
+  "n_bodies": 19,
+  "n_rollout_ref": 115,
+  "models": [
+    "mlp",
+    "mlp_stable",
+    "lstm",
+    "lstm_stable",
+    "gnn",
+    "gnn_stable"
+  ],
+  "dt_N": 0.0005645265016844589,
+  "W": 5
+}

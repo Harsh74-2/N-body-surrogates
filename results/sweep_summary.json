@@ -1,0 +1,45 @@
+{
+  "config": {
+    "N": [
+      10,
+      25,
+      50,
+      100
+    ],
+    "frames": 5000,
+    "test_frac": 0.1,
+    "num_simulations": {
+      "mlp": 20,
+      "lstm": 15,
+      "gnn": 10
+    },
+    "epochs": {
+      "mlp": 100,
+      "lstm": 80,
+      "gnn": 50
+    }
+  },
+  "per_N": [
+    {
+      "N": 10,
+      "elapsed_sec": 337.7351476980001,
+      "metrics": "/root/Universe-Simulation/results/N10/metrics.json"
+    },
+    {
+      "N": 25,
+      "elapsed_sec": 611.290056173,
+      "metrics": "/root/Universe-Simulation/results/N25/metrics.json"
+    },
+    {
+      "N": 50,
+      "elapsed_sec": 1911.088692824,
+      "metrics": "/root/Universe-Simulation/results/N50/metrics.json"
+    },
+    {
+      "N": 100,
+      "elapsed_sec": 6885.596389535,
+      "metrics": "/root/Universe-Simulation/results/N100/metrics.json"
+    }
+  ],
+  "total_sec": 9745.710629631001
+}

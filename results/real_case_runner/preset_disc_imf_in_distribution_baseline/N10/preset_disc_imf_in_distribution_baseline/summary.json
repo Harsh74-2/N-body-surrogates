@@ -1,0 +1,68 @@
+{
+  "name": "disc_imf_in_distribution_baseline",
+  "label": "25-body galaxy disc, training IMF (in-distribution sanity)",
+  "in_distribution": true,
+  "n_bodies": 25,
+  "n_samples": 2500,
+  "dt_N": 0.002,
+  "duration_years": 5,
+  "scale": {
+    "M_kg": 1.0,
+    "L_m": 1.0,
+    "T_s": 122404.43065054427,
+    "V_m_per_s": 8.169638914909275e-06,
+    "E_J": 6.6743e-11
+  },
+  "per_model": {
+    "mlp": {
+      "mse_state": 0.6377001354133145,
+      "mse_position": 0.9154668443708308,
+      "max_error_over_L": 4.088808251924425,
+      "mean_error_over_L": 1.446898151565509,
+      "frames_before_half_L": 202,
+      "max_energy_drift": 0.0004538454802858936
+    },
+    "mlp_stable": {
+      "mse_state": 0.6377206760209864,
+      "mse_position": 0.9154757374255438,
+      "max_error_over_L": 4.089106795125109,
+      "mean_error_over_L": 1.4469141801555365,
+      "frames_before_half_L": 202,
+      "max_energy_drift": 4.2000168000672006e-05
+    },
+    "lstm": {
+      "mse_state": 0.6724388859326836,
+      "mse_position": 0.9849111220547239,
+      "max_error_over_L": 4.39304577527069,
+      "mean_error_over_L": 1.4516129438047125,
+      "frames_before_half_L": 202,
+      "max_energy_drift": 0.00015806311743405248
+    },
+    "lstm_stable": {
+      "mse_state": 0.6719259322655217,
+      "mse_position": 0.9838847436866026,
+      "max_error_over_L": 4.381735803063987,
+      "mean_error_over_L": 1.4524123006977248,
+      "frames_before_half_L": 202,
+      "max_energy_drift": 6.918777675110701e-05
+    },
+    "gnn": {
+      "mse_state": 0.6457469850593673,
+      "mse_position": 0.931507839449206,
+      "max_error_over_L": 4.646324140505381,
+      "mean_error_over_L": 1.3828795229242543,
+      "frames_before_half_L": 195,
+      "max_energy_drift": 0.00019471951062308837
+    },
+    "gnn_stable": {
+      "mse_state": 0.6458199259094931,
+      "mse_position": 0.9316735233727674,
+      "max_error_over_L": 4.647309555586483,
+      "mean_error_over_L": 1.382949061925239,
+      "frames_before_half_L": 195,
+      "max_energy_drift": 1.4718810255129483e-05
+    }
+  },
+  "wallclock_s": 23.242762453010073,
+  "kepler_check": []
+}

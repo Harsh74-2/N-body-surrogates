@@ -1,0 +1,37 @@
+# Real-Case Validation Report
+
+Trained MLP / LSTM / GNN surrogates evaluated on real Solar-System initial conditions. All numbers are in the dimensionless N-body units the surrogates were trained on.
+
+## Out-of-distribution caveat
+
+The surrogates were trained on 25-body synthetic galaxy discs (`simulation_3d.init_galaxy_disc`, mass ratio ≲ 10, body count = 25, Σm = 1, G = 1, no central sink). The Solar System is a *very* different distribution: 8-10 bodies with mass ratios of 10⁵ (Sun:Earth) or higher. The numbers below therefore measure **out-of-distribution generalisation**, not domain fit. The `disc_imf_in_distribution_baseline` preset provides an in-distribution sanity check for comparison.
+
+## Per-preset summary
+
+### Reading key
+
+Every line in the plots uses one of the styles below. References are drawn in white. The book (closed-form Kepler) line is green. Surrogates use a different colour and linestyle per architecture:
+
+| line        | colour   | linestyle | meaning |
+|-------------|----------|-----------|---------|
+| book        | green    | solid     | Closed-form 2-body Kepler (primary + body, all other perturbations ignored) |
+| reference   | white    | solid     | Leapfrog at dt_ref = coarse dt / 100 |
+| GNN         | blue     | solid     | Trained GNN surrogate (`model_best.pt`) |
+| GNN_stable  | blue     | dashed    | GNN trained with stability loss (`model_best.pt` from `*/gnn_stable/`) |
+| LSTM        | orange   | dash-dot  | Trained LSTM surrogate (`model_best.pt` from `*/lstm/`) |
+| LSTM_stable | orange   | dotted    | LSTM trained with stability loss (`model_best.pt` from `*/lstm_stable/`) |
+| MLP         | violet   | dotted    | Trained MLP surrogate (`model_best.pt` from `*/mlp/`) |
+| MLP_stable  | violet   | densely dotted | MLP trained with stability loss (`model_best.pt` from `*/mlp_stable/`) |
+
+### disc_imf_in_distribution_baseline, 25-body galaxy disc, training IMF (in-distribution sanity)
+
+- N = 25, samples = 2500, dt_N = 2.000e-03
+
+| model | MSE (pos) | MSE (state) | max err / L | mean err / L | frames to ½L error | max energy drift |
+|---|---|---|---|---|---|---|
+| mlp | 9.155e-01 | 6.377e-01 | 4.089e+00 | 1.447e+00 | 202 | 4.538e-04 |
+| mlp_stable | 9.155e-01 | 6.377e-01 | 4.089e+00 | 1.447e+00 | 202 | 4.200e-05 |
+| lstm | 9.849e-01 | 6.724e-01 | 4.393e+00 | 1.452e+00 | 202 | 1.581e-04 |
+| lstm_stable | 9.839e-01 | 6.719e-01 | 4.382e+00 | 1.452e+00 | 202 | 6.919e-05 |
+| gnn | 9.315e-01 | 6.457e-01 | 4.646e+00 | 1.383e+00 | 195 | 1.947e-04 |
+| gnn_stable | 9.317e-01 | 6.458e-01 | 4.647e+00 | 1.383e+00 | 195 | 1.472e-05 |

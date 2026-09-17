@@ -1,0 +1,15 @@
+{
+  "preset": "inner_planets",
+  "n_bodies": 5,
+  "n_rollout_ref": 115,
+  "models": [
+    "mlp",
+    "mlp_stable",
+    "lstm",
+    "lstm_stable",
+    "gnn",
+    "gnn_stable"
+  ],
+  "dt_N": 0.28864791003894896,
+  "W": 5
+}

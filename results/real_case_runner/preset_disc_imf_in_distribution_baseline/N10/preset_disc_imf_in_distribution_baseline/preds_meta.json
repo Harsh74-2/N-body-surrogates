@@ -1,0 +1,15 @@
+{
+  "preset": "disc_imf_in_distribution_baseline",
+  "n_bodies": 25,
+  "n_rollout_ref": 2495,
+  "models": [
+    "mlp",
+    "mlp_stable",
+    "lstm",
+    "lstm_stable",
+    "gnn",
+    "gnn_stable"
+  ],
+  "dt_N": 0.002,
+  "W": 5
+}
