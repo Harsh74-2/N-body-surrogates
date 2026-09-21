@@ -1,0 +1,18 @@
+{
+  "preset": "sun_earth_only",
+  "n_bodies": 2,
+  "n_predictions": 115,
+  "models": [
+    "mlp",
+    "mlp_stable",
+    "lstm",
+    "lstm_stable",
+    "gnn",
+    "gnn_stable"
+  ],
+  "dt_N": 0.5126514626560704,
+  "W": 5,
+  "reference": "kepler",
+  "L_m": 151719838085.82532,
+  "T_s": 5129801.0277292235
+}

@@ -1,0 +1,516 @@
+[device] cpu
+[ckpt] mlp   <- C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\training_runs\N10\mlp\model_best.pt  (label: mlp)
+[ckpt] mlp   <- C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\training_runs\N10\mlp_stable\model_best.pt  (label: mlp_stable)
+[ckpt] lstm  <- C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\training_runs\N10\lstm\model_best.pt  (label: lstm)
+[ckpt] lstm  <- C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\training_runs\N10\lstm_stable\model_best.pt  (label: lstm_stable)
+[ckpt] gnn   <- C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\training_runs\N10\gnn\model_best.pt  (label: gnn)
+[ckpt] gnn   <- C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\training_runs\N10\gnn_stable\model_best.pt  (label: gnn_stable)
+[runner] --dump-preds: single-step arrays will be written to <out>/single_step/preset_*/ (preds.npy, ref_pos.npy, preds_meta.json).
+
+[single-step] disc_imf_in_distribution_baseline
+  N = 25  samples = 2500  dt_N = 2.0000e-03  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 2495 single-step predictions  mean_err = 1.643e-03 L  = 0.164 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 2495 single-step predictions  mean_err = 1.643e-03 L  = 0.164 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 2495 single-step predictions  mean_err = 1.680e-03 L  = 0.168 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 2495 single-step predictions  mean_err = 1.680e-03 L  = 0.168 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 2495 single-step predictions  mean_err = 1.654e-03 L  = 0.165 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 2495 single-step predictions  mean_err = 1.655e-03 L  = 0.165 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N10\single_step\preset_disc_imf_in_distribution_baseline/ss_summary.json  (elapsed 127.5s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N10\single_step\preset_disc_imf_in_distribution_baseline/preds.npy (6, 2495, 25, 6)  + ref_pos.npy + preds_meta.json
+
+[single-step] full_solar_system
+  N = 9  samples = 2400  dt_N = 3.2080e-03  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 2395 single-step predictions  mean_err = 1.053e-02 L  = 1.053 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 2395 single-step predictions  mean_err = 1.094e-02 L  = 1.094 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 2395 single-step predictions  mean_err = 1.053e-02 L  = 1.053 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 2395 single-step predictions  mean_err = 1.053e-02 L  = 1.053 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 2395 single-step predictions  mean_err = 1.054e-02 L  = 1.054 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 2395 single-step predictions  mean_err = 1.054e-02 L  = 1.054 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N10\single_step\preset_full_solar_system/ss_summary.json  (elapsed 68.4s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N10\single_step\preset_full_solar_system/preds.npy (6, 2395, 9, 6)  + ref_pos.npy + preds_meta.json
+
+[single-step] inner_planets
+  N = 5  samples = 120  dt_N = 2.8865e-01  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 2.970e-01 L  = 29.697 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 2.970e-01 L  = 29.697 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 2.970e-01 L  = 29.701 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 2.970e-01 L  = 29.701 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 2.970e-01 L  = 29.702 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 2.970e-01 L  = 29.702 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N10\single_step\preset_inner_planets/ss_summary.json  (elapsed 3.5s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N10\single_step\preset_inner_planets/preds.npy (6, 115, 5, 6)  + ref_pos.npy + preds_meta.json
+
+[single-step] jupiter_galileans
+  N = 5  samples = 1460  dt_N = 9.4186e-02  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 1455 single-step predictions  mean_err = 1.136e-01 L  = 11.358 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 1455 single-step predictions  mean_err = 1.136e-01 L  = 11.359 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 1455 single-step predictions  mean_err = 1.136e-01 L  = 11.362 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 1455 single-step predictions  mean_err = 1.136e-01 L  = 11.361 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 1455 single-step predictions  mean_err = 1.136e-01 L  = 11.363 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 1455 single-step predictions  mean_err = 1.136e-01 L  = 11.363 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N10\single_step\preset_jupiter_galileans/ss_summary.json  (elapsed 38.5s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N10\single_step\preset_jupiter_galileans/preds.npy (6, 1455, 5, 6)  + ref_pos.npy + preds_meta.json
+
+[single-step] solar_system_extended
+  N = 19  samples = 120  dt_N = 5.6453e-04  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 4.097e-03 L  = 0.410 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 4.370e-03 L  = 0.437 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 3.998e-03 L  = 0.400 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 3.996e-03 L  = 0.400 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 4.127e-03 L  = 0.413 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 4.035e-03 L  = 0.404 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N10\single_step\preset_solar_system_extended/ss_summary.json  (elapsed 5.5s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N10\single_step\preset_solar_system_extended/preds.npy (6, 115, 19, 6)  + ref_pos.npy + preds_meta.json
+
+[single-step] sun_earth_only
+  N = 2  samples = 120  dt_N = 5.1265e-01  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 2.552e-01 L  = 25.523 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 2.552e-01 L  = 25.523 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 2.553e-01 L  = 25.531 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 2.553e-01 L  = 25.531 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 2.553e-01 L  = 25.534 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 2.553e-01 L  = 25.534 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N10\single_step\preset_sun_earth_only/ss_summary.json  (elapsed 2.8s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N10\single_step\preset_sun_earth_only/preds.npy (6, 115, 2, 6)  + ref_pos.npy + preds_meta.json
+
+[single-step] sun_planets_moon
+  N = 10  samples = 120  dt_N = 3.2080e-03  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 1.134e-02 L  = 1.134 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 1.175e-02 L  = 1.175 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 1.126e-02 L  = 1.126 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 1.126e-02 L  = 1.126 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 1.129e-02 L  = 1.129 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 1.129e-02 L  = 1.129 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N10\single_step\preset_sun_planets_moon/ss_summary.json  (elapsed 3.7s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N10\single_step\preset_sun_planets_moon/preds.npy (6, 115, 10, 6)  + ref_pos.npy + preds_meta.json
+[single-step] C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N10\single_step\single_step_report.md
+[single-step] C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N10\single_step\single_step_report.json
+[device] cpu
+[ckpt] mlp   <- C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\training_runs\N25\mlp\model_best.pt  (label: mlp)
+[ckpt] mlp   <- C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\training_runs\N25\mlp_stable\model_best.pt  (label: mlp_stable)
+[ckpt] lstm  <- C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\training_runs\N25\lstm\model_best.pt  (label: lstm)
+[ckpt] lstm  <- C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\training_runs\N25\lstm_stable\model_best.pt  (label: lstm_stable)
+[ckpt] gnn   <- C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\training_runs\N25\gnn\model_best.pt  (label: gnn)
+[ckpt] gnn   <- C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\training_runs\N25\gnn_stable\model_best.pt  (label: gnn_stable)
+[runner] --dump-preds: single-step arrays will be written to <out>/single_step/preset_*/ (preds.npy, ref_pos.npy, preds_meta.json).
+
+[single-step] disc_imf_in_distribution_baseline
+  N = 25  samples = 2500  dt_N = 2.0000e-03  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 2495 single-step predictions  mean_err = 1.669e-03 L  = 0.167 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 2495 single-step predictions  mean_err = 1.671e-03 L  = 0.167 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 2495 single-step predictions  mean_err = 1.636e-03 L  = 0.164 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 2495 single-step predictions  mean_err = 1.637e-03 L  = 0.164 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 2495 single-step predictions  mean_err = 1.654e-03 L  = 0.165 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 2495 single-step predictions  mean_err = 1.653e-03 L  = 0.165 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N25\single_step\preset_disc_imf_in_distribution_baseline/ss_summary.json  (elapsed 132.7s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N25\single_step\preset_disc_imf_in_distribution_baseline/preds.npy (6, 2495, 25, 6)  + ref_pos.npy + preds_meta.json
+
+[single-step] full_solar_system
+  N = 9  samples = 2400  dt_N = 3.2080e-03  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 2395 single-step predictions  mean_err = 1.049e-02 L  = 1.049 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 2395 single-step predictions  mean_err = 1.051e-02 L  = 1.051 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 2395 single-step predictions  mean_err = 1.051e-02 L  = 1.051 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 2395 single-step predictions  mean_err = 1.051e-02 L  = 1.051 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 2395 single-step predictions  mean_err = 1.050e-02 L  = 1.050 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 2395 single-step predictions  mean_err = 1.050e-02 L  = 1.050 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N25\single_step\preset_full_solar_system/ss_summary.json  (elapsed 72.7s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N25\single_step\preset_full_solar_system/preds.npy (6, 2395, 9, 6)  + ref_pos.npy + preds_meta.json
+
+[single-step] inner_planets
+  N = 5  samples = 120  dt_N = 2.8865e-01  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 2.970e-01 L  = 29.697 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 2.970e-01 L  = 29.697 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 2.970e-01 L  = 29.698 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 2.970e-01 L  = 29.698 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 2.970e-01 L  = 29.697 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 2.970e-01 L  = 29.697 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N25\single_step\preset_inner_planets/ss_summary.json  (elapsed 3.1s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N25\single_step\preset_inner_planets/preds.npy (6, 115, 5, 6)  + ref_pos.npy + preds_meta.json
+
+[single-step] jupiter_galileans
+  N = 5  samples = 1460  dt_N = 9.4186e-02  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 1455 single-step predictions  mean_err = 1.136e-01 L  = 11.358 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 1455 single-step predictions  mean_err = 1.136e-01 L  = 11.358 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 1455 single-step predictions  mean_err = 1.136e-01 L  = 11.359 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 1455 single-step predictions  mean_err = 1.136e-01 L  = 11.359 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 1455 single-step predictions  mean_err = 1.136e-01 L  = 11.358 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 1455 single-step predictions  mean_err = 1.136e-01 L  = 11.358 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N25\single_step\preset_jupiter_galileans/ss_summary.json  (elapsed 37.8s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N25\single_step\preset_jupiter_galileans/preds.npy (6, 1455, 5, 6)  + ref_pos.npy + preds_meta.json
+
+[single-step] solar_system_extended
+  N = 19  samples = 120  dt_N = 5.6453e-04  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 3.951e-03 L  = 0.395 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 3.935e-03 L  = 0.394 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 3.936e-03 L  = 0.394 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 3.935e-03 L  = 0.393 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 4.432e-03 L  = 0.443 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 3.915e-03 L  = 0.392 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N25\single_step\preset_solar_system_extended/ss_summary.json  (elapsed 4.7s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N25\single_step\preset_solar_system_extended/preds.npy (6, 115, 19, 6)  + ref_pos.npy + preds_meta.json
+
+[single-step] sun_earth_only
+  N = 2  samples = 120  dt_N = 5.1265e-01  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 2.552e-01 L  = 25.522 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 2.552e-01 L  = 25.522 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 2.552e-01 L  = 25.525 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 2.552e-01 L  = 25.524 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 2.552e-01 L  = 25.521 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 2.552e-01 L  = 25.521 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N25\single_step\preset_sun_earth_only/ss_summary.json  (elapsed 2.4s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N25\single_step\preset_sun_earth_only/preds.npy (6, 115, 2, 6)  + ref_pos.npy + preds_meta.json
+
+[single-step] sun_planets_moon
+  N = 10  samples = 120  dt_N = 3.2080e-03  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 1.122e-02 L  = 1.122 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 1.124e-02 L  = 1.124 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 1.128e-02 L  = 1.128 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 1.127e-02 L  = 1.127 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 1.125e-02 L  = 1.125 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 1.125e-02 L  = 1.125 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N25\single_step\preset_sun_planets_moon/ss_summary.json  (elapsed 3.3s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N25\single_step\preset_sun_planets_moon/preds.npy (6, 115, 10, 6)  + ref_pos.npy + preds_meta.json
+[single-step] C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N25\single_step\single_step_report.md
+[single-step] C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N25\single_step\single_step_report.json
+[device] cpu
+[ckpt] mlp   <- C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\training_runs\N50\mlp\model_best.pt  (label: mlp)
+[ckpt] mlp   <- C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\training_runs\N50\mlp_stable\model_best.pt  (label: mlp_stable)
+[ckpt] lstm  <- C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\training_runs\N50\lstm\model_best.pt  (label: lstm)
+[ckpt] lstm  <- C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\training_runs\N50\lstm_stable\model_best.pt  (label: lstm_stable)
+[ckpt] gnn   <- C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\training_runs\N50\gnn\model_best.pt  (label: gnn)
+[ckpt] gnn   <- C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\training_runs\N50\gnn_stable\model_best.pt  (label: gnn_stable)
+[runner] --dump-preds: single-step arrays will be written to <out>/single_step/preset_*/ (preds.npy, ref_pos.npy, preds_meta.json).
+
+[single-step] disc_imf_in_distribution_baseline
+  N = 25  samples = 2500  dt_N = 2.0000e-03  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 2495 single-step predictions  mean_err = 1.667e-03 L  = 0.167 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 2495 single-step predictions  mean_err = 1.667e-03 L  = 0.167 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 2495 single-step predictions  mean_err = 1.651e-03 L  = 0.165 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 2495 single-step predictions  mean_err = 1.652e-03 L  = 0.165 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 2495 single-step predictions  mean_err = 1.656e-03 L  = 0.166 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 2495 single-step predictions  mean_err = 1.656e-03 L  = 0.166 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N50\single_step\preset_disc_imf_in_distribution_baseline/ss_summary.json  (elapsed 129.1s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N50\single_step\preset_disc_imf_in_distribution_baseline/preds.npy (6, 2495, 25, 6)  + ref_pos.npy + preds_meta.json
+
+[single-step] full_solar_system
+  N = 9  samples = 2400  dt_N = 3.2080e-03  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 2395 single-step predictions  mean_err = 1.054e-02 L  = 1.054 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 2395 single-step predictions  mean_err = 1.051e-02 L  = 1.051 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 2395 single-step predictions  mean_err = 1.052e-02 L  = 1.052 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 2395 single-step predictions  mean_err = 1.052e-02 L  = 1.052 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 2395 single-step predictions  mean_err = 1.051e-02 L  = 1.051 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 2395 single-step predictions  mean_err = 1.051e-02 L  = 1.051 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N50\single_step\preset_full_solar_system/ss_summary.json  (elapsed 68.1s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N50\single_step\preset_full_solar_system/preds.npy (6, 2395, 9, 6)  + ref_pos.npy + preds_meta.json
+
+[single-step] inner_planets
+  N = 5  samples = 120  dt_N = 2.8865e-01  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 2.970e-01 L  = 29.698 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 2.970e-01 L  = 29.698 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 2.970e-01 L  = 29.699 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 2.970e-01 L  = 29.699 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 2.970e-01 L  = 29.698 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 2.970e-01 L  = 29.698 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N50\single_step\preset_inner_planets/ss_summary.json  (elapsed 3.6s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N50\single_step\preset_inner_planets/preds.npy (6, 115, 5, 6)  + ref_pos.npy + preds_meta.json
+
+[single-step] jupiter_galileans
+  N = 5  samples = 1460  dt_N = 9.4186e-02  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 1455 single-step predictions  mean_err = 1.136e-01 L  = 11.359 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 1455 single-step predictions  mean_err = 1.136e-01 L  = 11.359 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 1455 single-step predictions  mean_err = 1.136e-01 L  = 11.360 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 1455 single-step predictions  mean_err = 1.136e-01 L  = 11.360 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 1455 single-step predictions  mean_err = 1.136e-01 L  = 11.360 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 1455 single-step predictions  mean_err = 1.136e-01 L  = 11.360 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N50\single_step\preset_jupiter_galileans/ss_summary.json  (elapsed 38.4s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N50\single_step\preset_jupiter_galileans/preds.npy (6, 1455, 5, 6)  + ref_pos.npy + preds_meta.json
+
+[single-step] solar_system_extended
+  N = 19  samples = 120  dt_N = 5.6453e-04  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 3.945e-03 L  = 0.394 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 3.904e-03 L  = 0.390 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 3.887e-03 L  = 0.389 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 3.886e-03 L  = 0.389 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 3.887e-03 L  = 0.389 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 3.886e-03 L  = 0.389 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N50\single_step\preset_solar_system_extended/ss_summary.json  (elapsed 4.9s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N50\single_step\preset_solar_system_extended/preds.npy (6, 115, 19, 6)  + ref_pos.npy + preds_meta.json
+
+[single-step] sun_earth_only
+  N = 2  samples = 120  dt_N = 5.1265e-01  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 2.552e-01 L  = 25.525 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 2.552e-01 L  = 25.524 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 2.553e-01 L  = 25.527 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 2.553e-01 L  = 25.527 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 2.553e-01 L  = 25.526 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 2.553e-01 L  = 25.526 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N50\single_step\preset_sun_earth_only/ss_summary.json  (elapsed 2.4s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N50\single_step\preset_sun_earth_only/preds.npy (6, 115, 2, 6)  + ref_pos.npy + preds_meta.json
+
+[single-step] sun_planets_moon
+  N = 10  samples = 120  dt_N = 3.2080e-03  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 1.128e-02 L  = 1.128 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 1.125e-02 L  = 1.125 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 1.127e-02 L  = 1.127 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 1.127e-02 L  = 1.127 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 1.126e-02 L  = 1.126 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 1.126e-02 L  = 1.126 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N50\single_step\preset_sun_planets_moon/ss_summary.json  (elapsed 3.7s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N50\single_step\preset_sun_planets_moon/preds.npy (6, 115, 10, 6)  + ref_pos.npy + preds_meta.json
+[single-step] C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N50\single_step\single_step_report.md
+[single-step] C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N50\single_step\single_step_report.json
+[device] cpu
+[ckpt] mlp   <- C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\training_runs\N100\mlp\model_best.pt  (label: mlp)
+[ckpt] mlp   <- C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\training_runs\N100\mlp_stable\model_best.pt  (label: mlp_stable)
+[ckpt] lstm  <- C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\training_runs\N100\lstm\model_best.pt  (label: lstm)
+[ckpt] lstm  <- C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\training_runs\N100\lstm_stable\model_best.pt  (label: lstm_stable)
+[ckpt] gnn   <- C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\training_runs\N100\gnn\model_best.pt  (label: gnn)
+[ckpt] gnn   <- C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\training_runs\N100\gnn_stable\model_best.pt  (label: gnn_stable)
+[runner] --dump-preds: single-step arrays will be written to <out>/single_step/preset_*/ (preds.npy, ref_pos.npy, preds_meta.json).
+
+[single-step] disc_imf_in_distribution_baseline
+  N = 25  samples = 2500  dt_N = 2.0000e-03  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 2495 single-step predictions  mean_err = 1.672e-03 L  = 0.167 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 2495 single-step predictions  mean_err = 1.674e-03 L  = 0.167 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 2495 single-step predictions  mean_err = 1.668e-03 L  = 0.167 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 2495 single-step predictions  mean_err = 1.670e-03 L  = 0.167 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 2495 single-step predictions  mean_err = 1.673e-03 L  = 0.167 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 2495 single-step predictions  mean_err = 1.670e-03 L  = 0.167 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N100\single_step\preset_disc_imf_in_distribution_baseline/ss_summary.json  (elapsed 113.7s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N100\single_step\preset_disc_imf_in_distribution_baseline/preds.npy (6, 2495, 25, 6)  + ref_pos.npy + preds_meta.json
+
+[single-step] full_solar_system
+  N = 9  samples = 2400  dt_N = 3.2080e-03  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 2395 single-step predictions  mean_err = 1.047e-02 L  = 1.047 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 2395 single-step predictions  mean_err = 1.050e-02 L  = 1.050 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 2395 single-step predictions  mean_err = 1.050e-02 L  = 1.050 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 2395 single-step predictions  mean_err = 1.050e-02 L  = 1.050 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 2395 single-step predictions  mean_err = 1.051e-02 L  = 1.051 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 2395 single-step predictions  mean_err = 1.050e-02 L  = 1.050 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N100\single_step\preset_full_solar_system/ss_summary.json  (elapsed 54.8s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N100\single_step\preset_full_solar_system/preds.npy (6, 2395, 9, 6)  + ref_pos.npy + preds_meta.json
+
+[single-step] inner_planets
+  N = 5  samples = 120  dt_N = 2.8865e-01  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 2.970e-01 L  = 29.697 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 2.970e-01 L  = 29.697 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 2.970e-01 L  = 29.697 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 2.970e-01 L  = 29.697 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 2.970e-01 L  = 29.697 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 2.970e-01 L  = 29.697 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N100\single_step\preset_inner_planets/ss_summary.json  (elapsed 2.3s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N100\single_step\preset_inner_planets/preds.npy (6, 115, 5, 6)  + ref_pos.npy + preds_meta.json
+
+[single-step] jupiter_galileans
+  N = 5  samples = 1460  dt_N = 9.4186e-02  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 1455 single-step predictions  mean_err = 1.136e-01 L  = 11.358 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 1455 single-step predictions  mean_err = 1.136e-01 L  = 11.358 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 1455 single-step predictions  mean_err = 1.136e-01 L  = 11.358 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 1455 single-step predictions  mean_err = 1.136e-01 L  = 11.358 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 1455 single-step predictions  mean_err = 1.136e-01 L  = 11.358 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 1455 single-step predictions  mean_err = 1.136e-01 L  = 11.358 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N100\single_step\preset_jupiter_galileans/ss_summary.json  (elapsed 31.6s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N100\single_step\preset_jupiter_galileans/preds.npy (6, 1455, 5, 6)  + ref_pos.npy + preds_meta.json
+
+[single-step] solar_system_extended
+  N = 19  samples = 120  dt_N = 5.6453e-04  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 3.914e-03 L  = 0.391 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 3.916e-03 L  = 0.392 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 3.910e-03 L  = 0.391 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 3.915e-03 L  = 0.392 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 3.915e-03 L  = 0.391 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 3.920e-03 L  = 0.392 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N100\single_step\preset_solar_system_extended/ss_summary.json  (elapsed 3.9s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N100\single_step\preset_solar_system_extended/preds.npy (6, 115, 19, 6)  + ref_pos.npy + preds_meta.json
+
+[single-step] sun_earth_only
+  N = 2  samples = 120  dt_N = 5.1265e-01  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 2.552e-01 L  = 25.521 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 2.552e-01 L  = 25.522 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 2.552e-01 L  = 25.521 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 2.552e-01 L  = 25.521 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 2.552e-01 L  = 25.522 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 2.552e-01 L  = 25.521 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N100\single_step\preset_sun_earth_only/ss_summary.json  (elapsed 2.1s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N100\single_step\preset_sun_earth_only/preds.npy (6, 115, 2, 6)  + ref_pos.npy + preds_meta.json
+
+[single-step] sun_planets_moon
+  N = 10  samples = 120  dt_N = 3.2080e-03  (N-body units)
+  [single-step] mlp  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 1.120e-02 L  = 1.120 %
+  [single-step] mlp_stable  (mlp, 210,182 params)
+    ✓ 115 single-step predictions  mean_err = 1.123e-02 L  = 1.123 %
+  [single-step] lstm  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 1.123e-02 L  = 1.123 %
+  [single-step] lstm_stable  (lstm, 865,542 params)
+    ✓ 115 single-step predictions  mean_err = 1.124e-02 L  = 1.124 %
+  [single-step] gnn  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 1.123e-02 L  = 1.123 %
+  [single-step] gnn_stable  (gnn, 168,199 params)
+    ✓ 115 single-step predictions  mean_err = 1.124e-02 L  = 1.124 %
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N100\single_step\preset_sun_planets_moon/ss_summary.json  (elapsed 2.7s)
+  → C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N100\single_step\preset_sun_planets_moon/preds.npy (6, 115, 10, 6)  + ref_pos.npy + preds_meta.json
+[single-step] C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N100\single_step\single_step_report.md
+[single-step] C:\Users\HP\OneDrive - IU International University of Applied Sciences\Dokumente\Universe Simulation\results\real_case_ss\N100\single_step\single_step_report.json

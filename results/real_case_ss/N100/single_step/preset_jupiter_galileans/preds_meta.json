@@ -1,0 +1,18 @@
+{
+  "preset": "jupiter_galileans",
+  "n_bodies": 5,
+  "n_predictions": 1455,
+  "models": [
+    "mlp",
+    "mlp_stable",
+    "lstm",
+    "lstm_stable",
+    "gnn",
+    "gnn_stable"
+  ],
+  "dt_N": 0.09418616578652095,
+  "W": 5,
+  "reference": "leapfrog",
+  "L_m": 1882709000.0,
+  "T_s": 229490.1203382594
+}

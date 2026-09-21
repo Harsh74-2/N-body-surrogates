@@ -1,0 +1,18 @@
+{
+  "preset": "full_solar_system",
+  "n_bodies": 9,
+  "n_predictions": 2395,
+  "models": [
+    "mlp",
+    "mlp_stable",
+    "lstm",
+    "lstm_stable",
+    "gnn",
+    "gnn_stable"
+  ],
+  "dt_N": 0.003207973608685734,
+  "W": 5,
+  "reference": "leapfrog",
+  "L_m": 4469891194334.827,
+  "T_s": 819769836.2853414
+}

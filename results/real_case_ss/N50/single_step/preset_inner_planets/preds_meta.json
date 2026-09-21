@@ -1,0 +1,18 @@
+{
+  "preset": "inner_planets",
+  "n_bodies": 5,
+  "n_predictions": 115,
+  "models": [
+    "mlp",
+    "mlp_stable",
+    "lstm",
+    "lstm_stable",
+    "gnn",
+    "gnn_stable"
+  ],
+  "dt_N": 0.28864791003894896,
+  "W": 5,
+  "reference": "leapfrog",
+  "L_m": 222507840081.3762,
+  "T_s": 9110753.650165511
+}

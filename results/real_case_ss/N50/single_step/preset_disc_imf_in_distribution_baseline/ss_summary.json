@@ -1,0 +1,79 @@
+{
+  "name": "disc_imf_in_distribution_baseline",
+  "label": "25-body galaxy disc, training IMF (in-distribution sanity)",
+  "in_distribution": true,
+  "n_bodies": 25,
+  "n_samples": 2500,
+  "dt_N": 0.002,
+  "duration_years": 5,
+  "n_predictions": 2495,
+  "per_model": {
+    "mlp": {
+      "mse_position": 1.072740912197049e-06,
+      "mse_state": 6.455898041747169e-06,
+      "mean_error_over_L": 0.0016667128637917485,
+      "max_error_over_L": 0.004040510097730943,
+      "mean_err_pct": 0.16667128637917486,
+      "max_err_pct": 0.40405100977309427,
+      "energy_drift": 3.2536446690493585e-07,
+      "energy_drift_max": 1.500005718771803e-06,
+      "n_predictions": 2495
+    },
+    "mlp_stable": {
+      "mse_position": 1.0729717713074125e-06,
+      "mse_state": 6.45654487245346e-06,
+      "mean_error_over_L": 0.0016670349362726854,
+      "max_error_over_L": 0.0040393857580779706,
+      "mean_err_pct": 0.16670349362726855,
+      "max_err_pct": 0.4039385758077971,
+      "energy_drift": 2.168845944075863e-07,
+      "energy_drift_max": 1.125004289078852e-06,
+      "n_predictions": 2495
+    },
+    "lstm": {
+      "mse_position": 1.060591871987179e-06,
+      "mse_state": 6.45038130413362e-06,
+      "mean_error_over_L": 0.0016514149257136966,
+      "max_error_over_L": 0.0041076431916704315,
+      "mean_err_pct": 0.16514149257136965,
+      "max_err_pct": 0.41076431916704315,
+      "energy_drift": 2.139537215101865e-07,
+      "energy_drift_max": 1.0312539316556143e-06,
+      "n_predictions": 2495
+    },
+    "lstm_stable": {
+      "mse_position": 1.0616618586263238e-06,
+      "mse_state": 6.4508447404366195e-06,
+      "mean_error_over_L": 0.0016521522663174204,
+      "max_error_over_L": 0.004109524646261061,
+      "mean_err_pct": 0.16521522663174204,
+      "max_err_pct": 0.4109524646261061,
+      "energy_drift": 2.0249325697548212e-07,
+      "energy_drift_max": 9.375035742323768e-07,
+      "n_predictions": 2495
+    },
+    "gnn": {
+      "mse_position": 1.0640463062727041e-06,
+      "mse_state": 6.452051832651269e-06,
+      "mean_error_over_L": 0.0016560391822788875,
+      "max_error_over_L": 0.0040856557871706166,
+      "mean_err_pct": 0.16560391822788875,
+      "max_err_pct": 0.4085655787170617,
+      "energy_drift": 2.263535683838011e-07,
+      "energy_drift_max": 1.125004289078852e-06,
+      "n_predictions": 2495
+    },
+    "gnn_stable": {
+      "mse_position": 1.064436625615044e-06,
+      "mse_state": 6.452233067634368e-06,
+      "mean_error_over_L": 0.0016563726709112416,
+      "max_error_over_L": 0.004086053575670571,
+      "mean_err_pct": 0.16563726709112417,
+      "max_err_pct": 0.4086053575670571,
+      "energy_drift": 2.100083156867637e-07,
+      "energy_drift_max": 9.375035742323768e-07,
+      "n_predictions": 2495
+    }
+  },
+  "wallclock_s": 129.12787260000005
+}

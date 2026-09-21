@@ -1,0 +1,79 @@
+{
+  "name": "sun_planets_moon",
+  "label": "Sun + 8 planets + Earth's Moon (10 bodies)",
+  "in_distribution": false,
+  "n_bodies": 10,
+  "n_samples": 120,
+  "dt_N": 0.0032079736678301708,
+  "duration_years": 10,
+  "n_predictions": 115,
+  "per_model": {
+    "mlp": {
+      "mse_position": 6.174210594528037e-05,
+      "mse_state": 4.780210783339198,
+      "mean_error_over_L": 0.011276172206097506,
+      "max_error_over_L": 0.02678030236542985,
+      "mean_err_pct": 1.1276172206097506,
+      "max_err_pct": 2.678030236542985,
+      "energy_drift": 0.004175172246449956,
+      "energy_drift_max": 0.17925142789716778,
+      "n_predictions": 115
+    },
+    "mlp_stable": {
+      "mse_position": 6.136344216316696e-05,
+      "mse_state": 4.780042193476838,
+      "mean_error_over_L": 0.011249158294226867,
+      "max_error_over_L": 0.026494157042192035,
+      "mean_err_pct": 1.1249158294226866,
+      "max_err_pct": 2.6494157042192037,
+      "energy_drift": 0.005671761404057785,
+      "energy_drift_max": 0.17925081058066378,
+      "n_predictions": 115
+    },
+    "lstm": {
+      "mse_position": 6.137167237698439e-05,
+      "mse_state": 4.780106173703111,
+      "mean_error_over_L": 0.01126858715143319,
+      "max_error_over_L": 0.024364667535951186,
+      "mean_err_pct": 1.1268587151433191,
+      "max_err_pct": 2.4364667535951186,
+      "energy_drift": 0.005671716159742586,
+      "energy_drift_max": 0.1792502814522318,
+      "n_predictions": 115
+    },
+    "lstm_stable": {
+      "mse_position": 6.137044355023143e-05,
+      "mse_state": 4.780106147869674,
+      "mean_error_over_L": 0.011268343155383562,
+      "max_error_over_L": 0.024362241405880433,
+      "mean_err_pct": 1.1268343155383562,
+      "max_err_pct": 2.436224140588043,
+      "energy_drift": 0.005671742232737785,
+      "energy_drift_max": 0.17925036964030377,
+      "n_predictions": 115
+    },
+    "gnn": {
+      "mse_position": 6.135512569808349e-05,
+      "mse_state": 4.780106157679772,
+      "mean_error_over_L": 0.01126130042788612,
+      "max_error_over_L": 0.02434084140075679,
+      "mean_err_pct": 1.126130042788612,
+      "max_err_pct": 2.434084140075679,
+      "energy_drift": 0.005671677817102586,
+      "energy_drift_max": 0.1792502814522318,
+      "n_predictions": 115
+    },
+    "gnn_stable": {
+      "mse_position": 6.135611318502643e-05,
+      "mse_state": 4.780106156705518,
+      "mean_error_over_L": 0.011261417145499808,
+      "max_error_over_L": 0.024340334165124773,
+      "mean_err_pct": 1.1261417145499808,
+      "max_err_pct": 2.4340334165124773,
+      "energy_drift": 0.005671720760859385,
+      "energy_drift_max": 0.17925036964030377,
+      "n_predictions": 115
+    }
+  },
+  "wallclock_s": 3.653616100000363
+}

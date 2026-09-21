@@ -1,0 +1,18 @@
+{
+  "preset": "sun_planets_moon",
+  "n_bodies": 10,
+  "n_predictions": 115,
+  "models": [
+    "mlp",
+    "mlp_stable",
+    "lstm",
+    "lstm_stable",
+    "gnn",
+    "gnn_stable"
+  ],
+  "dt_N": 0.0032079736678301708,
+  "W": 5,
+  "reference": "leapfrog",
+  "L_m": 4469891194334.827,
+  "T_s": 819769821.1714938
+}
