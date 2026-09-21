@@ -35,7 +35,10 @@ MLP N=10 and N=25 complete first (~minutes each). Sanity-read the logs:
 - epoch 1 must show `roll=0.0000e+00` (warmup_frac=0.5: pure MSE during the
   first half of training, ramp starts at epoch 50/25/… for 100/80/50-epoch
   models) and the ramp must appear afterwards;
-- final line must say `selected on val_mse`.
+- final line must say `selected on val_mse, post-ramp epochs >= 75/60/37`
+  (MLP 100 / LSTM 80 / GNN 50): best-ckpt selection is RESTRICTED to
+  post-ramp epochs, so the saved stable checkpoint always experienced the
+  fully-active rollout loss (adversarial-crosscheck fix, 2026-09-21).
 
 ## Stage 2 — probe gate
 
@@ -59,7 +62,7 @@ python verify_retrain_gates.py --N 10 25 --allow-missing
 # finish the single-step cells for all N (N=50, 100 + remaining models)
 python scaling_sweep.py
 
-# stable variants — GNN N=100 stable trains at b=64 (only that cell),
+# stable variants — GNN N=100 stable trains at b=96 (only that cell),
 # expandable_segments is exported by the script itself
 bash train_stable_variants.sh
 ```
@@ -67,8 +70,9 @@ bash train_stable_variants.sh
 - Resumable: completed cells are skipped via their `model_best.pt`.
 - One failing cell is recorded and the queue continues; re-run the script
   to retry failed cells.
-- Expected wall-clock: `gnn_stable` N=100 is the long pole (~15 h at b=64);
-  run cheap cells concurrently only while no big GNN cell is training.
+- Expected wall-clock: `gnn_stable` N=100 is the long pole (~13–15 h at
+  b=96); run cheap cells concurrently only while no big GNN cell is
+  training.
 
 ## Stage 4 — rollout stability benchmark (both variants, every N)
 

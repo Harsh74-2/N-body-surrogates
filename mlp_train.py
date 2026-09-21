@@ -438,6 +438,20 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
     # the weights from `loss_fn` every batch, so mutating them propagates.
     warmup_epochs = int(cfg.warmup_frac * cfg.epochs)
     ramp_epochs   = max(1, int(cfg.ramp_frac * cfg.epochs))
+    # Post-ramp selection gate (2026-09-21, adversarial-crosscheck fix):
+    # val_mse is typically at its lowest at the END of the pure-MSE warmup;
+    # once the rollout/energy regulariser ramps in, val_mse may rise
+    # slightly as weights trade a little single-step accuracy for long-
+    # horizon stability. Selecting on val_mse across ALL epochs would then
+    # save a checkpoint that never saw the full objective — for the stable
+    # variant the stability training would be silently discarded (the saved
+    # model would just be an under-trained single-step model). Best-ckpt
+    # selection is therefore only allowed from the first epoch with the aux
+    # losses fully active (aux_frac == 1). The metric stays val_mse: an
+    # energy-weighted val_total was the ORIGINAL identity-collapse root
+    # cause and must not return. If the run is too short for any post-ramp
+    # epoch, the final epoch is eligible (a checkpoint is always saved).
+    first_sel_epoch = min(warmup_epochs + ramp_epochs, cfg.epochs)
 
     def aux_scale(epoch: int) -> float:
         if epoch <= warmup_epochs:
@@ -475,8 +489,10 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
         # Best-checkpoint selection on val MSE (post-audit fix, 2026-09-17;
         # rationale in gnn_train.py): the weighted val total was dominated by
         # the stiff energy term, so the saved checkpoint minimised energy,
-        # not prediction error.
-        if val_losses["mse"] < best_val:
+        # not prediction error. Restricted to post-ramp epochs (see the
+        # first_sel_epoch comment above): a pre-ramp checkpoint never
+        # experienced the full training objective.
+        if val_losses["mse"] < best_val and epoch >= first_sel_epoch:
             best_val = val_losses["mse"]
             # `variant` lets downstream consumers (e.g. stability_benchmark)
             # distinguish the stability-trained checkpoint from the
@@ -529,7 +545,8 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
             "test_metrics": test_metrics,
         }, f, indent=2)
     print(f"[save] history  -> {history_path}")
-    print(f"[save] best ckpt-> {best_path}  (val_mse={best_val:.4e}, selected on val_mse)")
+    print(f"[save] best ckpt-> {best_path}  (val_mse={best_val:.4e}, "
+          f"selected on val_mse, post-ramp epochs >= {first_sel_epoch})")
 
     save_loss_curve(
         history,

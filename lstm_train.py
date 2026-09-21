@@ -441,6 +441,15 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
     # the weights from `loss_fn` every batch, so mutating them propagates.
     warmup_epochs = int(cfg.warmup_frac * cfg.epochs)
     ramp_epochs   = max(1, int(cfg.ramp_frac * cfg.epochs))
+    # Post-ramp selection gate (2026-09-21, adversarial-crosscheck fix):
+    # best-ckpt selection on val_mse must only consider epochs with the aux
+    # losses fully active (aux_frac == 1) — pre-ramp val_mse is typically
+    # lowest right at the end of the pure-MSE warmup, and selecting it would
+    # silently discard the stability training (the stable checkpoint would
+    # just be an under-trained single-step model). The metric stays val_mse;
+    # an energy-weighted val_total was the ORIGINAL identity-collapse root
+    # cause and must not return. Short runs: the final epoch is eligible.
+    first_sel_epoch = min(warmup_epochs + ramp_epochs, cfg.epochs)
 
     def aux_scale(epoch: int) -> float:
         if epoch <= warmup_epochs:
@@ -478,7 +487,7 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
         # rationale in gnn_train.py): the weighted val total was dominated by
         # the stiff energy term, so the saved checkpoint minimised energy,
         # not prediction error.
-        if val_loss["mse"] < best_val:
+        if val_loss["mse"] < best_val and epoch >= first_sel_epoch:
             best_val = val_loss["mse"]
             # `variant` lets downstream consumers (e.g. stability_benchmark)
             # distinguish the stability-trained checkpoint from the
@@ -530,7 +539,8 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
             "test_metrics": test_metrics,
         }, f, indent=2)
     print(f"[save] history  -> {history_path}")
-    print(f"[save] best ckpt-> {best_path}  (val_mse={best_val:.4e}, selected on val_mse)")
+    print(f"[save] best ckpt-> {best_path}  (val_mse={best_val:.4e}, "
+          f"selected on val_mse, post-ramp epochs >= {first_sel_epoch})")
 
     save_loss_curve(
         history,

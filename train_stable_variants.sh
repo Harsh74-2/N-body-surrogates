@@ -44,13 +44,15 @@
 # 2026-09-14. The K=5 checkpointed BPTT graph at b=512 still fits the 48 GB
 # card with headroom.)
 #
-# GNN N=100 stable override (2026-09-21): this is the ONE cell that
-# approaches the 48 GB ceiling (~42 GB peak at b=128: main forward ~21 GB +
-# one checkpointed rollout recompute ~21 GB) and can OOM on fragmentation or
-# a first-iteration spike -- an OOM here would waste the ~13 h training run.
-# That cell is therefore trained at b=64 (peak ~21 GB). The single-step GNN
-# N=100 run (scaling_sweep.py) is UNTOUCHED and keeps b=128 -- only the
-# stable variant pays the BPTT memory cost.
+# GNN N=100 stable override (2026-09-21, Gemini crosscheck round 2): this
+# is the ONE cell that approaches the 48 GB ceiling (~42 GB peak at b=128:
+# main forward ~21 GB + one checkpointed rollout recompute ~21 GB) and can
+# OOM on fragmentation or a first-iteration spike -- an OOM here would
+# waste the ~13 h training run. That cell is therefore trained at b=96
+# (~31 GB peak, ~17 GB headroom with expandable_segments; closest batch to
+# the b=128 baseline, multiple of 32 for Ada Tensor Core warp scheduling).
+# The single-step GNN N=100 run (scaling_sweep.py) is UNTOUCHED and keeps
+# b=128 -- only the stable variant pays the BPTT memory cost.
 #
 # Resumable: a model is skipped if its model_best.pt already exists.
 # Run AFTER the main sweep has produced ml_ready_data/N{N}/{mlp,lstm,gnn}/.
@@ -59,12 +61,12 @@
 # + 16 GB RAM. Datasets are <1 GB in RAM (N=100 GNN ~0.7 GB), so system RAM
 # is no issue. GPU peaks (activations + grads, BPTT K=5, rollout checkpointed)
 # scale with batch: MLP b=512 ~16 GB, LSTM b=256 ~1 GB, GNN b=128/N=50
-# ~11 GB. GNN stable at N=100 is trained at b=64 (~21 GB peak) by default --
+# ~11 GB. GNN stable at N=100 is trained at b=96 (~31 GB peak) by default --
 # at b=128 it would peak ~42 GB (main forward + one checkpointed rollout
 # recompute), which approaches the 48 GB ceiling and risks an OOM that would
-# waste the ~13 h cell. If b=64 ever OOMs, drop THAT CELL to 32:
+# waste the ~13 h cell. If b=96 ever OOMs, drop THAT CELL to 64 (then 32):
 #   python gnn_train.py --npz ml_ready_data/N100/gnn/dataset_3d_w5h1s1r.npz \
-#     --out training_runs/N100/gnn_stable --epochs 50 --batch-size 32 \
+#     --out training_runs/N100/gnn_stable --epochs 50 --batch-size 64 \
 #     --w-rollout 0.1 --rollout-K 5
 
 set -euo pipefail
@@ -123,11 +125,11 @@ for N in "${N_VALUES[@]}"; do
             continue
         fi
 
-        # Per-cell batch override: GNN stable at N=100 drops to b=64
+        # Per-cell batch override: GNN stable at N=100 drops to b=96
         # (~42 GB peak at b=128 approaches the 48 GB ceiling; see header).
         # Every other cell keeps the sweep-matching batch.
         if [ "${m}" = "gnn" ] && [ "${N}" = "100" ]; then
-            B=64
+            B=96
         else
             B=${BATCH[$m]}
         fi

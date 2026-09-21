@@ -110,7 +110,7 @@ GNN_BATCH_SIZE: int = 128          # gnn single-step ckpt
 MLP_STABLE_BATCH_SIZE: int = 256   # mlp_stable ckpt (halved for rollout K=5)
 LSTM_STABLE_BATCH_SIZE: int = 256  # lstm_stable ckpt
 GNN_STABLE_BATCH_SIZE: int = 128   # gnn_stable ckpt
-#   Exception: the GNN stable cell at N=100 trains at b=64 instead (peak
+#   Exception: the GNN stable cell at N=100 trains at b=96 instead (peak
 #   ~42 GB at b=128 approaches the 48 GB RTX 6000 ceiling; see
 #   train_stable_variants.sh). Single-step GNN keeps b=128 everywhere.
 
