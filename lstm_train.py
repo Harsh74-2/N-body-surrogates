@@ -91,6 +91,7 @@ from pipeline_config import (
     LSTM_EPOCHS,
     LSTM_HIDDEN,
     LSTM_LAYERS,
+    RELATIVE_MSE,
     TRAINING_RUNS_DIR,
 )
 
@@ -220,6 +221,11 @@ class TrainConfig:
     # Aux-loss warmup (post-audit fix, 2026-09-17; rationale in gnn_train.py).
     warmup_frac:   float = 0.5
     ramp_frac:     float = 0.25
+    # Optional loss-scale normalisation (--relative-mse; see
+    # pipeline_config.RELATIVE_MSE). False keeps the canonical
+    # absolute-MSE loss; True divides the loss components by the
+    # variance of the per-step target increment.
+    relative_mse:  bool  = False
 
 
 def _reshape_lstm_batch(x: torch.Tensor,
@@ -245,7 +251,8 @@ def run_epoch(model: nn.Module,
               optimizer: torch.optim.Optimizer | None,
               device: torch.device,
               train: bool,
-              F: int) -> dict[str, float]:
+              F: int,
+              relative_mse: bool = False) -> dict[str, float]:
     """
     Returns a dict of averaged loss components:
         {mse, energy, rollout, total}
@@ -268,13 +275,29 @@ def run_epoch(model: nn.Module,
             x_3d, y_3d, _ = _reshape_lstm_batch(x, y, F=F)
             pred = model(x_3d, mass)                          # (B, N, F)
 
-            l_mse      = mse_loss(pred, y_3d)
+            if relative_mse:
+                # Optional loss-scale normalisation (--relative-mse):
+                # divide the MSE component by the variance of the
+                # ground-truth per-step increment (y_3d − last frame of
+                # the window) so the loss is scale-free, and divide the
+                # aux weights by the same factor to preserve the
+                # w_mse/w_energy/w_rollout gradient hierarchy. Total is
+                # then (MSE + w_energy·E + w_rollout·R) / step_var.
+                # Off by default: canonical runs keep the absolute-MSE
+                # scale that every published number is quoted in.
+                step_var = torch.var(y_3d - x_3d[:, -1, :, :]) + 1e-8
+                l_mse         = mse_loss(pred, y_3d) / step_var
+                eff_w_energy  = loss_fn.w_energy  / step_var.detach()
+                eff_w_rollout = loss_fn.w_rollout / step_var.detach()
+            else:
+                l_mse         = mse_loss(pred, y_3d)
+                eff_w_energy  = loss_fn.w_energy
+                eff_w_rollout = loss_fn.w_rollout
             l_energy   = energy_drift_loss(pred, y_3d, mass,
                                            eps=loss_fn.eps, g=loss_fn.g)
-            l_total    = (loss_fn.w_mse    * l_mse
-                          + loss_fn.w_energy * l_energy)
+            l_total    = loss_fn.w_mse * l_mse + eff_w_energy * l_energy
 
-            if loss_fn.w_rollout > 0.0:
+            if eff_w_rollout > 0.0:
                 # In-distribution sliding-window rollout: seed with the
                 # true W-window `x_3d` (B, W, N, F) and use the true next
                 # state `y_3d` as the energy-drift reference. Matches the
@@ -286,7 +309,7 @@ def run_epoch(model: nn.Module,
                                              eps=loss_fn.eps,
                                              g=loss_fn.g,
                                              K=loss_fn.rollout_K)
-                l_total = l_total + loss_fn.w_rollout * l_roll
+                l_total = l_total + eff_w_rollout * l_roll
             else:
                 l_roll  = pred.new_zeros(())
 
@@ -430,9 +453,11 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
         loss_fn.w_energy  = cfg.w_energy  * frac
         loss_fn.w_rollout = cfg.w_rollout * frac
         train_loss = run_epoch(model, train_loader, loss_fn, optimizer, device,
-                               train=True, F=in_features)
+                               train=True, F=in_features,
+                               relative_mse=cfg.relative_mse)
         val_loss   = run_epoch(model, val_loader,   loss_fn, None,        device,
-                               train=False, F=in_features)
+                               train=False, F=in_features,
+                               relative_mse=cfg.relative_mse)
         scheduler.step()
         elapsed    = time.perf_counter() - t0
 
@@ -568,6 +593,10 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--seed",      type=int,   default=42,
                    help="RNG seed (python/numpy/torch/cuda) for "
                         "reproducible runs; logged in history.json.")
+    p.add_argument("--relative-mse", action="store_true", default=RELATIVE_MSE,
+                   help="Normalise the loss components by the variance of the "
+                        "per-step target increment (scale-free loss; off by "
+                        "default — canonical runs report absolute MSE).")
     return p
 
 
@@ -623,6 +652,7 @@ if __name__ == "__main__":
         seed=args.seed,
         warmup_frac=args.warmup_frac,
         ramp_frac=args.ramp_frac,
+        relative_mse=args.relative_mse,
     )
     print(f"[run] cfg={cfg}")
     print(f"[run] npz ={npz_path}")

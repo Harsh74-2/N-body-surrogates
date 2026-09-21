@@ -124,6 +124,15 @@ DEFAULT_W_ROLLOUT_STABLE: float = 0.1
 DEFAULT_ROLLOUT_K_SINGLE: int = 10
 DEFAULT_ROLLOUT_K_STABLE: int = 5
 
+# Optional loss-scale normalisation (--relative-mse). When True, the MSE
+# component of the training loss is divided by the variance of the
+# ground-truth per-step increment (target − last frame of the window), making
+# the loss scale-free, and the energy/rollout aux weights are divided by the
+# same factor so the w_mse/w_energy/w_rollout gradient hierarchy is preserved.
+# OFF by default: the canonical runs report absolute MSE, and changing the
+# loss scale silently would invalidate every published val/test number.
+RELATIVE_MSE: bool = False
+
 # Per-architecture training epochs (different compute costs)
 MLP_EPOCHS: int = 100
 LSTM_EPOCHS: int = 80
