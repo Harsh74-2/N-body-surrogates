@@ -397,6 +397,10 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
     # Ada/Hopper TF32 tensor cores (perf tune, 2026-09-20): ~2-4x faster
     # fp32 matmuls on the RTX 6000 Ada; well within the energy-loss tolerance.
     torch.set_float32_matmul_precision('high')
+    # cuDNN kernel autotuning (2026-09-21): constant shapes per cell, so the
+    # one-time first-batch benchmark locks in the fastest cuDNN RNN kernels
+    # (the LSTM rollout cells are where this pays).
+    torch.backends.cudnn.benchmark = True
     print(f"[device] {device}")
 
     print(f"[data] {npz_path}")
