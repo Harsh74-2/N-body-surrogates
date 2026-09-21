@@ -56,6 +56,7 @@ import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+import numpy as np
 import torch
 
 from utils import (
@@ -164,6 +165,15 @@ class Metrics:
     n_batches:   int
     rollout_K:   int
     rollout_batches: int
+    # Identity (persistence) baseline: MSE of predicting the last input
+    # frame as the next state, on the SAME split. A trained model must
+    # beat this floor; explained variance = 1 − mse/mse_identity makes
+    # the margin scale-free (1.0 = perfect, 0.0 = identity, <0 = worse
+    # than identity). Permanent audit column, 2026-09-21: catches the
+    # identity-collapse failure mode (the Sept-15 retrain's root cause)
+    # at eval time, not just at the training gate.
+    mse_identity:      float = float("nan")
+    mse_explained_var: float = float("nan")
 
 
 def _predict_one_step(model: torch.nn.Module, model_type: str,
@@ -201,6 +211,7 @@ def evaluate(model: torch.nn.Module,
     model.eval()
 
     mse_sum, energy_sum = 0.0, 0.0
+    ident_sum = 0.0
     n_samples = 0
 
     latencies: list[float] = []
@@ -230,6 +241,20 @@ def evaluate(model: torch.nn.Module,
             else:
                 e_val = float("nan")
 
+            # Identity (persistence) baseline on the same batch: repeat the
+            # last input frame as the prediction. Free (no forward pass) and
+            # measured on exactly the same (x, y) pairs as the model, so the
+            # comparison is like-for-like.
+            if model_type == "gnn":
+                x_last = x[:, -1, :, :]                      # (B, N, F)
+            else:
+                B = x.shape[0]
+                W = model.window_size
+                N = mass.shape[-1]
+                F = model.in_features
+                x_last = x.view(B, W, N, F)[:, -1, :, :]     # (B, N, F)
+            ident_val = float(mse_loss(x_last, y).item())
+
             # Latency timing (skip the first batch as warmup).
             if i > 0:
                 if device.type == "cuda":
@@ -244,10 +269,19 @@ def evaluate(model: torch.nn.Module,
             bsz = x.size(0)
             mse_sum   += mse_val  * bsz
             energy_sum += e_val   * bsz
+            ident_sum += ident_val * bsz
             n_samples += bsz
 
     mse_avg    = mse_sum   / max(n_samples, 1)
     energy_avg = energy_sum / max(n_samples, 1)
+    ident_avg  = ident_sum / max(n_samples, 1)
+    # Explained variance vs identity: >0 means the model beats the
+    # persistence floor on this split. Guard: if the identity MSE is ~0 the
+    # targets are ~constant and the ratio is meaningless → NaN.
+    if ident_avg > 0.0 and np.isfinite(ident_avg):
+        ev = 1.0 - mse_avg / ident_avg
+    else:
+        ev = float("nan")
     latency_ms = float(statistics.fmean(latencies)) if latencies else float("nan")
 
     # ── Rollout stability (average over the first N rollout batches) ───────
@@ -345,6 +379,8 @@ def evaluate(model: torch.nn.Module,
         n_batches=n_timed,
         rollout_K=K,
         rollout_batches=rollout_batches,
+        mse_identity=ident_avg,
+        mse_explained_var=ev,
     )
 
 
@@ -352,14 +388,16 @@ def evaluate(model: torch.nn.Module,
 def format_metrics_table(metrics_list: list[Metrics]) -> str:
     header = (f"{'model':<22} {'type':<5} {'split':<6} {'#params':>10}  "
               f"{'MSE':>10}  {'|ΔE/E₀|':>10}  "
-              f"{'latency(ms)':>12}  {'rollout-K':>10}  {'rollout':>10}")
+              f"{'latency(ms)':>12}  {'rollout-K':>10}  {'rollout':>10}  "
+              f"{'MSE_ident':>10}  {'expl.var':>8}")
     lines = [header, "-" * len(header)]
     for m in metrics_list:
         lines.append(
             f"{m.model_name:<22} {m.model_type:<5} {m.split:<6} {m.n_params:>10,}  "
             f"{m.mse:>10.3e}  {m.energy:>10.3e}  "
             f"{m.latency_ms:>12.3f}  {m.rollout_K:>10d}  "
-            f"{m.rollout:>10.3e}"
+            f"{m.rollout:>10.3e}  {m.mse_identity:>10.3e}  "
+            f"{m.mse_explained_var:>8.3f}"
         )
     return "\n".join(lines)
 

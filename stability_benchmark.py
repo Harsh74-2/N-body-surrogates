@@ -390,6 +390,7 @@ def run_one_model(ckpt_path: str, model_type: str, device: torch.device,
     vel_all = np.full((len(starts), K), np.nan, dtype=np.float64)
     edr_all = np.full((len(starts), K), np.nan, dtype=np.float64)
     eet_all = np.full((len(starts), K), np.nan, dtype=np.float64)
+    ident_all = np.full((len(starts), K), np.nan, dtype=np.float64)
     div_steps: list[int] = []
 
     for i, (sim_idx, frame) in enumerate(starts):
@@ -415,6 +416,17 @@ def run_one_model(ckpt_path: str, model_type: str, device: torch.device,
         m = per_step_mse(pred_steps, true_steps)
         e = per_step_energy(pred_steps, true_steps, anchor, mass_t, eps, g)
 
+        # Frozen-anchor identity baseline (audit guard, 2026-09-21): what a
+        # persistence predictor scores on the SAME rollout — repeat the
+        # warm-up anchor frame at every step and compare to the true
+        # continuation. Zero model cost; gives each cell a "how much does
+        # the state actually move over K steps" floor. A model whose
+        # per-step MSE is AT or ABOVE this floor is stalling on the anchor
+        # rather than predicting dynamics — the identity-collapse failure
+        # mode that the training gate must never let through.
+        id_steps = np.repeat(anchor[None], K, axis=0)          # (K, N, 6)
+        ident_all[i] = per_step_mse(id_steps, true_steps)["mse"]
+
         div = find_divergence(pred_steps, m["mse"], blowup_thresh)
         if div is not None:
             # Truncate this start's curves from the divergence step onward.
@@ -439,6 +451,10 @@ def run_one_model(ckpt_path: str, model_type: str, device: torch.device,
     vel_mean = np.nanmean(vel_all, axis=0)
     edr_mean = np.nanmean(edr_all, axis=0)
     eet_mean = np.nanmean(eet_all, axis=0)
+    ident_mean = np.nanmean(ident_all, axis=0)
+    # Model-over-identity ratio per step: <1 beats the persistence floor.
+    with np.errstate(divide="ignore", invalid="ignore"):
+        ident_ratio = mse_mean / np.maximum(ident_mean, 1e-30)
     loss_mean = composed_loss(mse_mean, edr_mean, w_energy)
     mse_std = np.nanstd(mse_all, axis=0)
 
@@ -488,6 +504,20 @@ def run_one_model(ckpt_path: str, model_type: str, device: torch.device,
             "loss": _tolist(loss_mean),
             "mse_std": _tolist(mse_std),
         },
+        "identity_baseline": {
+            "description": (
+                "Frozen-anchor persistence floor: MSE of repeating the "
+                "warm-up anchor frame at every rollout step vs the true "
+                "continuation, on the same starts. model_over_identity "
+                "< 1 means the model beats persistence."
+            ),
+            "per_step_mse": _tolist(ident_mean),
+            "model_over_identity": _tolist(ident_ratio),
+            "model_over_identity_mean": (
+                float(np.nanmean(ident_ratio))
+                if np.isfinite(ident_ratio).any() else None
+            ),
+        },
         "gradients": {
             "mse_slope": mse_slope,
             "mse_r2": mse_r2,
@@ -504,6 +534,9 @@ def run_one_model(ckpt_path: str, model_type: str, device: torch.device,
           f"energy_drift_slope={edr_slope:.4e}  loss_slope={loss_slope:.4e}  "
           f"log_mse_slope={log_mse_slope:.4e}  "
           f"div_step={divergence_step}")
+    if np.isfinite(ident_ratio).any():
+        print(f"  → identity baseline: mean model/persistence MSE ratio = "
+              f"{np.nanmean(ident_ratio):.4f}  (<1 beats persistence)")
     return payload
 
 
@@ -591,16 +624,19 @@ def make_overview_plot(all_results: dict, out_dir: Path) -> None:
 # ── Markdown table ───────────────────────────────────────────────────────────
 def markdown_table(per_model: list[dict]) -> str:
     head = ("| model | variant | n_params | K | n_starts | mse_slope | mse_r2 | "
-            "energy_drift_slope | loss_slope | log_mse_slope | div_step |\n"
-            "|---|---|---|---|---|---|---|---|---|---|---|")
+            "energy_drift_slope | loss_slope | log_mse_slope | div_step | "
+            "model/persistence |\n"
+            "|---|---|---|---|---|---|---|---|---|---|---|---|")
     rows = []
     for m in per_model:
         g = m["gradients"]
+        ident = m.get("identity_baseline", {}).get("model_over_identity_mean")
+        ident_s = f"{ident:.4f}" if ident is not None else "n/a"
         rows.append(
             f"| {m['model_type'].upper()} | {m['variant']} | {m['n_params']:,} | "
             f"{m['K']} | {m['n_starts']} | {g['mse_slope']:.4e} | {g['mse_r2']:.3f} | "
             f"{g['energy_drift_slope']:.4e} | {g['loss_slope']:.4e} | "
-            f"{g['log_mse_slope']:.4e} | {m['divergence_step']} |"
+            f"{g['log_mse_slope']:.4e} | {m['divergence_step']} | {ident_s} |"
         )
     return head + "\n".join(rows)
 
@@ -630,6 +666,10 @@ def aggregate(results_root: Path, out_dir: Path) -> None:
                 "loss_slope": m["gradients"]["loss_slope"],
                 "divergence_step": m["divergence_step"],
                 "n_params": m["n_params"],
+                # Mean model/persistence MSE ratio over the rollout (<1
+                # beats the frozen-anchor floor; audit column, 2026-09-21).
+                "model_over_identity_mean":
+                    m.get("identity_baseline", {}).get("model_over_identity_mean"),
             }
     out = results_root / "stability_summary.json"
     with open(out, "w", encoding="utf-8") as f:
