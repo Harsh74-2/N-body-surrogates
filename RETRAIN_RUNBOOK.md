@@ -81,6 +81,18 @@ python verify_retrain_gates.py --N 10 25 --allow-missing
 
 ## Stage 3 — full 24-cell grid (~23–24 GPU-h sequential; ~1.5 days)
 
+DELETE STALE COLLAPSED PROBE OUTPUTS FIRST (2026-09-21 rework): the probe
+cells trained with the OLD rollout-ENERGY code are identity-collapsed, and
+the sweep's resumability would SKIP them silently. Data directories are
+fine — the rollout-MSE targets are derived from the npz at load time, so
+no data regeneration is needed:
+
+```bash
+rm -rf training_runs/N10 training_runs/N25 results/N10 results/N25
+```
+
+Grid launch (unchanged from the original plan):
+
 ```bash
 # finish the single-step cells for all N (N=50, 100 + remaining models);
 # this also generates raw_data + npz for N=50/100 (skips what exists)
@@ -101,6 +113,10 @@ python verify_retrain_gates.py --precheck    # 12/12 PASS expected now
 - Resumable: completed cells are skipped via their `model_best.pt`.
 - One failing cell is recorded and the queue continues; re-run the script
   to retry failed cells.
+- Stable cells now train the rollout-MSE term (w_energy 0, w_rollout 0.1)
+  and select on val_total post-ramp; single-step cells keep val_mse — the
+  final line reads `selected on val_total` for stable, `selected on
+  val_mse` for single-step (rollout-MSE rework, 2026-09-21).
 - Expected wall-clock: `gnn_stable` N=100 is the long pole (~13–15 h at
   b=96); run cheap cells concurrently only while no big GNN cell is
   training.
