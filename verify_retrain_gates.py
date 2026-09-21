@@ -167,7 +167,7 @@ def _load_json(path: Path):
 
 def check_cell(n: int, m: str, variant: str, results_root: Path,
                min_ev: float, max_ident_ratio: float,
-               training_root: Path,
+               training_root: Path, allow_missing: bool = False,
                ) -> dict:
     """Gates G1–G4 for one (N, model, variant) cell."""
     cell = f"N{n}/{m}_{variant}"
@@ -253,13 +253,18 @@ def check_cell(n: int, m: str, variant: str, results_root: Path,
         fail(f"checkpoint unreadable: {ckpt_path} ({type(e).__name__}: {e})")
 
     # G2: rollout beats persistence (only checkable once the stability
-    # benchmark has produced results/N{n}/stability.json).
+    # benchmark has produced results/N{n}/stability.json). A missing
+    # benchmark artifact is DEFERRED under --allow-missing (probe stage:
+    # the benchmark runs after the grid) and a hard FAIL in the final
+    # gate (no --allow-missing): Stage 5 must not pass without it.
     spath = results_root / f"N{n}" / "stability.json"
     srecs = _load_json(spath)
     if srecs is None:
-        checks["stability"] = "not run yet"
-        fail(f"stability.json not found: {spath} "
-             f"(run stability_benchmark.py for N{n})")
+        checks["stability"] = ("deferred (--allow-missing)"
+                               if allow_missing else "not run yet")
+        if not allow_missing:
+            fail(f"stability.json not found: {spath} "
+                 f"(run stability_benchmark.py for N{n})")
     else:
         srec = next((r for r in srecs
                      if r.get("model_type") == m and r.get("variant") == variant),
@@ -331,7 +336,8 @@ def main() -> None:
                 for v in args.variants:
                     rec = check_cell(n, m, v, results_root,
                                      args.min_ev, args.max_ident_ratio,
-                                     Path(args.training_root))
+                                     Path(args.training_root),
+                                     allow_missing=args.allow_missing)
                     rows.append(rec)
                     errs = rec["checks"].get("errors", [])
                     print(f"  [{rec['status']:7s}] {rec['cell']}")
