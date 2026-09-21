@@ -79,6 +79,10 @@ import numpy as np
 
 import matplotlib
 matplotlib.use("Agg")
+# Sub-pixel path detail below the ~100 dpi output grid is wasted render
+# time across 200-frame clips (Gemini draw-side round, 2026-09-21).
+matplotlib.rcParams["path.simplify"] = True
+matplotlib.rcParams["path.simplify_threshold"] = 1.0
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, FFMpegWriter, PillowWriter
 
@@ -860,11 +864,16 @@ def _animate_one(preset_name: str, model_name: str,
         except Exception as e:
             # NVENC unavailable (ffmpeg without --enable-nvenc, driver
             # busy, no GPU session): re-encode with the software encoder
-            # instead of failing the clip.
+            # instead of failing the clip. veryfast costs several x less
+            # CPU than the libx264 default (medium) and is visually
+            # indistinguishable for flat-background line plots — the
+            # software-medium fallback was the dominant cost of the
+            # September re-render rounds on non-GPU hosts.
             print(f"[anim] NVENC encode failed ({e}); retrying with h264")
             if tmp_path.exists():
                 tmp_path.unlink()
-            writer = FFMpegWriter(**{**writer_kwargs, "codec": "h264"})
+            writer = FFMpegWriter(**{**writer_kwargs, "codec": "h264",
+                                     "extra_args": ["-preset", "veryfast"]})
             anim.save(tmp_path, writer=writer)
         tmp_path.replace(out_path)
         written.append(out_path)
