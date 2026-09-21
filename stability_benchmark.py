@@ -391,6 +391,8 @@ def run_one_model(ckpt_path: str, model_type: str, device: torch.device,
     edr_all = np.full((len(starts), K), np.nan, dtype=np.float64)
     eet_all = np.full((len(starts), K), np.nan, dtype=np.float64)
     ident_all = np.full((len(starts), K), np.nan, dtype=np.float64)
+    pred_var_all = np.full(len(starts), np.nan, dtype=np.float64)
+    true_var_all = np.full(len(starts), np.nan, dtype=np.float64)
     div_steps: list[int] = []
 
     for i, (sim_idx, frame) in enumerate(starts):
@@ -445,6 +447,22 @@ def run_one_model(ckpt_path: str, model_type: str, device: torch.device,
         edr_all[i] = e["energy_drift"]
         eet_all[i] = e["energy_err_vs_true"]
 
+        # Collapse guard (G6, 2026-09-21): spatial variance of the
+        # predicted final step vs the true step at the same index. A model
+        # that clamps every body to the centre of mass scores the dataset
+        # spatial variance as its MSE — and at long horizons the
+        # persistence floor itself degrades past that variance, so a plain
+        # model/persistence ratio can PASS a spatially collapsed model.
+        # Variance across bodies at the last finite step (divergence-
+        # truncated rollouts are measured just before the blow-up).
+        fin = np.where(np.isfinite(m["mse"]))[0]
+        if fin.size:
+            li = int(fin[-1])
+            pred_var_all[i] = float(
+                np.var(pred_steps[li][:, :3], axis=0).mean())
+            true_var_all[i] = float(
+                np.var(true_steps[li][:, :3], axis=0).mean())
+
     # Aggregate across starts (NaN-aware).
     mse_mean = np.nanmean(mse_all, axis=0)
     pos_mean = np.nanmean(pos_all, axis=0)
@@ -455,6 +473,14 @@ def run_one_model(ckpt_path: str, model_type: str, device: torch.device,
     # Model-over-identity ratio per step: <1 beats the persistence floor.
     with np.errstate(divide="ignore", invalid="ignore"):
         ident_ratio = mse_mean / np.maximum(ident_mean, 1e-30)
+    # Per-start ratios (robust stats, Gemini round 2026-09-21): a raw mean
+    # is infinitely sensitive to ONE exploding rollout among healthy ones
+    # (47 x 0.1 + 1 x 1e9 → mean 2e7). The gate reads the MEDIAN (typical
+    # stability) and MAX (no catastrophic single trajectory); the mean is
+    # kept as a diagnostic.
+    with np.errstate(divide="ignore", invalid="ignore"):
+        ratio_per_start_mat = mse_all / np.maximum(ident_all, 1e-30)
+    ratio_per_start = np.nanmean(ratio_per_start_mat, axis=1)
     loss_mean = composed_loss(mse_mean, edr_mean, w_energy)
     mse_std = np.nanstd(mse_all, axis=0)
 
@@ -517,6 +543,42 @@ def run_one_model(ckpt_path: str, model_type: str, device: torch.device,
                 float(np.nanmean(ident_ratio))
                 if np.isfinite(ident_ratio).any() else None
             ),
+            # Robust per-start stats (Gemini round, 2026-09-21): the gate
+            # keys on median (<1 = typical stability) + max (no single
+            # catastrophic trajectory); the mean is diagnostic only.
+            "model_over_identity_per_start": (
+                [float(x) if np.isfinite(x) else None
+                 for x in ratio_per_start]),
+            "model_over_identity_median": (
+                float(np.nanmedian(ratio_per_start))
+                if np.isfinite(ratio_per_start).any() else None),
+            "model_over_identity_max": (
+                float(np.nanmax(ratio_per_start))
+                if np.isfinite(ratio_per_start).any() else None),
+        },
+        "collapse_guard": {
+            "description": (
+                "Spatial-collapse detector (Gemini round, 2026-09-21): a "
+                "model that clamps every body to the centre of mass "
+                "scores the dataset spatial variance as its MSE, and at "
+                "long K the persistence floor degrades past that "
+                "variance — so the model/persistence ratio alone can "
+                "pass a physically dead model. spatial_var_ratio_final "
+                "is Var-across-bodies(pred last finite step) / Var(true "
+                "same step), position channels, averaged over starts; "
+                "the gate requires >= 0.5."
+            ),
+            "spatial_var_pred_final": (
+                float(np.nanmean(pred_var_all))
+                if np.isfinite(pred_var_all).any() else None),
+            "spatial_var_true_final": (
+                float(np.nanmean(true_var_all))
+                if np.isfinite(true_var_all).any() else None),
+            "spatial_var_ratio_final": (
+                float(np.nanmean(pred_var_all) / np.nanmean(true_var_all))
+                if (np.isfinite(pred_var_all).any()
+                    and np.isfinite(true_var_all).any()
+                    and float(np.nanmean(true_var_all)) > 0.0) else None),
         },
         "gradients": {
             "mse_slope": mse_slope,
@@ -537,6 +599,16 @@ def run_one_model(ckpt_path: str, model_type: str, device: torch.device,
     if np.isfinite(ident_ratio).any():
         print(f"  → identity baseline: mean model/persistence MSE ratio = "
               f"{np.nanmean(ident_ratio):.4f}  (<1 beats persistence)")
+    if np.isfinite(ratio_per_start).any():
+        print(f"  → per-start ratios: median = "
+              f"{np.nanmedian(ratio_per_start):.4f}  max = "
+              f"{np.nanmax(ratio_per_start):.4f}")
+    if (np.isfinite(pred_var_all).any()
+            and np.isfinite(true_var_all).any()
+            and float(np.nanmean(true_var_all)) > 0.0):
+        print(f"  → collapse guard: spatial_var_ratio = "
+              f"{np.nanmean(pred_var_all) / np.nanmean(true_var_all):.3f} "
+              f"(<0.5 = spatial-collapse signature)")
     return payload
 
 
@@ -625,18 +697,24 @@ def make_overview_plot(all_results: dict, out_dir: Path) -> None:
 def markdown_table(per_model: list[dict]) -> str:
     head = ("| model | variant | n_params | K | n_starts | mse_slope | mse_r2 | "
             "energy_drift_slope | loss_slope | log_mse_slope | div_step | "
-            "model/persistence |\n"
-            "|---|---|---|---|---|---|---|---|---|---|---|---|")
+            "ratio mean | ratio med | ratio max | spatial var ratio |\n"
+            "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     rows = []
     for m in per_model:
         g = m["gradients"]
-        ident = m.get("identity_baseline", {}).get("model_over_identity_mean")
-        ident_s = f"{ident:.4f}" if ident is not None else "n/a"
+        ident = m.get("identity_baseline", {})
+        mean_r = ident.get("model_over_identity_mean")
+        med_r = ident.get("model_over_identity_median")
+        max_r = ident.get("model_over_identity_max")
+        var_r = m.get("collapse_guard", {}).get("spatial_var_ratio_final")
+        fmt = lambda v: (f"{v:.4f}" if isinstance(v, (int, float))
+                         and np.isfinite(v) else "n/a")
         rows.append(
             f"| {m['model_type'].upper()} | {m['variant']} | {m['n_params']:,} | "
             f"{m['K']} | {m['n_starts']} | {g['mse_slope']:.4e} | {g['mse_r2']:.3f} | "
             f"{g['energy_drift_slope']:.4e} | {g['loss_slope']:.4e} | "
-            f"{g['log_mse_slope']:.4e} | {m['divergence_step']} | {ident_s} |"
+            f"{g['log_mse_slope']:.4e} | {m['divergence_step']} | "
+            f"{fmt(mean_r)} | {fmt(med_r)} | {fmt(max_r)} | {fmt(var_r)} |"
         )
     return head + "\n".join(rows)
 
@@ -670,6 +748,14 @@ def aggregate(results_root: Path, out_dir: Path) -> None:
                 # beats the frozen-anchor floor; audit column, 2026-09-21).
                 "model_over_identity_mean":
                     m.get("identity_baseline", {}).get("model_over_identity_mean"),
+                # Robust per-start stats + spatial-collapse guard (Gemini
+                # round, 2026-09-21) — the gate keys on these.
+                "model_over_identity_median":
+                    m.get("identity_baseline", {}).get("model_over_identity_median"),
+                "model_over_identity_max":
+                    m.get("identity_baseline", {}).get("model_over_identity_max"),
+                "spatial_var_ratio_final":
+                    m.get("collapse_guard", {}).get("spatial_var_ratio_final"),
             }
     out = results_root / "stability_summary.json"
     with open(out, "w", encoding="utf-8") as f:

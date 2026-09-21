@@ -129,7 +129,10 @@ python verify_retrain_gates.py --precheck    # 12/12 PASS expected now
 
 One invocation per N with all six checkpoints — the script writes ALL of
 them into a single `results/N{n}/stability.json` (list of per-model
-records), which is what the gate reads:
+records), which is what the gate reads. Each record carries the
+robust-statistics fields the final gate consumes (2026-09-21): per-start
+model/persistence ratios → median + max, and the spatial-collapse guard
+`collapse_guard.spatial_var_ratio_final`:
 
 ```bash
 for N in 10 25 50 100; do
@@ -152,11 +155,22 @@ done
 python verify_retrain_gates.py
 ```
 
-All 24 cells must PASS: explained variance > 0.5, rollout
-model/persistence ratio < 1.0, param counts = canonical
-(MLP 210,182 / LSTM / GNN 168,199 — printed by the script), all metrics
-finite. Nonzero exit = at least one cell failed; investigate BEFORE
-spending time on downstream regeneration.
+All 24 cells must PASS:
+- explained variance > 0.5 (or the mse-beats-identity generalization-gap
+  warning path),
+- rollout model/persistence **MEDIAN** ratio < 1.0 and **MAX per-start**
+  ratio < 100 (robust stats, 2026-09-21: a raw mean is infinitely
+  sensitive to one exploding rollout among healthy ones),
+- spatial_var_ratio_final >= 0.5 — **G6, centre-of-mass collapse guard**
+  (2026-09-21): a clamped-to-CoM model scores the dataset spatial
+  variance as its MSE and at long K the persistence floor degrades past
+  that variance, so the ratio alone can pass a physically dead model;
+- param counts = canonical (MLP 210,182 / LSTM / GNN 168,199 — printed
+  by the script), all metrics finite.
+Nonzero exit = at least one cell failed; investigate BEFORE spending
+time on downstream regeneration. NOTE: stability.json files produced by
+a pre-2026-09-21 benchmark (no median/max/collapse_guard) FAIL by design
+— re-run the Stage 4 benchmark with the updated script.
 
 ## Stage 6 — downstream regeneration (only after Stage 5 PASSES)
 

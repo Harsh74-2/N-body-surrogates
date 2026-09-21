@@ -8,9 +8,20 @@ identity-collapse failure mode (Sept-15 retrain) must never pass:
   G1  single-step explained variance   metrics_explained_var > --min-ev
       (from results/N{n}/metrics_{m}.json          — single-step cells)
       and results/N{n}_{m}_stable_metrics.json     — stable cells
-  G2  rollout beats persistence
-      stability.json identity_baseline.model_over_identity_mean
-      < --max-ident-ratio   (per model_type + variant record)
+  G2  rollout beats persistence (robust stats, Gemini round 2026-09-21)
+      stability.json identity_baseline.model_over_identity_median
+      < --max-ident-ratio  (per model_type + variant record)
+      AND model_over_identity_max < --max-start-ratio (no single
+      catastrophic trajectory; the mean is recorded as diagnostic only —
+      a raw mean is infinitely sensitive to one exploding rollout among
+      healthy ones)
+  G6  spatial-collapse guard (Gemini round, 2026-09-21)
+      collapse_guard.spatial_var_ratio_final >= --min-spatial-var
+      (default 0.5): a model that clamps every body to the centre of
+      mass scores the dataset spatial variance as its MSE, and at long
+      K the persistence floor degrades past that variance, so a plain
+      model/persistence ratio can PASS a physically dead model. This
+      gate proves the rollout retained real spatial structure.
   G3  architecture parameter counts match the canonical surrogates
       (catches a silently-changed model definition before it invalidates
       the published param table; MLP/LSTM/GNN counts are N-independent)
@@ -168,6 +179,8 @@ def _load_json(path: Path):
 def check_cell(n: int, m: str, variant: str, results_root: Path,
                min_ev: float, max_ident_ratio: float,
                training_root: Path, allow_missing: bool = False,
+               max_start_ratio: float = 100.0,
+               min_spatial_var: float = 0.5,
                ) -> dict:
     """Gates G1–G4 for one (N, model, variant) cell."""
     cell = f"N{n}/{m}_{variant}"
@@ -287,15 +300,50 @@ def check_cell(n: int, m: str, variant: str, results_root: Path,
         if srec is None:
             fail(f"no {m}/{variant} record in {spath}")
         else:
-            ratio = (srec.get("identity_baseline", {})
-                         .get("model_over_identity_mean"))
-            checks["model_over_identity_mean"] = ratio
-            if ratio is None or not np.isfinite(ratio):
+            ident = srec.get("identity_baseline", {})
+            mean_r = ident.get("model_over_identity_mean")
+            med_r = ident.get("model_over_identity_median")
+            max_r = ident.get("model_over_identity_max")
+            checks["model_over_identity_mean"] = mean_r
+            checks["model_over_identity_median"] = med_r
+            checks["model_over_identity_max"] = max_r
+            if mean_r is None or not np.isfinite(mean_r):
                 fail(f"identity_baseline.model_over_identity_mean missing "
                      f"in {spath} (stability ran with pre-audit code?)")
-            elif ratio >= max_ident_ratio:
-                fail(f"rollout model/persistence MSE ratio {ratio:.3f} >= "
-                     f"gate {max_ident_ratio:.3f} (stalling on the anchor)")
+            # Median is the primary gate: robust to a single exploding
+            # rollout among healthy ones. A missing median = the
+            # benchmark predates the 2026-09-21 robust-stats update.
+            if med_r is None or not np.isfinite(med_r):
+                fail(f"identity_baseline.model_over_identity_median missing "
+                     f"in {spath} — stability.json predates the robust-stats "
+                     f"benchmark; re-run stability_benchmark.py")
+            elif med_r >= max_ident_ratio:
+                fail(f"rollout model/persistence MEDIAN MSE ratio "
+                     f"{med_r:.3f} >= gate {max_ident_ratio:.3f} "
+                     f"(stalling on the anchor)")
+            # Max per-start ratio: no single trajectory may suffer a
+            # catastrophic numerical explosion (median can hide one).
+            if max_r is None or not np.isfinite(max_r):
+                fail(f"identity_baseline.model_over_identity_max missing "
+                     f"in {spath} — re-run with the updated benchmark")
+            elif max_r >= max_start_ratio:
+                fail(f"max per-start model/persistence ratio {max_r:.3g} >= "
+                     f"gate {max_start_ratio:.3g} (catastrophic single-"
+                     "trajectory explosion)")
+            # G6: spatial-collapse guard.
+            cg = srec.get("collapse_guard", {})
+            var_ratio = cg.get("spatial_var_ratio_final")
+            checks["spatial_var_ratio_final"] = var_ratio
+            if var_ratio is None or not np.isfinite(var_ratio):
+                fail(f"collapse_guard.spatial_var_ratio_final missing in "
+                     f"{spath} — re-run with the updated benchmark (a "
+                     "missing guard cannot prove the rollout kept spatial "
+                     "structure)")
+            elif var_ratio < min_spatial_var:
+                fail(f"spatial_var_ratio_final {var_ratio:.3f} < "
+                     f"{min_spatial_var:.2f} — predicted rollout lost "
+                     "spatial variance (centre-of-mass collapse signature: "
+                     "beats persistence by clumping, not by physics)")
             # Divergence inside the horizon is informative, not fatal, but a
             # cell that diverges at step 1 has effectively failed.
             div = srec.get("divergence_step")
@@ -325,8 +373,17 @@ def main() -> None:
                         "identity (default 0.5 — a healthy in-distribution "
                         "model is far above 0; an identity-collapsed one ~0).")
     p.add_argument("--max-ident-ratio", type=float, default=1.0,
-                   help="Gate G2: max allowed rollout model/persistence MSE "
-                        "ratio.")
+                   help="Gate G2: max allowed rollout model/persistence "
+                        "MEDIAN MSE ratio (robust per-start statistic).")
+    p.add_argument("--max-start-ratio", type=float, default=100.0,
+                   help="Gate G2: max allowed per-start model/persistence "
+                        "MSE ratio (catches one catastrophic trajectory "
+                        "the median would hide).")
+    p.add_argument("--min-spatial-var", type=float, default=0.5,
+                   help="Gate G6: required spatial_var_ratio_final "
+                        "(predicted vs true spatial variance at the last "
+                        "finite rollout step); below this = centre-of-mass "
+                        "collapse signature.")
     p.add_argument("--allow-missing", action="store_true",
                    help="Treat MISSING cells (artifacts not yet produced) as "
                         "skipped instead of failing — for staged probes.")
@@ -345,14 +402,21 @@ def main() -> None:
     else:
         print("── GATES: post-retrain artifact gate ──")
         print(f"  min explained variance = {args.min_ev}\n"
-              f"  max rollout model/persistence ratio = {args.max_ident_ratio}\n")
+              f"  max rollout model/persistence MEDIAN ratio = "
+              f"{args.max_ident_ratio}\n"
+              f"  max per-start ratio (explosion guard) = "
+              f"{args.max_start_ratio}\n"
+              f"  min spatial-variance ratio (collapse guard) = "
+              f"{args.min_spatial_var}\n")
         for n in args.N:
             for m in args.models:
                 for v in args.variants:
                     rec = check_cell(n, m, v, results_root,
                                      args.min_ev, args.max_ident_ratio,
                                      Path(args.training_root),
-                                     allow_missing=args.allow_missing)
+                                     allow_missing=args.allow_missing,
+                                     max_start_ratio=args.max_start_ratio,
+                                     min_spatial_var=args.min_spatial_var)
                     rows.append(rec)
                     errs = rec["checks"].get("errors", [])
                     print(f"  [{rec['status']:7s}] {rec['cell']}")
