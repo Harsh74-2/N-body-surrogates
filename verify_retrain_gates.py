@@ -34,8 +34,10 @@ The per-cell verdict table is also written to results/retrain_gates.json.
 
 Usage
 -----
-    # before training (VM, fresh clone):
-    python verify_retrain_gates.py --precheck
+    # before training (after the data-generating sweep step — raw_data/ and
+    # ml_ready_data/ are not git-tracked, so a fresh clone FAILs every cell):
+    python verify_retrain_gates.py --precheck --N 10 25   # probe cells
+    python verify_retrain_gates.py --precheck             # full grid
 
     # probe stage (2 cheap cells, no stability benchmark yet):
     python verify_retrain_gates.py --N 10 25 --models mlp --allow-missing
@@ -100,10 +102,16 @@ MODELS = ["mlp", "lstm", "gnn"]
 
 
 # ── Precheck (audit-B scan, runnable on the VM before launch) ────────────────
-def run_precheck(root: Path) -> list[dict]:
+# NOTE: raw_data/ and ml_ready_data/ are NOT git-tracked (1.9 GB), so on a
+# fresh clone every cell FAILS until scaling_sweep.py has generated them.
+# Stage the precheck: --precheck --N 10 25 after the probe sweep, full
+# --precheck after the full grid's data is in place.
+def run_precheck(root: Path,
+                 n_values: list[int] | None = None,
+                 models: list[str] | None = None) -> list[dict]:
     rows: list[dict] = []
-    for n in N_VALUES:
-        for m in MODELS:
+    for n in (n_values or N_VALUES):
+        for m in (models or MODELS):
             cell = f"N{n}/{m}"
             npz = root / "ml_ready_data" / f"N{n}" / m / "dataset_3d_w5h1s1r.npz"
             js_path = npz.with_suffix(".json")
@@ -312,7 +320,8 @@ def main() -> None:
 
     if args.precheck:
         print("── PRECHECK: data pipeline gate (audit-B scan) ──")
-        rows = run_precheck(Path(args.project_root).resolve())
+        rows = run_precheck(Path(args.project_root).resolve(),
+                            n_values=list(args.N), models=list(args.models))
     else:
         print("── GATES: post-retrain artifact gate ──")
         print(f"  min explained variance = {args.min_ev}\n"

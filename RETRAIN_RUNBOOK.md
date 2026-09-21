@@ -11,24 +11,47 @@ git clone <repo> && cd Universe-Simulation
 pip install -r requirements.txt
 ```
 
-## Stage 0 — preflight data gate (~2 min, CPU)
+## Stage 0 — no data precheck on a fresh clone (expected)
+
+`raw_data/` and `ml_ready_data/` are NOT git-tracked (~2.8 GB total), so a
+fresh clone has empty data directories and
 
 ```bash
 python verify_retrain_gates.py --precheck
 ```
 
-12 cells PASS = raw sims + npz/sidecars consistent. If the sweep re-exports
-the npz on the VM, re-run the precheck AFTER the export step and BEFORE any
-training. STOP if anything FAILs — do not train on an unverified dataset.
+reports 0 PASS / 12 FAIL (`raw sims missing`). That is EXPECTED here, not a
+data problem — the sweep regenerates both trees on the VM. The precheck
+becomes meaningful per-cell once the data exists:
 
-## Stage 1 — probe cells (~1 h GPU)
+```bash
+python verify_retrain_gates.py --precheck --N 10 25   # after the probe sweep
+python verify_retrain_gates.py --precheck             # after the full grid
+```
+
+STOP if any cell that HAS been generated FAILs — do not train on an
+unverified dataset.
+
+## Stage 1 — probe cells (~1 h GPU, includes data generation)
 
 The two cheapest cells first; they carry the identity-collapse gate before
-any expensive GPU time is spent:
+any expensive GPU time is spent. The sweep's steps 1–2 also CREATE
+`raw_data/N{10,25}/{mlp,lstm,gnn}/` + the npz exports (skipped per-cell if
+already present):
 
 ```bash
 python scaling_sweep.py --N 10 25          # single-step MLP/LSTM/GNN + eval
 ```
+
+After this completes, run the staged precheck:
+
+```bash
+python verify_retrain_gates.py --precheck --N 10 25
+```
+
+6 cells PASS = the freshly generated sims + npz/sidecars are consistent
+(the npz CRC-full read also guards against a truncated export like the
+repaired N100/mlp file).
 
 MLP N=10 and N=25 complete first (~minutes each). Sanity-read the logs:
 
@@ -59,12 +82,20 @@ python verify_retrain_gates.py --N 10 25 --allow-missing
 ## Stage 3 — full 24-cell grid (~23–24 GPU-h sequential; ~1.5 days)
 
 ```bash
-# finish the single-step cells for all N (N=50, 100 + remaining models)
+# finish the single-step cells for all N (N=50, 100 + remaining models);
+# this also generates raw_data + npz for N=50/100 (skips what exists)
 python scaling_sweep.py
 
 # stable variants — GNN N=100 stable trains at b=96 (only that cell),
 # expandable_segments is exported by the script itself
 bash train_stable_variants.sh
+```
+
+After the full sweep's data generation, the full precheck must PASS before
+trusting the remaining cells:
+
+```bash
+python verify_retrain_gates.py --precheck    # 12/12 PASS expected now
 ```
 
 - Resumable: completed cells are skipped via their `model_best.pt`.
