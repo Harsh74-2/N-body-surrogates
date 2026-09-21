@@ -2,9 +2,22 @@
 # train_stable_variants.sh
 # ========================
 # Retrain the three surrogates (MLP / LSTM / GNN) with the K-step rollout
-# energy loss ENABLED (w_rollout = 0.1): the "stability-trained" variant
-# contrasted against the single-step-trained checkpoints in the stability
-# benchmark.
+# MSE loss ENABLED (w_rollout = 0.1, w_energy = 0): the "stability-trained"
+# variant contrasted against the single-step-trained checkpoints in the
+# stability benchmark.
+#
+# REDESIGN (2026-09-21, cross-verified): the previous rollout-ENERGY term
+# has the identity function as its global optimum — a frozen state
+# conserves energy exactly, so |E_k − E0| ≡ 0 — and once the ramp
+# completed, every variant was dragged back to the persistence floor
+# (the September-2026 identity collapse; the probe caught it before the
+# expensive grid). The stability term is now rollout-MSE against TRUE
+# future frames (losses.rollout_mse_loss): identity is maximally
+# penalised, and the term directly optimises the per-step MSE the
+# stability benchmark measures. The single-step --w-energy 0 is likewise
+# set to 0: the energy-drift aux loss is NOT used anywhere in this
+# retrain. Stable checkpoints select on val_total (mse + 0.1·rollout-MSE
+# — all components identity-repelling); single-step keeps val_mse.
 #
 # Runs for N = 10, 25, 50, 100 so the stable-vs-single-step contrast can be
 # made at every training body count, matching the OOD evaluation grid.
@@ -67,7 +80,7 @@
 # waste the ~13 h cell. If b=96 ever OOMs, drop THAT CELL to 64 (then 32):
 #   python gnn_train.py --npz ml_ready_data/N100/gnn/dataset_3d_w5h1s1r.npz \
 #     --out training_runs/N100/gnn_stable --epochs 50 --batch-size 64 \
-#     --w-rollout 0.1 --rollout-K 5
+#     --w-energy 0 --w-rollout 0.1 --rollout-K 5
 
 set -euo pipefail
 
@@ -75,7 +88,7 @@ set -euo pipefail
 # checkpointed-rollout recompute spikes instead of failing on fragmentation
 # when a segment boundary splits a large allocation (Gemini suggestion,
 # 2026-09-21). Harmless for every other cell; insurance for the tight GNN
-# N=100 stable cell (which already trains at b=64, so ~21 GB peak vs 48 GB).
+# N=100 stable cell (which trains at b=96, ~31 GB peak vs 48 GB).
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
 # Resolve the repo root as this script's directory (works when invoked by
@@ -144,6 +157,7 @@ for N in "${N_VALUES[@]}"; do
             --out        "${OUT}" \
             --epochs     "${EPOCHS[$m]}" \
             --batch-size "${B}" \
+            --w-energy   0 \
             --w-rollout  0.1 \
             --rollout-K  "${ROLLK[$m]}" 2>&1 | tee "${OUT}/train.log"; then
             echo "[FAIL] N=${N} stable ${m} -- continuing with the queue;" \

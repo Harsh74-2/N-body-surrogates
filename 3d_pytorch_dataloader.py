@@ -150,7 +150,8 @@ class NBody3DDataset(Dataset):
                  model_type: str = "mlp",
                  include_mass: bool = False,
                  channel_mask: np.ndarray | None = None,
-                 dtype: torch.dtype = torch.float32) -> None:
+                 dtype: torch.dtype = torch.float32,
+                 rollout_K: int = 0) -> None:
 
         if not Path(npz_path).exists():
             raise FileNotFoundError(
@@ -285,6 +286,52 @@ class NBody3DDataset(Dataset):
             self._mass_per_window = self._mass_per_sim[self._sim_ids]  # (n_samples, N)
         else:
             self._mass_per_window = None
+
+        # ── K-step rollout targets (opt-in, 2026-09-21) ─────────────────────
+        # The stability-trained variants train with a K-step autoregressive
+        # rollout MSE (losses.rollout_mse_loss), which needs the TRUE future
+        # frames for every rollout step. The (X, y) pair alone only carries
+        # one frame ahead, but the windows are contiguous with STRIDE=1, so
+        # the true frame for rollout step k of window i is y[i + k − 1]:
+        #   window i = frames [i .. i+W-1], y[i] = frame i+W, and the sim's
+        #   windows tile it contiguously — so step k's ground truth is
+        #   simply the y of window i+k−1. Precomputed here once (a gather
+        #   of `y`), with a validity mask: windows within K−1 of a
+        #   simulation boundary have no in-sim frame for the later steps.
+        # Off by default (rollout_K=0) so evaluate_models /
+        # stability_benchmark and every existing consumer keep the plain
+        # (x, y[, mass]) item contract.
+        self.rollout_K = int(rollout_K)
+        if self.rollout_K > 0:
+            if self._sim_ids.size == 0:
+                raise RuntimeError(
+                    f"rollout_K={self.rollout_K} requires per-window "
+                    f"simulation ids (mass table / sidecar), which could "
+                    f"not be recovered from {npz_path!r}."
+                )
+            _K  = self.rollout_K
+            _yr = torch.zeros((self.n_samples, _K, self.n_bodies, self.features),
+                              dtype=torch.float32)
+            _ok = torch.zeros((self.n_samples, _K), dtype=torch.bool)
+            _sim = torch.from_numpy(self._sim_ids.astype(np.int64))
+            _idx = torch.arange(self.n_samples)
+            _y_all = self._y                     # (n, N, F), shared
+            for _j in range(_K):
+                # target of step j of window i is y[i + j], valid iff
+                # i + j stays inside the same simulation. Sim-id lookup is
+                # restricted to in-bounds windows first, so the gather
+                # never indexes past the array end.
+                _same = _idx + _j < self.n_samples
+                if _j > 0:
+                    _in = _idx[_same]                 # in-bounds candidates
+                    _same[_in] = _sim[_in + _j] == _sim[_in]
+                _yr[_same, _j] = _y_all[_idx[_same] + _j]
+                _ok[_same, _j] = True
+            self._y_roll    = _yr.share_memory_()
+            self._roll_valid = _ok.share_memory_()
+        else:
+            self._y_roll    = None
+            self._roll_valid = None
 
         # ── Reporting ───────────────────────────────────────────────────────
         print(f"[NBody3DDataset] {Path(npz_path).name}")
@@ -442,6 +489,17 @@ class NBody3DDataset(Dataset):
 
         if self.include_mass and self._mass_per_window is not None:
             m = torch.as_tensor(self._mass_per_window[idx], dtype=self.dtype)
+            if self.rollout_K > 0:
+                # (K, N, F') rollout targets + validity mask (see __init__).
+                yr = torch.as_tensor(np.array(self._y_roll[idx]),
+                                     dtype=self.dtype)
+                if not self.channel_mask.all():
+                    yr = self.apply_channel_mask(yr)
+                if self.model_type in ("mlp", "lstm"):
+                    yr_out = yr.reshape(self.rollout_K, -1)
+                else:  # gnn: (K, N, F')
+                    yr_out = yr
+                return x_out, y_out, m, yr_out, self._roll_valid[idx]
             return x_out, y_out, m
 
         return x_out, y_out
@@ -464,7 +522,8 @@ def get_dataloaders(npz_path: str,
                     num_workers: int = 0,
                     pin_memory: bool = False,
                     drop_last: bool = False,
-                    persistent_workers: bool = False) -> tuple[DataLoader, DataLoader, DataLoader]:
+                    persistent_workers: bool = False,
+                    rollout_K: int = 0) -> tuple[DataLoader, DataLoader, DataLoader]:
     """
     Build train, validation, and test DataLoaders.
 
@@ -496,6 +555,10 @@ def get_dataloaders(npz_path: str,
     pin_memory      : pin host memory for CUDA transfers
     drop_last       : drop the last partial batch (train loader)
     persistent_workers : keep workers alive across epochs (set True with num_workers>0)
+    rollout_K       : if > 0, precompute K-step rollout targets and yield
+                      (x, y, mass, y_roll, roll_valid) items (see
+                      NBody3DDataset); 0 keeps the plain (x, y[, mass])
+                      contract for every existing consumer
 
     Returns
     -------
@@ -506,6 +569,7 @@ def get_dataloaders(npz_path: str,
         model_type=model_type,
         include_mass=include_mass,
         channel_mask=channel_mask,
+        rollout_K=rollout_K,
     )
 
     # ── Simulation-level split (see docstring for why the persisted

@@ -117,6 +117,7 @@ CombinedLoss        = _loss_mod.CombinedLoss
 mse_loss            = _loss_mod.mse_loss
 energy_drift_loss   = _loss_mod.energy_drift_loss
 rollout_energy_loss = _loss_mod.rollout_energy_loss
+rollout_mse_loss   = _loss_mod.rollout_mse_loss
 
 
 # ── Model ────────────────────────────────────────────────────────────────────
@@ -396,7 +397,13 @@ def run_epoch(model: nn.Module,
     count = 0
     ctx   = torch.enable_grad() if train else torch.no_grad()
     with ctx:
-        for x, y, mass in loader:
+        for batch in loader:
+            # Items are (x, y, mass) — or, with rollout_K > 0 (stability
+            # training), (x, y, mass, y_roll, roll_valid). Lenient unpack
+            # so one run_epoch serves both.
+            x, y, mass = batch[0], batch[1], batch[2]
+            y_roll, r_valid = ((batch[3], batch[4])
+                               if len(batch) > 3 else (None, None))
             x    = x.to(device, non_blocking=True)
             y    = y.to(device, non_blocking=True)
             mass = mass.to(device, non_blocking=True)
@@ -427,20 +434,30 @@ def run_epoch(model: nn.Module,
             l_total    = loss_fn.w_mse * l_mse + eff_w_energy * l_energy
 
             if eff_w_rollout > 0.0:
-                # In-distribution sliding-window rollout: seed with the
-                # true W-window `x` (B, W, N, F) so the GNN's forward
-                # runs its full message-passing path, and use the true
-                # next state `y` as the energy-drift reference. This
-                # matches how the GNN is evaluated in evaluate_models.py
-                # and stability_benchmark.py. (An earlier version called
-                # model.step here, which wraps the state as a W=1 window
-                # and so ran zero message-passing rounds -- training the
-                # stability term on an out-of-distribution path.)
-                l_roll = rollout_energy_loss(model, x, mass,
-                                             ref_state=y,
-                                             eps=loss_fn.eps,
-                                             g=loss_fn.g,
-                                             K=loss_fn.rollout_K)
+                # 2026-09-21, cross-verified redesign: the rollout term is
+                # now an autoregressive K-step rollout MSE against the TRUE
+                # future frames (losses.rollout_mse_loss) — the previous
+                # rollout-ENERGY term had the identity function as its
+                # global optimum (a frozen state conserves energy exactly)
+                # and caused the September identity collapse. See
+                # losses.py / mlp_train.py for the full rationale. The
+                # rollout path (sliding W-window with full message passing,
+                # identical to evaluate_models.py / stability_benchmark.py;
+                # the earlier model.step W=1 degenerate-window bug stays
+                # fixed) is unchanged.
+                K_roll = loss_fn.rollout_K
+                if y_roll is None:
+                    raise RuntimeError(
+                        "w_rollout > 0 but the loader yields no rollout "
+                        "targets — build the dataset with "
+                        "rollout_K=loss_fn.rollout_K")
+                y_roll_3d = y_roll.to(device, non_blocking=True)
+                r_mask = (r_valid.to(device, non_blocking=True)
+                          if r_valid is not None else None)
+                l_roll = rollout_mse_loss(model, x, mass,
+                                          targets=y_roll_3d,
+                                          target_mask=r_mask,
+                                          K=K_roll)
                 l_total = l_total + eff_w_rollout * l_roll
             else:
                 l_roll  = pred.new_zeros(())
@@ -491,6 +508,8 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
         model_type="gnn",
         batch_size=cfg.batch_size,
         include_mass=True,           # mass channel needed for energy loss
+        # K-step rollout targets only for the stability-trained variants.
+        rollout_K=(cfg.rollout_K if cfg.w_rollout > 0.0 else 0),
         num_workers=(nw := default_num_workers(device)),
         persistent_workers=(nw > 0),   # keep the workers alive across epochs
         pin_memory=(device.type == "cuda"),
@@ -502,7 +521,8 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
         test_loader  = cap_dataloader(test_loader, 2)
 
     # ── Infer N and F from one batch ───────────────────────────────────────
-    sample_x, sample_y, _ = next(iter(train_loader))
+    sample = next(iter(train_loader))
+    sample_x, sample_y = sample[0], sample[1]
     in_features = int(sample_x.shape[-1])
     N_bodies = int(sample_x.shape[-2])
     if cfg.n_bodies is not None and cfg.n_bodies != N_bodies:
@@ -544,13 +564,12 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
     warmup_epochs = int(cfg.warmup_frac * cfg.epochs)
     ramp_epochs   = max(1, int(cfg.ramp_frac * cfg.epochs))
     # Post-ramp selection gate (2026-09-21, adversarial-crosscheck fix):
-    # best-ckpt selection on val_mse must only consider epochs with the aux
-    # losses fully active (aux_frac == 1) — pre-ramp val_mse is typically
-    # lowest right at the end of the pure-MSE warmup, and selecting it would
-    # silently discard the stability training (the stable checkpoint would
-    # just be an under-trained single-step model). The metric stays val_mse;
-    # an energy-weighted val_total was the ORIGINAL identity-collapse root
-    # cause and must not return. Short runs: the final epoch is eligible.
+    # best-ckpt selection must only consider epochs with the aux losses
+    # fully active (aux_frac == 1) — pre-ramp val metrics are typically
+    # lowest right at the end of the pure-MSE warmup, and selecting one
+    # would silently discard the stability training (the stable checkpoint
+    # would just be an under-trained single-step model). Short runs: the
+    # final epoch is eligible.
     first_sel_epoch = min(warmup_epochs + ramp_epochs, cfg.epochs)
 
     def aux_scale(epoch: int) -> float:
@@ -583,16 +602,18 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
             "seconds":   elapsed,
         })
         marker = ""
-        # Best-checkpoint selection on val MSE (post-audit fix, 2026-09-17).
-        # Selection previously used the weighted val total, which the stiff
-        # energy term dominated: the saved checkpoint was whichever epoch
-        # minimised the energy component, not the prediction error.
-        # Restricted to post-ramp epochs (first_sel_epoch, above): a
-        # pre-ramp checkpoint never experienced the full training
-        # objective, so for the stable variant it would silently discard
-        # the stability training.
-        if val_loss["mse"] < best_val and epoch >= first_sel_epoch:
-            best_val = val_loss["mse"]
+        # Stable variant selects on val_total, NOT val_mse (cross-verified
+        # 2026-09-21): with the rollout-ENERGY term gone (identity has it at
+        # exactly 0), every component of val_total (mse + w_rollout·
+        # rollout-MSE) is identity-repelling, so the weighted total is safe
+        # — and it matches what the stability training optimises. The old
+        # energy-weighted val_total was poisonous only because the energy
+        # drift term itself was minimised by identity. Single-step variants
+        # (w_rollout = 0) keep val_mse.
+        sel_metric = (val_loss["total"] if cfg.w_rollout > 0.0
+                      else val_loss["mse"])
+        if sel_metric < best_val and epoch >= first_sel_epoch:
+            best_val = sel_metric
             # `variant` lets downstream consumers (e.g. stability_benchmark)
             # distinguish the stability-trained checkpoint from the
             # single-step one without relying on the directory name. The
@@ -606,7 +627,8 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
                 "num_passes":    cfg.num_passes,
                 "epoch":         epoch,
                 "val_mse":       val_loss["mse"],
-                "selected_on":   "val_mse",
+                "selected_on":   ("val_total" if cfg.w_rollout > 0.0
+                                  else "val_mse"),
                 "variant":       variant,
             }, best_path)
             marker = "  ✓ saved"
@@ -631,7 +653,9 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
     test_sums = {"mse": 0.0, "energy": 0.0, "total": 0.0}
     test_count = 0
     with torch.no_grad():
-        for x, y, mass in test_loader:
+        for batch in test_loader:
+            # Lenient unpack: rollout-capable loaders yield 5-tuples.
+            x, y, mass = batch[0], batch[1], batch[2]
             x = x.to(device, non_blocking=True)
             y = y.to(device, non_blocking=True)
             mass = mass.to(device, non_blocking=True)
@@ -659,8 +683,9 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
             "test_metrics": test_metrics,
         }, f, indent=2)
     print(f"[save] history  -> {history_path}")
-    print(f"[save] best ckpt-> {best_path}  (val_mse={best_val:.4e}, "
-          f"selected on val_mse, post-ramp epochs >= {first_sel_epoch})")
+    _sel_name = ("val_total" if cfg.w_rollout > 0.0 else "val_mse")
+    print(f"[save] best ckpt-> {best_path}  (val={best_val:.4e}, "
+          f"selected on {_sel_name}, post-ramp epochs >= {first_sel_epoch})")
 
     save_loss_curve(
         history,

@@ -270,6 +270,81 @@ def rollout_energy_loss(model: torch.nn.Module,
     return drift_accum / K
 
 
+def rollout_mse_loss(model: torch.nn.Module,
+                     window_init: torch.Tensor,
+                     mass: torch.Tensor,
+                     targets: torch.Tensor,
+                     target_mask: torch.Tensor | None = None,
+                     K: int = 5) -> torch.Tensor:
+    """
+    K-step autoregressive rollout **MSE** against true future frames.
+
+    This replaces `rollout_energy_loss` as the stability-training term
+    (2026-09-21, cross-verified design): the rollout-ENERGY term has the
+    identity function as its global optimum — a frozen state conserves
+    energy exactly, so |E_k − E0| ≡ 0 — and empirically drags every
+    variant back to the persistence floor once the ramp completes
+    (the September-2026 identity collapse). The rollout MSE is
+    identity-REPELLING by construction: a frozen universe accumulates the
+    maximum possible multi-step MSE error, so this term can only be
+    minimised by learning the dynamics. It directly optimises the
+    quantity the stability benchmark measures (per-step MSE).
+
+    At each step k = 1..K (identical autoregressive structure to
+    `rollout_energy_loss`):
+        y_pred   = model(window)          # full W-window forward
+        window   = shift(window, y_pred)  # slide with the prediction
+        loss    += masked MSE(y_pred, targets[:, k])
+
+    `targets` carries the TRUE future frames: for a dataset window
+    covering frames [i .. i+W-1] with target y[i] = frame i+W, the true
+    frame for rollout step k is y[i + k − 1] (STRIDE=1 contiguity, see
+    `NBody3DDataset` rollout targets). Windows near a simulation
+    boundary have no true frame for the later steps; `target_mask`
+    (B, K) marks the valid ones and the loss is a validity-weighted
+    mean over steps and samples. Identity behaviour is maximally
+    penalised, and the term needs no energy anchor at all.
+
+    Gradients flow through every step (no detach), and the GNN's
+    per-step forwards are gradient-checkpointed exactly as in
+    `rollout_energy_loss` — K=5 BPTT must not hold the (B, N, N, hidden)
+    message tensors for the whole rollout at N >= 50.
+
+    window_init : (B, W, N, F)  true W-window (the loader's `x`)
+    targets     : (B, K, N, F)  true future frames (within-sim; masked
+                                  entries are zeros)
+    target_mask : (B, K) bool   True where targets[:, k] is a real frame
+    mass        : (B, N)
+    """
+    window = window_init
+    accum  = window.new_zeros(())
+    count  = window.new_zeros(())
+    grad_ctx = torch.is_grad_enabled()
+    for k in range(K):
+        # Same checkpointing rule as rollout_energy_loss: checkpoint ONLY
+        # the message-passing models under grad (MLP/LSTM run directly —
+        # cheap, and avoids the LSTM recompute-time dropout-mask mismatch).
+        use_ckpt = grad_ctx and getattr(model, "num_passes", None) is not None
+        if use_ckpt:
+            y_pred = checkpoint(model, window, mass, use_reentrant=False)
+        else:
+            y_pred = model(window, mass)
+        t_k  = targets[:, k]                       # (B, N, F)
+        if target_mask is None:
+            accum += ((y_pred - t_k) ** 2).mean()
+            count += 1.0
+        else:
+            m_k  = target_mask[:, k].to(window.dtype)   # (B,)
+            err2 = ((y_pred - t_k) ** 2).mean(
+                dim=tuple(range(1, y_pred.dim())))      # (B,)
+            accum = accum + (err2 * m_k).sum()
+            count = count + m_k.sum()
+        # Slide the window with the (still attached) prediction.
+        window = torch.cat([window[:, 1:], y_pred.unsqueeze(1)], dim=1)
+    # clamp(min=1) keeps this sync-free when some batch has no valid step.
+    return accum / count.clamp(min=1.0)
+
+
 # ── Combined loss ────────────────────────────────────────────────────────────
 class CombinedLoss(torch.nn.Module):
     """

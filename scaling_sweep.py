@@ -210,6 +210,11 @@ def run_one_N(n: int,
                 "--out",       str(model_dirs[m]),
                 "--epochs",    str(epochs[m]),
                 "--batch-size", batch,
+                # The single-step energy-drift aux loss has identity
+                # (frozen state) as global optimum — it caused the
+                # 2026-09-21 collapse. Sweep models are single-step only,
+                # so the term is switched off entirely.
+                "--w-energy",  "0",
             ]
             if not dry_run:
                 run(cmd, cwd=project_root)
