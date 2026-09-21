@@ -87,10 +87,18 @@ def energy_drift_series(positions: np.ndarray,
     return out
 
 
-def energy_drift_normalised(E: np.ndarray, eps_floor: float = 1e-8) -> np.ndarray:
+def energy_drift_normalised(E: np.ndarray, eps_floor: float = 1e-8,
+                            e0: float | None = None) -> np.ndarray:
     """
-    |E(t) − E(0)| / max(|E(0)|, eps_floor) per frame. Returns shape (T,).
+    |E(t) − E0| / max(|E0|, eps_floor) per frame. Returns shape (T,).
+
+    `e0` pins the anchor energy; when omitted it defaults to E[0], i.e.
+    the metric measures energy CONSERVATION relative to the first frame
+    of the trajectory passed in (the canonical definition — the
+    reference/book trajectories are anchored the same way, so surrogate
+    and reference drift numbers stay comparable).
     """
-    e0 = float(E[0])
-    denom = max(abs(e0), eps_floor)
-    return np.abs(E - e0) / denom
+    if e0 is None:
+        e0 = float(E[0])
+    denom = max(abs(float(e0)), eps_floor)
+    return np.abs(E - float(e0)) / denom

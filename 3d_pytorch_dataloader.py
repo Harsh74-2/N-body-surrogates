@@ -184,6 +184,16 @@ class NBody3DDataset(Dataset):
             # Subsets, so this is a one-time cost.
             self._X = np.array(data["X"], dtype=np.float32)
             self._y = np.array(data["y"], dtype=np.float32)
+            # Store X/y as torch tensors in shared memory (2026-09-20).
+            # With num_workers > 0 each worker process otherwise gets its
+            # own copy: fork (Linux) copies them lazily via COW, but any
+            # refcount touch materialises the full copy per worker; spawn
+            # (Windows/Colab) pickles the ENTIRE array to every worker.
+            # share_memory_() puts the payload in shared memory once so all
+            # workers attach to the same pages -- an 8-worker run of a
+            # ~1.5 GB N=100 dataset drops from ~12 GB RSS to ~1.5 GB.
+            self._X = torch.from_numpy(self._X).share_memory_()
+            self._y = torch.from_numpy(self._y).share_memory_()
             X = self._X
             y = self._y
             self._X_shape = tuple(X.shape)
@@ -538,27 +548,24 @@ def get_dataloaders(npz_path: str,
               f"test={len(test_sims)} sims ({len(test_subset)})  "
               f"(seed={split_seed})")
     else:
-        # Fall back to a deterministic random WINDOW-level split. This is
-        # leaky with STRIDE=1 (see above); it only happens for datasets
-        # without a mass table or sidecar, i.e. nothing this project
-        # trains on.
+        # No window-level fallback (post-audit guard, 2026-09-20): a
+        # random WINDOW-level split leaks near-duplicate samples across
+        # splits with STRIDE=1 (adjacent windows share W-1 frames), which
+        # silently invalidates val/test metrics. If the per-simulation ids
+        # cannot be recovered, fail loudly instead of training on a leaky
+        # split.
         if sim_ids.size:
             raise RuntimeError(
                 f"Only {n_sims} simulations available; need >= 3 for a "
                 f"simulation-level split. Generate more simulations."
             )
-        print("  [warn] cannot recover per-window simulation ids "
-              "(no mass table / no sidecar); falling back to a LEAKY "
-              "window-level random split")
-        n_val   = int(round(len(full_dataset) * val_frac))
-        n_test  = int(round(len(full_dataset) * 0.1))
-        n_train = len(full_dataset) - n_val - n_test
-        g = torch.Generator().manual_seed(split_seed)
-        train_subset, val_subset, test_subset = torch.utils.data.random_split(
-            full_dataset, [n_train, n_val, n_test], generator=g,
+        raise RuntimeError(
+            f"Cannot safely split {npz_path}: per-window simulation ids "
+            f"could not be recovered (no mass table and no sidecar "
+            f"'n_windows_per_sim'). A window-level random split leaks "
+            f"near-duplicate samples across splits with STRIDE=1; "
+            f"re-export the dataset with 3d_export_pipeline.py."
         )
-        print(f"  window-level fallback split: "
-              f"train={n_train}  val={n_val}  test={n_test}  (seed={split_seed})")
 
     common = dict(
         batch_size=batch_size,

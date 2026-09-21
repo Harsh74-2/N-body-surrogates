@@ -207,6 +207,9 @@ class TrainConfig:
     rollout_K:     int   = DEFAULT_ROLLOUT_K
     eps:           float = DEFAULT_EPS         # softening for energy loss
     g:             float = DEFAULT_GRAVITY_G   # gravitational constant for energy loss
+    # Aux-loss warmup (post-audit fix, 2026-09-17; rationale in gnn_train.py).
+    warmup_frac:   float = 0.5
+    ramp_frac:     float = 0.25
 
 
 def _reshape_mlp_batch(x_flat: torch.Tensor,
@@ -241,7 +244,12 @@ def run_epoch(model: nn.Module,
     Rollout is only computed when loss_fn.w_rollout > 0.
     """
     model.train(train)
-    sums  = {"mse": 0.0, "energy": 0.0, "rollout": 0.0, "total": 0.0}
+    # Loss accumulators live on `device` (perf tune, 2026-09-20): the old
+    # per-batch `.item()` calls forced a CPU-GPU sync every batch, which
+    # serialised the dataloader->GPU pipeline. Accumulate detached device
+    # tensors and convert to floats once, at return.
+    sums  = {k: torch.zeros((), device=device)
+             for k in ("mse", "energy", "rollout", "total")}
     count = 0
     ctx   = torch.enable_grad() if train else torch.no_grad()
     with ctx:
@@ -293,13 +301,13 @@ def run_epoch(model: nn.Module,
                 optimizer.step()
 
             bsz = x.size(0)
-            sums["mse"]     += float(l_mse.item())    * bsz
-            sums["energy"]  += float(l_energy.item()) * bsz
-            sums["rollout"] += float(l_roll.item())   * bsz
-            sums["total"]   += float(l_total.item())  * bsz
+            sums["mse"]     += l_mse.detach()    * bsz
+            sums["energy"]  += l_energy.detach() * bsz
+            sums["rollout"] += l_roll.detach()   * bsz
+            sums["total"]   += l_total.detach()  * bsz
             count          += bsz
 
-    return {k: v / max(count, 1) for k, v in sums.items()}
+    return {k: (v / max(count, 1)).item() for k, v in sums.items()}
 
 
 def _final_test_metrics(model: nn.Module,
@@ -340,6 +348,9 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
     seed_everything(cfg.seed)
     print(f"[seed] {cfg.seed}")
     device = pick_device()
+    # Ada/Hopper TF32 tensor cores (perf tune, 2026-09-20): ~2-4x faster
+    # fp32 matmuls on the RTX 6000 Ada; well within the energy-loss tolerance.
+    torch.set_float32_matmul_precision('high')
     print(f"[device] {device}")
 
     print(f"[data] {npz_path}")
@@ -395,8 +406,23 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
     best_val = float("inf")
     best_path = out_path / "model_best.pt"
 
+    # Aux-loss warmup schedule (post-audit fix, 2026-09-17; rationale in
+    # gnn_train.py TrainConfig). Pure MSE until warmup_epochs have run, then
+    # the energy/rollout terms ramp linearly to full weight. run_epoch reads
+    # the weights from `loss_fn` every batch, so mutating them propagates.
+    warmup_epochs = int(cfg.warmup_frac * cfg.epochs)
+    ramp_epochs   = max(1, int(cfg.ramp_frac * cfg.epochs))
+
+    def aux_scale(epoch: int) -> float:
+        if epoch <= warmup_epochs:
+            return 0.0
+        return min(1.0, (epoch - warmup_epochs) / ramp_epochs)
+
     for epoch in range(1, cfg.epochs + 1):
         t0 = time.perf_counter()
+        frac = aux_scale(epoch)
+        loss_fn.w_energy  = cfg.w_energy  * frac
+        loss_fn.w_rollout = cfg.w_rollout * frac
         train_losses = run_epoch(model, train_loader, loss_fn, optimizer, device,
                                  train=True,  W=W_window, F=in_features)
         val_losses   = run_epoch(model, val_loader,   loss_fn, None,        device,
@@ -414,11 +440,16 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
             "val_energy":    val_losses["energy"],
             "val_rollout":   val_losses["rollout"],
             "val_total":     val_losses["total"],
+            "aux_frac":      frac,
             "seconds":       elapsed,
         })
         marker = ""
-        if val_losses["total"] < best_val:
-            best_val = val_losses["total"]
+        # Best-checkpoint selection on val MSE (post-audit fix, 2026-09-17;
+        # rationale in gnn_train.py): the weighted val total was dominated by
+        # the stiff energy term, so the saved checkpoint minimised energy,
+        # not prediction error.
+        if val_losses["mse"] < best_val:
+            best_val = val_losses["mse"]
             # `variant` lets downstream consumers (e.g. stability_benchmark)
             # distinguish the stability-trained checkpoint from the
             # single-step one without relying on the directory name. The
@@ -433,7 +464,8 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
                 "depth":         cfg.depth,
                 "epoch":         epoch,
                 "val_mse":       val_losses["mse"],
-                "val_total":     best_val,
+                "val_total":     val_losses["total"],
+                "selected_on":   "val_mse",
                 "variant":       variant,
             }, best_path)
             marker = "  ✓ saved"
@@ -469,13 +501,17 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
             "test_metrics": test_metrics,
         }, f, indent=2)
     print(f"[save] history  -> {history_path}")
-    print(f"[save] best ckpt-> {best_path}  (val_total={best_val:.4e})")
+    print(f"[save] best ckpt-> {best_path}  (val_mse={best_val:.4e}, selected on val_mse)")
 
     save_loss_curve(
         history,
         out_path / "loss_curve.png",
         title="MLP surrogate, per-body feed-forward",
-        keys=("train_total", "val_total"),
+        # MSE, not the weighted total: the total includes the aux terms
+        # whose weights ramp during training, so its curve shows schedule
+        # step artefacts rather than learning progress (perf/audit tune,
+        # 2026-09-20; matches the LSTM/GNN loss curves).
+        keys=("train_mse", "val_mse"),
     )
 
 
@@ -518,6 +554,12 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                    help="Gravitational constant used by the energy loss.")
     p.add_argument("--quick",        action="store_true",
                    help="Smoke-test mode: cap each loader at 8 batches.")
+    p.add_argument("--warmup-frac",  type=float, default=0.5,
+                   help="Fraction of epochs with pure-MSE loss before the "
+                        "aux terms (energy/rollout) start ramping.")
+    p.add_argument("--ramp-frac",    type=float, default=0.25,
+                   help="Fraction of epochs over which the aux terms ramp "
+                        "linearly to their full weight after the warmup.")
     return p
 
 
@@ -570,6 +612,8 @@ if __name__ == "__main__":
         rollout_K=args.rollout_K,
         eps=args.eps,
         g=args.g,
+        warmup_frac=args.warmup_frac,
+        ramp_frac=args.ramp_frac,
     )
     print(f"[run] cfg={cfg}")
     print(f"[run] npz ={npz_path}")

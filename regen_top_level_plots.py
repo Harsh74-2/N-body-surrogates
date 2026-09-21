@@ -91,7 +91,7 @@ def _parse_pipe_table(md_text: str, heading_prefix: str) -> dict[str, list[float
                 # n=10 if lowercased)
                 vals = []
                 for c in cells[1:]:
-                    m = re.search(r"([-+]?\d+(?:\.\d+)?)", c)
+                    m = re.search(r"([-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)", c)
                     if m:
                         vals.append(float(m.group(1)))
                 rows[label] = vals
@@ -131,7 +131,7 @@ def _load_single_step_ood_mean(cross_n_audit_md: Path) -> dict[str, list[float]]
                     label = cells[0]
                     vals = []
                     for c in cells[1:]:
-                        m = re.search(r"([-+]?\d+(?:\.\d+)?)", c)
+                        m = re.search(r"([-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)", c)
                         if m:
                             vals.append(float(m.group(1)))
                     rows[label] = vals
@@ -178,7 +178,7 @@ def _load_single_step_section(cross_n_audit_md: Path, preset: str) -> dict[str, 
                 continue
             vals = []
             for c in cells[1:]:
-                m = re.search(r"([-+]?\d+(?:\.\d+)?)", c)
+                m = re.search(r"([-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)", c)
                 if m:
                     vals.append(float(m.group(1)))
             rows[cells[0]] = vals

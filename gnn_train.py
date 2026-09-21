@@ -234,7 +234,11 @@ class GNNSurrogate(nn.Module):
         # sender j = dim 2), the same trick simulation_3d uses for forces.
         diff_h = h.unsqueeze(2) - h.unsqueeze(1)           # (B, N, N, hidden)
         diff_r = pos.unsqueeze(2) - pos.unsqueeze(1)       # (B, N, N, 3)
-        dist   = diff_r.norm(dim=-1, keepdim=True)          # (B, N, N, 1)
+        dist   = torch.sqrt((diff_r ** 2).sum(dim=-1, keepdim=True) + 1e-8)
+        # +1e-8 under the sqrt (2026-09-20): at an exactly-coincident pair
+        # `norm()` yields a NaN gradient (d/dx sqrt(x) at x=0); the floor
+        # keeps the edge feature finite. In normal operation the shift is
+        # ~1e-4 of a typical inter-body distance, i.e. numerically invisible.
         return diff_h, diff_r, dist
 
     def forward(self, x: torch.Tensor, mass: torch.Tensor | None = None) -> torch.Tensor:
@@ -347,6 +351,18 @@ class TrainConfig:
     eps:           float = DEFAULT_EPS
     g:             float = DEFAULT_GRAVITY_G
     seed:          int   = 42
+    # Aux-loss warmup (post-audit fix, 2026-09-17). Co-training the stiff
+    # energy term with MSE from epoch 1 saturates the encoder (the 2026-09-15
+    # checkpoints all collapsed to the identity predictor: val_mse flatlined
+    # at the identity floor from epoch 1 while the energy component trained
+    # perfectly). The schedule is: pure MSE for the first `warmup_frac` of
+    # the epochs, then the aux terms (energy, and rollout for the stable
+    # variant) ramp linearly to their full weight over the next `ramp_frac`,
+    # and hold for the remainder. Checkpoint selection is on val MSE (see
+    # below), so even if a ramped aux term degrades MSE, the saved weights
+    # cannot regress past the warmup phase.
+    warmup_frac:   float = 0.5
+    ramp_frac:     float = 0.25
 
 
 def run_epoch(model: nn.Module,
@@ -360,7 +376,12 @@ def run_epoch(model: nn.Module,
         {mse, energy, rollout, total}
     """
     model.train(train)
-    sums  = {"mse": 0.0, "energy": 0.0, "rollout": 0.0, "total": 0.0}
+    # Loss accumulators live on `device` (perf tune, 2026-09-20): the old
+    # per-batch `.item()` calls forced a CPU-GPU sync every batch, which
+    # serialised the dataloader->GPU pipeline. Accumulate detached device
+    # tensors and convert to floats once, at return.
+    sums  = {k: torch.zeros((), device=device)
+             for k in ("mse", "energy", "rollout", "total")}
     count = 0
     ctx   = torch.enable_grad() if train else torch.no_grad()
     with ctx:
@@ -417,13 +438,13 @@ def run_epoch(model: nn.Module,
                 optimizer.step()
 
             bsz = x.size(0)
-            sums["mse"]     += float(l_mse.item())    * bsz
-            sums["energy"]  += float(l_energy.item()) * bsz
-            sums["rollout"] += float(l_roll.item())   * bsz
-            sums["total"]   += float(l_total.item())  * bsz
+            sums["mse"]     += l_mse.detach()    * bsz
+            sums["energy"]  += l_energy.detach() * bsz
+            sums["rollout"] += l_roll.detach()   * bsz
+            sums["total"]   += l_total.detach()  * bsz
             count          += bsz
 
-    return {k: v / max(count, 1) for k, v in sums.items()}
+    return {k: (v / max(count, 1)).item() for k, v in sums.items()}
 
 
 def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
@@ -432,6 +453,9 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
     seed_everything(cfg.seed)
     print(f"[seed] {cfg.seed}")
     device = pick_device()
+    # Ada/Hopper TF32 tensor cores (perf tune, 2026-09-20): ~2-4x faster
+    # fp32 matmuls on the RTX 6000 Ada; well within the energy-loss tolerance.
+    torch.set_float32_matmul_precision('high')
     print(f"[device] {device}")
 
     print(f"[data] {npz_path}")
@@ -486,8 +510,23 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
     best_val = float("inf")
     best_path = out_path / "model_best.pt"
 
+    # Aux-loss warmup schedule (see TrainConfig.warmup_frac). Aux terms are
+    # pure-MSE until `warmup_epochs` have run, ramp linearly to full weight
+    # over the next `ramp_epochs`, then hold. run_epoch reads the weights
+    # from `loss_fn` every batch, so mutating them here propagates.
+    warmup_epochs = int(cfg.warmup_frac * cfg.epochs)
+    ramp_epochs   = max(1, int(cfg.ramp_frac * cfg.epochs))
+
+    def aux_scale(epoch: int) -> float:
+        if epoch <= warmup_epochs:
+            return 0.0
+        return min(1.0, (epoch - warmup_epochs) / ramp_epochs)
+
     for epoch in range(1, cfg.epochs + 1):
         t0 = time.perf_counter()
+        frac = aux_scale(epoch)
+        loss_fn.w_energy  = cfg.w_energy  * frac
+        loss_fn.w_rollout = cfg.w_rollout * frac
         train_loss = run_epoch(model, train_loader, loss_fn, optimizer, device, train=True)
         val_loss   = run_epoch(model, val_loader,   loss_fn, None,        device, train=False)
         scheduler.step()
@@ -502,11 +541,18 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
             "train_components": train_loss,
             "val_mse":   val_loss["mse"],
             "val_components":   val_loss,
+            "aux_frac":  frac,
             "seconds":   elapsed,
         })
         marker = ""
-        if val_loss["total"] < best_val:
-            best_val = val_loss["total"]
+        # Best-checkpoint selection on val MSE (post-audit fix, 2026-09-17).
+        # Selection previously used the weighted val total, which the stiff
+        # energy term dominated: the saved checkpoint was whichever epoch
+        # minimised the energy component, not the prediction error. With
+        # selection on val_mse, a ramped aux term can never regress the
+        # saved weights past the best-MSE epoch.
+        if val_loss["mse"] < best_val:
+            best_val = val_loss["mse"]
             # `variant` lets downstream consumers (e.g. stability_benchmark)
             # distinguish the stability-trained checkpoint from the
             # single-step one without relying on the directory name. The
@@ -520,6 +566,7 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
                 "num_passes":    cfg.num_passes,
                 "epoch":         epoch,
                 "val_mse":       val_loss["mse"],
+                "selected_on":   "val_mse",
                 "variant":       variant,
             }, best_path)
             marker = "  ✓ saved"
@@ -572,7 +619,7 @@ def main(cfg: TrainConfig, npz_path: str, out_dir: str) -> None:
             "test_metrics": test_metrics,
         }, f, indent=2)
     print(f"[save] history  -> {history_path}")
-    print(f"[save] best ckpt-> {best_path}  (val_total={best_val:.4e})")
+    print(f"[save] best ckpt-> {best_path}  (val_mse={best_val:.4e}, selected on val_mse)")
 
     save_loss_curve(
         history,
@@ -624,6 +671,12 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                    help="Number of rollout steps when --w-rollout > 0.")
     p.add_argument("--eps",       type=float, default=DEFAULT_EPS,
                    help="Plummer softening for the energy loss.")
+    p.add_argument("--warmup-frac", type=float, default=0.5,
+                   help="Fraction of epochs with pure-MSE loss before the "
+                        "aux terms (energy/rollout) start ramping.")
+    p.add_argument("--ramp-frac",   type=float, default=0.25,
+                   help="Fraction of epochs over which the aux terms ramp "
+                        "linearly to their full weight after the warmup.")
     p.add_argument("--g",         type=float, default=DEFAULT_GRAVITY_G,
                    help="Gravitational constant for the energy loss.")
     p.add_argument("--seed",      type=int,   default=42,
@@ -681,6 +734,8 @@ if __name__ == "__main__":
         eps=args.eps,
         g=args.g,
         seed=args.seed,
+        warmup_frac=args.warmup_frac,
+        ramp_frac=args.ramp_frac,
     )
     print(f"[run] cfg={cfg}")
     print(f"[run] npz ={npz_path}")

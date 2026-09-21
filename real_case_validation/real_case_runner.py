@@ -1341,6 +1341,10 @@ def main() -> None:
                  "--list-presets to print the catalog).")
 
     device = pick_device()
+    # Ada/Hopper TF32 tensor cores (perf tune, 2026-09-20): faster fp32
+    # matmuls on the RTX 6000 Ada; inference-only path, no training dynamics
+    # to perturb.
+    torch.set_float32_matmul_precision('high')
     print(f"[device] {device}")
 
     # Load every checkpoint.

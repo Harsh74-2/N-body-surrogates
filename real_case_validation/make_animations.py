@@ -833,7 +833,12 @@ def _animate_one(preset_name: str, model_name: str,
             ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
         except ImportError:
             ffmpeg_path = None
-        writer_kwargs = {"fps": fps, "bitrate": 2400, "codec": "h264",
+        # h264_nvenc (2026-09-20): offload H.264 encoding to the RTX
+        # 6000 Ada's NVENC hardware block -- the CPU-side libx264 encode
+        # was a large fraction of the per-clip wall clock. The save below
+        # falls back to software h264 when the ffmpeg build has no NVENC
+        # (or the encoder errors), so non-GPU hosts keep working.
+        writer_kwargs = {"fps": fps, "bitrate": 2400, "codec": "h264_nvenc",
                          "metadata": {"preset": preset_name,
                                       "model": model_name}}
         if ffmpeg_path:
@@ -850,7 +855,17 @@ def _animate_one(preset_name: str, model_name: str,
         # wrongly treat as finished. The rename is atomic once ffmpeg's
         # final flush completes (moov atom included).
         tmp_path = out_path.with_suffix(".tmp.mp4")
-        anim.save(tmp_path, writer=writer)
+        try:
+            anim.save(tmp_path, writer=writer)
+        except Exception as e:
+            # NVENC unavailable (ffmpeg without --enable-nvenc, driver
+            # busy, no GPU session): re-encode with the software encoder
+            # instead of failing the clip.
+            print(f"[anim] NVENC encode failed ({e}); retrying with h264")
+            if tmp_path.exists():
+                tmp_path.unlink()
+            writer = FFMpegWriter(**{**writer_kwargs, "codec": "h264"})
+            anim.save(tmp_path, writer=writer)
         tmp_path.replace(out_path)
         written.append(out_path)
     if fmt in ("gif", "both"):

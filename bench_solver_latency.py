@@ -252,6 +252,12 @@ def main() -> None:
     solver: dict[int, float] = {}
     single: dict[str, dict[int, float | None]] = {"mlp": {}, "lstm": {}, "gnn": {}}
     batched: dict[str, dict[int, float | None]] = {"mlp": {}, "lstm": {}, "gnn": {}}
+    # (model, N) -> ms/frame recovered from results/N*/metrics.json instead
+    # of measured here. Those numbers were recorded by evaluate_models.py on
+    # whatever device it ran on (GPU on the VM), so they are NOT comparable
+    # to this script's CPU timings: they are excluded from the plot and the
+    # crossover computation and reported separately in the JSON.
+    saved_fallback: dict[tuple[str, int], float] = {}
 
     print(f"\n{'N':>5} {'solver':>9} | {'MLP sgl':>8} {'LSTM sgl':>8} {'GNN sgl':>8} | "
           f"{'MLP b64':>8} {'LSTM b64':>8} {'GNN b64':>8}  (ms/frame)")
@@ -266,6 +272,11 @@ def main() -> None:
             else:
                 sg = None
                 bt = _saved_surrogate_latency(mt, n) if n in SWEEP_N_VALUES else None
+                if bt is not None:
+                    saved_fallback[(mt, n)] = bt
+                    print(f"    [warn] {mt} N={n}: using SAVED metrics.json "
+                          f"latency (device unknown, likely GPU) -- excluded "
+                          f"from the CPU plot/crossover")
             single[mt][n] = sg
             batched[mt][n] = bt
             row.append(f"{sg:>8.4f}" if sg is not None else f"{'--':>8}")
@@ -274,6 +285,11 @@ def main() -> None:
             bt = batched[mt][n]
             row.append(f"{bt:>8.4f}" if bt is not None else f"{'--':>8}")
         print(" ".join(row))
+
+    # The crossover and the plot must compare like with like: drop the
+    # saved-metrics (device-unknown) entries before plotting/curve fitting.
+    for (mt, n) in list(saved_fallback):
+        batched[mt][n] = None
 
     cs = {mt: crossover(ns, solver, single[mt]) for mt in ("mlp", "lstm", "gnn")}
     cb = {mt: crossover(ns, solver, batched[mt]) for mt in ("mlp", "lstm", "gnn")}
@@ -297,6 +313,11 @@ def main() -> None:
         "surrogate_batched_amortised": {mt: {str(k): v for k, v in d.items()} for mt, d in batched.items()},
         "crossover_Nstar_single_frame": cs,
         "crossover_Nstar_batched": cb,
+        # Not measured here; pulled from results/N*/metrics.json whose
+        # `latency_ms` may have been recorded on a GPU. Kept out of the
+        # plot and the crossover above for a like-for-like comparison.
+        "saved_metrics_latency_excluded": {
+            f"{mt}_N{n}": v for (mt, n), v in saved_fallback.items()},
     }
     Path(args.json).parent.mkdir(parents=True, exist_ok=True)
     Path(args.json).write_text(json.dumps(payload, indent=2), encoding="utf-8")

@@ -171,9 +171,12 @@ def main() -> None:
                            "--out", str(run_out),
                            "--dump-preds",
                            "--quick"]
-                    # Insert every --ckpt positional arg.
+                    # Append every --ckpt pair (fix, 2026-09-20): the old
+                    # `cmd[3:3] = [...]` splice worked but inserted each
+                    # successive pair BEFORE the previous one, so the ckpt
+                    # list ended up in reverse order — confusing in `ps`/logs.
                     for c in ckpts:
-                        cmd[3:3] = ["--ckpt", c]   # noqa: E501
+                        cmd.extend(["--ckpt", c])
                     print(f"  [run] N={n} preset={preset} "
                           f"({len(ckpts)} ckpts)", flush=True)
                     try:

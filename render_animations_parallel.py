@@ -19,6 +19,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
@@ -106,9 +107,10 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--fps", type=int, default=15)
     p.add_argument("--view", choices=("3d", "2d"), default="2d")
     p.add_argument("--trail", type=int, default=40)
-    p.add_argument("--workers", type=int, default=6,
-                   help="Number of parallel processes (default 6 = physical cores; "
-                        "machine has 6P+6HT = 12 logical)")
+    p.add_argument("--workers", type=int,
+                   default=max(1, (os.cpu_count() or 4) - 2),
+                   help="Number of parallel processes (default: cores - 2, "
+                        "leaving headroom for the OS/ffmpeg on the VM)")
     p.add_argument("--dry-run", action="store_true",
                    help="Print jobs without running")
     return p.parse_args()

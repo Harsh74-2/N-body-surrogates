@@ -95,6 +95,9 @@ from pipeline_config import (  # noqa: E402
     DEFAULT_EPS,
     DEFAULT_GRAVITY_G,
     FEATURE_DIM,
+    SPLIT_SEED,
+    TEST_FRAC,
+    VAL_FRAC,
     WINDOW_SIZE,
 )
 
@@ -176,6 +179,32 @@ def select_start_frames(raw_root: Path, N: int, K: int, W: int,
         print(f"  [warn] only {len(sims)} sim(s) available for N={N}; "
               f"using all of them (requested {n_sims}).")
     sims = sims[:n_sims]
+
+    # Restrict start frames to TEST-split simulations (post-audit fix,
+    # 2026-09-20). `select_start_frames` used to sample start frames from
+    # the first `n_sims` raw simulations indiscriminately — but those sims
+    # include the training/validation simulations, so rollout curves were
+    # partly measured on windows the surrogate trained on (the same
+    # STRIDE=1 leakage that motivated the dataloader's simulation-level
+    # split). Reproduce the dataloader's split assignment exactly (same
+    # SPLIT_SEED / TEST_FRAC / VAL_FRAC and the same tiny-n guard) and keep
+    # only test-split sims.
+    rng = np.random.default_rng(SPLIT_SEED)
+    perm = rng.permutation(n_sims)
+    n_test_sims = max(1, int(round(n_sims * TEST_FRAC)))
+    n_val_sims  = max(1, int(round(n_sims * VAL_FRAC)))
+    if n_test_sims + n_val_sims >= n_sims:
+        n_test_sims = 1
+    test_sims = {int(s) for s in perm[:n_test_sims]}
+    n_before = len(sims)
+    sims = [s for s in sims if s in test_sims]
+    if not sims:
+        raise RuntimeError(
+            f"none of the first {n_sims} simulations for N={N} fall in the "
+            f"test split (test sims = {sorted(test_sims)}); increase --n-sims "
+            f"to cover the whole dataset.")
+    print(f"  [split] start-frame sims restricted to the test split "
+          f"{sorted(test_sims)}  ({n_before} -> {len(sims)} sims)")
 
     starts: list[tuple[int, int]] = []
     per_sim = max(1, math.ceil(n_starts / len(sims)))

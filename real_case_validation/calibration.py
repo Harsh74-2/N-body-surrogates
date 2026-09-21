@@ -170,12 +170,20 @@ def apply_correction(surrogate_traj: np.ndarray,
         # Broadcast over (T-n_cal, 3).
         out[idx, body_i, :3] = (surr_view * scale[:, None]
                                + out[idx, pri_i, :3])
-        # Velocities: scale by the same factor so the orbit shape
-        # preserves. This is the simplest "honest" rescale that keeps
-        # the energy behaviour in the same regime; a more rigorous
-        # symplectic rescale would re-derive v from the new orbit.
+        # Velocities: vis-viva rescale (post-audit fix, 2026-09-20). The
+        # radius was corrected by the factor `scale` (r_new = s · r_old),
+        # so for the same central mass the circular-orbit speed scales as
+        # v ∝ 1/sqrt(r): v_new = v_old / sqrt(s). The previous velocity
+        # MULTIPLICATION by s injected a spurious factor s^(3/2) into the
+        # kinetic energy and destroyed the vis-viva consistency of the
+        # corrected orbit. Direction is preserved either way.
         if out.shape[-1] >= 6:
-            out[idx, body_i, 3:6] = out[idx, body_i, 3:6] * scale[:, None]
+            # Degenerate fits can yield scale <= 0 (a·r+b < 0, i.e. an
+            # anti-correlated radius fit): leave the velocities unchanged
+            # there rather than sqrt() a negative number.
+            s_pos = np.where(scale > 0.0, scale, 1.0)
+            out[idx, body_i, 3:6] = out[idx, body_i, 3:6] / np.maximum(
+                np.sqrt(s_pos[:, None]), 1e-12)
     return out
 
 

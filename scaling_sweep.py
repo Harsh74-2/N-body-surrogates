@@ -216,33 +216,37 @@ def run_one_N(n: int,
         else:
             print(f"  [skip] {ckpts[m]} exists")
 
-    # ── 6. evaluate_models.py ─────────────────────────────────────
-    if not metrics_path.is_file():
-        _step(f"N={n}  step 6/6  evaluate (rollout-K={ROLLOUT_K})")
-        # Evaluate on the MLP test set as the common hold-out. Because the
-        # three datasets are generated from the same RNG family and split with
-        # the same seed, their test sets are statistically comparable.
+    # ── 6. evaluate_models.py per model ───────────────────────────
+    # Each checkpoint is evaluated on ITS OWN .npz / test split (post-audit
+    # fix, 2026-09-20). The old code evaluated all three checkpoints on the
+    # MLP test set; the per-model datasets have different sim counts
+    # (MLP 20 / LSTM 15 / GNN 10), so the MLP test split contains windows
+    # drawn from simulations the LSTM and GNN TRAINED on — a silent
+    # advantage for those two rows. Each model now gets metrics_<m>.json.
+    for m in MODELS:
+        m_metrics_path = res_dir / f"metrics_{m}.json"
+        if m_metrics_path.is_file():
+            print(f"  [skip] {m_metrics_path.name} exists")
+            continue
+        _step(f"N={n}  step 6/6  evaluate {m.upper()} (rollout-K={ROLLOUT_K})")
         cmd = [
             sys.executable, "evaluate_models.py",
-            "--ckpt", f"{ckpts['mlp']}:mlp",
-            "--ckpt", f"{ckpts['lstm']}:lstm",
-            "--ckpt", f"{ckpts['gnn']}:gnn",
-            "--npz",             str(npzs["mlp"]),
+            "--ckpt",            f"{ckpts[m]}:{m}",
+            "--npz",             str(npzs[m]),
             "--split",           "test",
             "--rollout-K",       str(ROLLOUT_K),
             "--rollout-batches", "4",
             "--batch-size",      "32",
-            "--json",            str(metrics_path),
+            "--json",            str(m_metrics_path),
         ]
         if not dry_run:
             run(cmd, cwd=project_root)
-    else:
-        print(f"  [skip] {metrics_path} exists")
 
     elapsed = time.perf_counter() - t_n
     print(f"\n  ✓ N={n} done in {elapsed/60:.1f} min", flush=True)
 
-    return {"N": n, "elapsed_sec": elapsed, "metrics": str(metrics_path)}
+    return {"N": n, "elapsed_sec": elapsed,
+            "metrics": [str(res_dir / f"metrics_{m}.json") for m in MODELS]}
 
 
 # ── Sweep entry point ──────────────────────────────────────────────────
