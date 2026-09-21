@@ -15,6 +15,9 @@ identity-collapse failure mode (Sept-15 retrain) must never pass:
       (catches a silently-changed model definition before it invalidates
       the published param table; MLP/LSTM/GNN counts are N-independent)
   G4  all reported metrics finite (NaN guard)
+  G5  checkpoint config-vs-variant consistency (Gemini crosscheck round 3,
+      4(c)): *_stable ckpt must carry w_rollout > 0, single_step ckpt
+      w_rollout == 0, and the ckpt's saved `variant` must match the cell
 
 Modes
 -----
@@ -63,7 +66,7 @@ def _sibling(name: str, path: str):
     return mod
 
 
-from utils import configure_utf8_stdout  # noqa: E402
+from utils import configure_utf8_stdout, load_checkpoint  # noqa: E402
 
 configure_utf8_stdout()
 
@@ -156,6 +159,7 @@ def _load_json(path: Path):
 
 def check_cell(n: int, m: str, variant: str, results_root: Path,
                min_ev: float, max_ident_ratio: float,
+               training_root: Path,
                ) -> dict:
     """Gates G1–G4 for one (N, model, variant) cell."""
     cell = f"N{n}/{m}_{variant}"
@@ -209,6 +213,37 @@ def check_cell(n: int, m: str, variant: str, results_root: Path,
         fail(f"n_params {n_params:,} != canonical {exp:,} "
              "(architecture drift)")
 
+    # G5: checkpoint config-vs-variant consistency (Gemini crosscheck
+    # round 3, 4(c)): a *_stable checkpoint MUST have been trained with
+    # w_rollout > 0, a single-step one with w_rollout == 0 — a stable
+    # model trained without the rollout term is the failure mode this
+    # whole gate set exists to catch. The trainers write `variant` and
+    # the full config into every model_best.pt.
+    if variant == "single_step":
+        ckpt_path = training_root / f"N{n}" / m / "model_best.pt"
+    else:
+        ckpt_path = training_root / f"N{n}" / f"{m}_stable" / "model_best.pt"
+    try:
+        ckpt = load_checkpoint(str(ckpt_path))
+        ck_variant = ckpt.get("variant")
+        cfg_dict = ckpt.get("config", {}) or {}
+        w_rollout = cfg_dict.get("w_rollout")
+        checks["ckpt_variant"] = ck_variant
+        checks["ckpt_w_rollout"] = w_rollout
+        if ck_variant != variant:
+            fail(f"checkpoint variant {ck_variant!r} != requested {variant!r} "
+                 f"({ckpt_path})")
+        if not isinstance(w_rollout, (int, float)):
+            fail(f"checkpoint config missing w_rollout ({ckpt_path})")
+        elif variant == "stable" and not w_rollout > 0.0:
+            fail(f"stable ckpt trained with w_rollout={w_rollout} "
+                 "(stability training silently absent)")
+        elif variant == "single_step" and not w_rollout == 0.0:
+            fail(f"single_step ckpt trained with w_rollout={w_rollout} "
+                 "(not single-step)")
+    except Exception as e:
+        fail(f"checkpoint unreadable: {ckpt_path} ({type(e).__name__}: {e})")
+
     # G2: rollout beats persistence (only checkable once the stability
     # benchmark has produced results/N{n}/stability.json).
     spath = results_root / f"N{n}" / "stability.json"
@@ -245,6 +280,9 @@ def main() -> None:
     p = argparse.ArgumentParser(
         description="Post-retrain go/no-go gates (identity-collapse guard).")
     p.add_argument("--results-root", default="results")
+    p.add_argument("--training-root", default="training_runs",
+                   help="Root holding N{n}/{model}[_stable]/model_best.pt "
+                        "(gate G5 reads each ckpt's variant + config).")
     p.add_argument("--project-root", default=".",
                    help="Repo root for --precheck (raw_data/, ml_ready_data/).")
     p.add_argument("--precheck", action="store_true",
@@ -283,7 +321,8 @@ def main() -> None:
             for m in args.models:
                 for v in args.variants:
                     rec = check_cell(n, m, v, results_root,
-                                     args.min_ev, args.max_ident_ratio)
+                                     args.min_ev, args.max_ident_ratio,
+                                     Path(args.training_root))
                     rows.append(rec)
                     errs = rec["checks"].get("errors", [])
                     print(f"  [{rec['status']:7s}] {rec['cell']}")
