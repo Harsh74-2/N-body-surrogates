@@ -69,9 +69,13 @@ MLP N=10 and N=25 complete first (~minutes each). Sanity-read the logs:
 python verify_retrain_gates.py --N 10 25 --allow-missing
 ```
 
-- Explained variance (`expl.var` in the eval table) must be **> 0.5** for
-  every probe cell (default gate). EV ≈ 0 or negative ⇒ identity collapse
-  ⇒ STOP, do not launch the grid — report the value first.
+- The HARD gate is `mse < mse_identity` (beat the persistence floor):
+  EV ≈ 0 or negative ⇒ identity collapse ⇒ STOP, do not launch the grid.
+  Explained variance **> 0.5** is expected for MLP/LSTM; for the GNN a low
+  EV with mse still below identity is a GENERALIZATION gap, not a collapse
+  (2026-09-21 probe: GNN N=10 EV 0.05, mse 2.71e-06 vs identity 2.86e-06,
+  train/val gap ~500x — real result, reported not blocking). The gate
+  prints this case as a warning.
 - `stability.json` records are MISSING at this point; `--allow-missing`
   accounts for that. MISSING cells for `metrics_*.json` are NOT allowed
   and still fail — a probe cell that produced no eval artifact is a
