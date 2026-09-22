@@ -102,9 +102,11 @@ def load_all_eval() -> dict[tuple[int, str], dict]:
     cells = json.loads((RESULTS / "all_eval.json").read_text(encoding="utf-8"))
     assert len(cells) == len(N_VALUES) * len(VARIANTS), (
         f"all_eval.json has {len(cells)} cells, expected 24")
-    # Ordering anchor: N=25 GNN single-step must be ~4.94e-6 (thesis
-    # tab:eval), N=100 GNN single-step ~2.11e-6.
-    anchors = {(25, "gnn"): 4.943e-6, (100, "gnn"): 2.107e-6}
+    # Ordering anchor: N=25 GNN single-step and N=100 GNN single-step
+    # (fresh 2026-09 retrain, rollout-MSE rework; September values were
+    # 4.943e-6 / 2.107e-6). Cross-check the constants against the values
+    # printed by make_all_eval.py whenever all_eval.json is regenerated.
+    anchors = {(25, "gnn"): 1.51e-6, (100, "gnn"): 2.83e-7}
     out: dict[tuple[int, str], dict] = {}
     for n in N_VALUES:
         for v in VARIANTS:

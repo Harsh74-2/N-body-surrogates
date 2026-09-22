@@ -224,6 +224,15 @@ python stability_benchmark.py \
 ```
 
 1. OOD real-case grid (28 preset×variant cells) + single-step dumps (28).
+   Before `make_site_audits.py`, `results/all_eval.json` must exist — it
+   is NOT produced by any training script; assemble it from the per-cell
+   eval outputs (also updates the make_site_audits ordering anchors —
+   cross-check the printed gnn N=25/N=100 mse values against the
+   `anchors` constants in make_site_audits.py):
+
+```bash
+python make_all_eval.py
+```
 2. `regen_top_level_plots.py`, `run_animations.py` /
    `render_animations_parallel.py` (168 mp4s).
 3. Stability plots + aggregate; cross-N audit mds; site audits.
