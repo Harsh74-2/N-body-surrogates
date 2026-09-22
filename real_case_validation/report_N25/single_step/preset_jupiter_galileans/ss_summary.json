@@ -1,0 +1,46 @@
+{
+  "name": "jupiter_galileans",
+  "label": "Jupiter + 4 Galilean moons (toy circular orbits)",
+  "in_distribution": false,
+  "n_bodies": 5,
+  "n_samples": 1460,
+  "dt_N": 0.09418616578652095,
+  "duration_years": 1,
+  "n_predictions": 1455,
+  "per_model": {
+    "MLP": {
+      "mse_position": 0.005518282528098021,
+      "mse_state": 0.12900105294566935,
+      "mean_error_over_L": 0.11104264253084668,
+      "max_error_over_L": 0.21024457507492364,
+      "mean_err_pct": 11.104264253084668,
+      "max_err_pct": 21.024457507492365,
+      "energy_drift": 0.054630873629696784,
+      "energy_drift_max": 0.128377316698121,
+      "n_predictions": 1455
+    },
+    "LSTM": {
+      "mse_position": 0.005262107197151143,
+      "mse_state": 0.130386392567682,
+      "mean_error_over_L": 0.10758181623850797,
+      "max_error_over_L": 0.23295873833124595,
+      "mean_err_pct": 10.758181623850797,
+      "max_err_pct": 23.295873833124595,
+      "energy_drift": 0.034717392185305174,
+      "energy_drift_max": 0.1199178003750007,
+      "n_predictions": 1455
+    },
+    "GNN": {
+      "mse_position": 0.0057949552308548076,
+      "mse_state": 0.13486471516808018,
+      "mean_error_over_L": 0.11393749417371796,
+      "max_error_over_L": 0.20156193034347994,
+      "mean_err_pct": 11.393749417371795,
+      "max_err_pct": 20.156193034347993,
+      "energy_drift": 0.7504870521082647,
+      "energy_drift_max": 2.6129004483192504,
+      "n_predictions": 1455
+    }
+  },
+  "wallclock_s": 6.381316231003439
+}

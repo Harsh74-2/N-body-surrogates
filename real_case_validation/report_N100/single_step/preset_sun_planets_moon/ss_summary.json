@@ -1,0 +1,46 @@
+{
+  "name": "sun_planets_moon",
+  "label": "Sun + 8 planets + Earth's Moon (10 bodies)",
+  "in_distribution": false,
+  "n_bodies": 10,
+  "n_samples": 120,
+  "dt_N": 0.0032079736678301708,
+  "duration_years": 10,
+  "n_predictions": 115,
+  "per_model": {
+    "MLP": {
+      "mse_position": 8.835854561706764e-05,
+      "mse_state": 4.794189159195745,
+      "mean_error_over_L": 0.011855854618938335,
+      "max_error_over_L": 0.03724586966560797,
+      "mean_err_pct": 1.1855854618938335,
+      "max_err_pct": 3.724586966560797,
+      "energy_drift": 0.08209761433397572,
+      "energy_drift_max": 0.5448780279594991,
+      "n_predictions": 115
+    },
+    "LSTM": {
+      "mse_position": 7.724673530337672e-05,
+      "mse_state": 5.014024717282543,
+      "mean_error_over_L": 0.010912512991397104,
+      "max_error_over_L": 0.03872160523703911,
+      "mean_err_pct": 1.0912512991397105,
+      "max_err_pct": 3.872160523703911,
+      "energy_drift": 0.024565606454072422,
+      "energy_drift_max": 0.2067460876684679,
+      "n_predictions": 115
+    },
+    "GNN": {
+      "mse_position": 8.649564823725076e-05,
+      "mse_state": 4.787688705577856,
+      "mean_error_over_L": 0.011928746488158202,
+      "max_error_over_L": 0.034905016636017895,
+      "mean_err_pct": 1.1928746488158202,
+      "max_err_pct": 3.4905016636017896,
+      "energy_drift": 0.057003567314871745,
+      "energy_drift_max": 0.27372960231941684,
+      "n_predictions": 115
+    }
+  },
+  "wallclock_s": 0.5337222980015213
+}

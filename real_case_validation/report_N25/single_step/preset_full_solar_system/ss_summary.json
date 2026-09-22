@@ -1,0 +1,46 @@
+{
+  "name": "full_solar_system",
+  "label": "All 8 planets + Sun",
+  "in_distribution": false,
+  "n_bodies": 9,
+  "n_samples": 2400,
+  "dt_N": 0.003207973608685734,
+  "duration_years": 200,
+  "n_predictions": 2395,
+  "per_model": {
+    "MLP": {
+      "mse_position": 6.876681858111533e-05,
+      "mse_state": 5.062405599247801,
+      "mean_error_over_L": 0.009986011885478355,
+      "max_error_over_L": 0.04113931762881614,
+      "mean_err_pct": 0.9986011885478355,
+      "max_err_pct": 4.113931762881614,
+      "energy_drift": 0.11380641197128823,
+      "energy_drift_max": 0.2794622780963209,
+      "n_predictions": 2395
+    },
+    "LSTM": {
+      "mse_position": 0.0011728212070127185,
+      "mse_state": 5.048346251433391,
+      "mean_error_over_L": 0.033430449768779236,
+      "max_error_over_L": 0.1996011024574825,
+      "mean_err_pct": 3.3430449768779233,
+      "max_err_pct": 19.96011024574825,
+      "energy_drift": 0.12588016067447189,
+      "energy_drift_max": 0.26292577707079096,
+      "n_predictions": 2395
+    },
+    "GNN": {
+      "mse_position": 7.872719990853426e-05,
+      "mse_state": 5.152316500273576,
+      "mean_error_over_L": 0.010798315462073976,
+      "max_error_over_L": 0.03575529619037595,
+      "mean_err_pct": 1.0798315462073975,
+      "max_err_pct": 3.575529619037595,
+      "energy_drift": 0.13369883256623635,
+      "energy_drift_max": 0.3756806453610299,
+      "n_predictions": 2395
+    }
+  },
+  "wallclock_s": 10.907636987001752
+}

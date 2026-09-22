@@ -1,0 +1,46 @@
+{
+  "name": "inner_planets",
+  "label": "Inner planets (Mercury \u2192 Mars + Sun)",
+  "in_distribution": false,
+  "n_bodies": 5,
+  "n_samples": 120,
+  "dt_N": 0.28864791003894896,
+  "duration_years": 10,
+  "n_predictions": 115,
+  "per_model": {
+    "MLP": {
+      "mse_position": 0.03746507739501037,
+      "mse_state": 0.4661695448530149,
+      "mean_error_over_L": 0.29506874621558554,
+      "max_error_over_L": 0.48176534213820216,
+      "mean_err_pct": 29.506874621558556,
+      "max_err_pct": 48.17653421382022,
+      "energy_drift": 6.298208198501316,
+      "energy_drift_max": 6.44179884282746,
+      "n_predictions": 115
+    },
+    "LSTM": {
+      "mse_position": 0.03753598310264388,
+      "mse_state": 0.49767008926812817,
+      "mean_error_over_L": 0.2939746766269341,
+      "max_error_over_L": 0.5143716938746665,
+      "mean_err_pct": 29.397467662693412,
+      "max_err_pct": 51.43716938746665,
+      "energy_drift": 0.6412466570010801,
+      "energy_drift_max": 0.8633764861607196,
+      "n_predictions": 115
+    },
+    "GNN": {
+      "mse_position": 0.03827740851662083,
+      "mse_state": 0.4873426807184012,
+      "mean_error_over_L": 0.2984994749468815,
+      "max_error_over_L": 0.4936648378952939,
+      "mean_err_pct": 29.849947494688152,
+      "max_err_pct": 49.36648378952939,
+      "energy_drift": 30.47108691895921,
+      "energy_drift_max": 125.59921342474664,
+      "n_predictions": 115
+    }
+  },
+  "wallclock_s": 0.6915667670036783
+}

@@ -1,0 +1,46 @@
+{
+  "name": "solar_system_extended",
+  "label": "Sun + 8 planets + Moon + 5 dwarfs + 4 Galilean moons (19 bodies)",
+  "in_distribution": false,
+  "n_bodies": 19,
+  "n_samples": 120,
+  "dt_N": 0.0005645265016844589,
+  "duration_years": 10,
+  "n_predictions": 115,
+  "per_model": {
+    "MLP": {
+      "mse_position": 5.9411704209894605e-05,
+      "mse_state": 8.092837814276695,
+      "mean_error_over_L": 0.01129692232937964,
+      "max_error_over_L": 0.03367498655839617,
+      "mean_err_pct": 1.1296922329379642,
+      "max_err_pct": 3.3674986558396167,
+      "energy_drift": 0.15514313746354358,
+      "energy_drift_max": 0.4862681821051164,
+      "n_predictions": 115
+    },
+    "LSTM": {
+      "mse_position": 8.016450779767351e-05,
+      "mse_state": 8.344053163402572,
+      "mean_error_over_L": 0.011953978882445924,
+      "max_error_over_L": 0.03212712128524747,
+      "mean_err_pct": 1.1953978882445924,
+      "max_err_pct": 3.212712128524747,
+      "energy_drift": 0.09106147200110763,
+      "energy_drift_max": 0.26908984227226757,
+      "n_predictions": 115
+    },
+    "GNN": {
+      "mse_position": 2.4561773823643632e-05,
+      "mse_state": 8.086283247332009,
+      "mean_error_over_L": 0.006903588241606158,
+      "max_error_over_L": 0.042967128433048195,
+      "mean_err_pct": 0.6903588241606158,
+      "max_err_pct": 4.296712843304819,
+      "energy_drift": 0.06271734435998365,
+      "energy_drift_max": 0.12534956372938824,
+      "n_predictions": 115
+    }
+  },
+  "wallclock_s": 0.6214436949958326
+}

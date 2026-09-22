@@ -1,0 +1,46 @@
+{
+  "name": "sun_earth_only",
+  "label": "Sun\u2013Earth 2-body (Keplerian reference)",
+  "in_distribution": false,
+  "n_bodies": 2,
+  "n_samples": 120,
+  "dt_N": 0.5126514626560704,
+  "duration_years": 10,
+  "n_predictions": 115,
+  "per_model": {
+    "MLP": {
+      "mse_position": 0.0426673500199589,
+      "mse_state": 0.0477539357174388,
+      "mean_error_over_L": 0.2531387762942952,
+      "max_error_over_L": 0.5159992329981676,
+      "mean_err_pct": 25.31387762942952,
+      "max_err_pct": 51.599923299816766,
+      "energy_drift": 21.286392993178307,
+      "energy_drift_max": 21.425733546315858,
+      "n_predictions": 115
+    },
+    "LSTM": {
+      "mse_position": 0.04056771642510275,
+      "mse_state": 0.040817237741721316,
+      "mean_error_over_L": 0.24671373626418464,
+      "max_error_over_L": 0.5064192605905946,
+      "mean_err_pct": 24.671373626418465,
+      "max_err_pct": 50.64192605905946,
+      "energy_drift": 2.252555484406578,
+      "energy_drift_max": 2.5158489886160633,
+      "n_predictions": 115
+    },
+    "GNN": {
+      "mse_position": 0.04361316364980096,
+      "mse_state": 0.04148981988163932,
+      "mean_error_over_L": 0.2562512145861215,
+      "max_error_over_L": 0.5198842541642201,
+      "mean_err_pct": 25.62512145861215,
+      "max_err_pct": 51.98842541642201,
+      "energy_drift": 101.59836103095614,
+      "energy_drift_max": 240.69323643654693,
+      "n_predictions": 115
+    }
+  },
+  "wallclock_s": 0.35090369299723534
+}
