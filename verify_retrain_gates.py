@@ -434,13 +434,11 @@ def main() -> None:
                     for e in errs:
                         print(f"            ! {e}")
 
-    n_pass = sum(1 for r in rows if r["status"] == "PASS")
-    n_fail = sum(1 for r in rows if r["status"] == "FAIL")
-    n_missing = sum(1 for r in rows if r["status"] == "MISSING")
-
     # Documented-waiver path (2026-09-22): a cell may be waived ONLY with an
     # explicit, recorded rationale — thresholds stay untouched and the
-    # original failure evidence travels inside the record.
+    # original failure evidence travels inside the record. Counts are
+    # computed AFTER the waiver conversion so waived cells are counted
+    # exactly once (as WAIVED, not FAIL).
     waivers: list[dict] = []
     if args.waive:
         if not args.waive_reason or not args.waive_reason.strip():
@@ -450,10 +448,8 @@ def main() -> None:
         for cell in args.waive:
             rec = by_cell.get(cell)
             if rec is None:
-                print(f"[waiver] cell {cell} not found in the gate grid — "
-                      f"refusing to record a waiver for a nonexistent cell.")
-                n_fail += 1
-                continue
+                p.error(f"--waive cell {cell!r} not found in the gate grid — "
+                        f"check the cell name (format N<n>/<model>_<variant>).")
             if rec["status"] == "PASS":
                 print(f"[waiver] cell {cell} already PASSes — no waiver "
                       f"recorded (waiving a passing cell would be noise).")
@@ -469,6 +465,9 @@ def main() -> None:
                   f"({len(rec['checks'].get('errors', []))} original "
                   f"gate failures kept in the record)")
 
+    n_pass = sum(1 for r in rows if r["status"] == "PASS")
+    n_fail = sum(1 for r in rows if r["status"] == "FAIL")
+    n_missing = sum(1 for r in rows if r["status"] == "MISSING")
     n_waived = sum(1 for r in rows if r["status"] == "WAIVED")
     print(f"\n── {n_pass} PASS / {n_fail} FAIL / {n_missing} MISSING / "
           f"{n_waived} WAIVED (of {len(rows)} cells) ──")
