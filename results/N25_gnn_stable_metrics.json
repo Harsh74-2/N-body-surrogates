@@ -1,0 +1,18 @@
+[
+  {
+    "model_name": "GNNSurrogate",
+    "model_type": "gnn",
+    "n_params": 168199,
+    "split": "test",
+    "mse": 1.149224480904813e-06,
+    "energy": 0.0008157596266171237,
+    "latency_ms": 3.8893913977704075,
+    "rollout": 0.007593560184068338,
+    "n_samples": 4995,
+    "n_batches": 78,
+    "rollout_K": 50,
+    "rollout_batches": 4,
+    "mse_identity": 4.941893110606851e-06,
+    "mse_explained_var": 0.76745258240446
+  }
+]

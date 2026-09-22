@@ -1,0 +1,18 @@
+[
+  {
+    "model_name": "LSTMSurrogate",
+    "model_type": "lstm",
+    "n_params": 865542,
+    "split": "test",
+    "mse": 1.1613252856443176e-08,
+    "energy": 9.475777115294914e-05,
+    "latency_ms": 0.45372357045636863,
+    "rollout": 0.035403738773602526,
+    "n_samples": 9990,
+    "n_batches": 156,
+    "rollout_K": 50,
+    "rollout_batches": 4,
+    "mse_identity": 5.859802144909549e-06,
+    "mse_explained_var": 0.9980181493215549
+  }
+]

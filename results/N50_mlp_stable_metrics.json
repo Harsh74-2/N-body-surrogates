@@ -1,0 +1,18 @@
+[
+  {
+    "model_name": "MLPSurrogate",
+    "model_type": "mlp",
+    "n_params": 210182,
+    "split": "test",
+    "mse": 1.3008538031582898e-07,
+    "energy": 0.0001074368590406875,
+    "latency_ms": 0.24807612837134796,
+    "rollout": 0.01157102291337651,
+    "n_samples": 9990,
+    "n_batches": 156,
+    "rollout_K": 50,
+    "rollout_batches": 4,
+    "mse_identity": 4.455650083287651e-06,
+    "mse_explained_var": 0.9708043993841087
+  }
+]
