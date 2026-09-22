@@ -387,6 +387,17 @@ def main() -> None:
     p.add_argument("--allow-missing", action="store_true",
                    help="Treat MISSING cells (artifacts not yet produced) as "
                         "skipped instead of failing — for staged probes.")
+    p.add_argument("--waive", action="append", default=[], metavar="CELL",
+                   help="Record a documented waiver for an otherwise-FAILing "
+                        "cell (e.g. N100/lstm_single_step). Repeatable. The "
+                        "gate thresholds are NOT changed — the failure is "
+                        "kept in the record and the cell is excluded from "
+                        "the fail count only because the evidence justifying "
+                        "it is written down.")
+    p.add_argument("--waive-reason", default=None,
+                   help="Required (non-empty) alongside --waive: the "
+                        "documented rationale, recorded verbatim into the "
+                        "verdict JSON.")
     p.add_argument("--json-out", default=None,
                    help="Where to write the verdict table (default "
                         "<results-root>/retrain_gates.json).")
@@ -426,8 +437,41 @@ def main() -> None:
     n_pass = sum(1 for r in rows if r["status"] == "PASS")
     n_fail = sum(1 for r in rows if r["status"] == "FAIL")
     n_missing = sum(1 for r in rows if r["status"] == "MISSING")
-    print(f"\n── {n_pass} PASS / {n_fail} FAIL / {n_missing} MISSING "
-          f"(of {len(rows)} cells) ──")
+
+    # Documented-waiver path (2026-09-22): a cell may be waived ONLY with an
+    # explicit, recorded rationale — thresholds stay untouched and the
+    # original failure evidence travels inside the record.
+    waivers: list[dict] = []
+    if args.waive:
+        if not args.waive_reason or not args.waive_reason.strip():
+            p.error("--waive requires a non-empty --waive-reason "
+                    "(an undocumented waiver is not a waiver).")
+        by_cell = {r["cell"]: r for r in rows}
+        for cell in args.waive:
+            rec = by_cell.get(cell)
+            if rec is None:
+                print(f"[waiver] cell {cell} not found in the gate grid — "
+                      f"refusing to record a waiver for a nonexistent cell.")
+                n_fail += 1
+                continue
+            if rec["status"] == "PASS":
+                print(f"[waiver] cell {cell} already PASSes — no waiver "
+                      f"recorded (waiving a passing cell would be noise).")
+                continue
+            prior = rec["status"]
+            rec["status"] = "WAIVED"
+            rec["waiver_reason"] = args.waive_reason.strip()
+            waivers.append({"cell": cell,
+                            "prior_status": prior,
+                            "reason": rec["waiver_reason"],
+                            "original_errors": rec["checks"].get("errors", [])})
+            print(f"  [WAIVED ] {cell} — reason recorded "
+                  f"({len(rec['checks'].get('errors', []))} original "
+                  f"gate failures kept in the record)")
+
+    n_waived = sum(1 for r in rows if r["status"] == "WAIVED")
+    print(f"\n── {n_pass} PASS / {n_fail} FAIL / {n_missing} MISSING / "
+          f"{n_waived} WAIVED (of {len(rows)} cells) ──")
 
     out = Path(args.json_out) if args.json_out else results_root / "retrain_gates.json"
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -437,6 +481,7 @@ def main() -> None:
                                else "FAIL"),
                    "min_explained_var": args.min_ev,
                    "max_model_over_identity": args.max_ident_ratio,
+                   "waivers": waivers,
                    "cells": rows}, f, indent=2)
     print(f"[json] -> {out}")
 

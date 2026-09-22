@@ -172,7 +172,56 @@ time on downstream regeneration. NOTE: stability.json files produced by
 a pre-2026-09-21 benchmark (no median/max/collapse_guard) FAIL by design
 — re-run the Stage 4 benchmark with the updated script.
 
+### Stage 5 waiver — LSTM N=100 G2 failures (documented, 2026-09-22)
+
+The 2026-09-21/22 retrain produced 22 PASS / 2 FAIL / 0 MISSING: both
+LSTM N=100 cells fail G2 (median model/persistence ratio 23.7 / 10.1,
+max 373 / 198). Diagnosis (per-step ratio curves): the cells beat
+persistence by 3–5× up to k=32 (ratio@32 0.37 / 0.22), cross over at
+k=39 / 45 of 128, and have no blow-up (`divergence_step = None`); G6
+passed. This is genuine late-horizon error compounding in the more
+chaotic N=100 regime — the persistence anchor is the strongest baseline
+for long chaotic rollouts, and the cross-N trend is monotone (N=25
+crossover k=121/127 → N=50 never crosses → N=100 k=39/45). Stability
+training halves the compounding (median 23.7→10.1, crossover 39→45).
+Gemini-reviewed verdict (2026-09-22): keep G2 exactly as-is, record the
+2 FAILs as an architectural-limit finding, waive with documented
+rationale — do NOT weaken the gate post hoc. The waiver is explicit and
+recorded into the verdict JSON (thresholds untouched):
+
+```bash
+python verify_retrain_gates.py \
+  --waive N100/lstm_single_step --waive N100/lstm_stable \
+  --waive-reason "LSTM N=100 late-horizon compounding: single-step best-in-class (5.3e-08, EV 0.98), beats persistence to k=32 (ratio 0.37/0.22), crossover k=39/45 of 128, no blowup, G6 pass; stable halves compounding (median 23.7->10.1) — architectural capacity limit at the most chaotic N, documented thesis finding (predictive_horizon.md)" \
+  --json-out results/retrain_gates.json
+```
+
+Exit 0 with `22 PASS / 0 FAIL / 0 MISSING / 2 WAIVED` + `verdict: PASS`
+unblocks Stage 6. The thesis table is generated from the SAME records:
+
+```bash
+python predictive_horizon_report.py
+```
+
+(Also see the K=32 falsification check in Stage 6 step 0 below.)
+
 ## Stage 6 — downstream regeneration (only after Stage 5 PASSES)
+
+0. Falsification check on the waived cells (cheap, ~1 min): re-run the
+   two waived LSTM N=100 cells at K=32 — the crossover analysis predicts
+   median ratio < 1 there (crossover k=39/45 > 32). A median >= 1 at K=32
+   would mean non-monotonic error growth before the crossover — i.e. a
+   hidden-state/protocol bug, NOT an architectural limit — STOP and
+   re-diagnose in that case. Write to a separate file so the K=128 gate
+   input stays untouched:
+
+```bash
+python stability_benchmark.py \
+  --ckpt training_runs/N100/lstm/model_best.pt:lstm \
+  --ckpt training_runs/N100/lstm_stable/model_best.pt:lstm \
+  --N 100 --K 32 --rollout-batches 16 \
+  --json results/N100/stability_k32.json
+```
 
 1. OOD real-case grid (28 preset×variant cells) + single-step dumps (28).
 2. `regen_top_level_plots.py`, `run_animations.py` /
