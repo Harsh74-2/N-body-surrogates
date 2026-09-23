@@ -327,62 +327,99 @@ def main() -> int:
                 got = macros[f"resRollOOD{RV[mv]}{NS[n]}"]
                 if got != pct1(float(want.replace("%", "").replace("\\%", ""))):
                     errs.append(f"OOD mean {label} N{n}: md '{want}' vs macro '{got}'")
-    # full grid
-    grid = {}
+    # full grid (10 columns: N, variant, 7 presets, OOD mean)
     start = None
     for i, r in enumerate(grid_rows):
         if r and r[0] == "N" and r[1] == "variant":
             start = i
             break
+    if start is None:
+        errs.append("cross_N_audit.md: per-preset grid table not found")
+        start = len(grid_rows)
+    n_grid_rows = 0
     for r in grid_rows[start:]:
-        if len(r) == 9:
-            n = int(r[0].lstrip("N="))
-            label = r[1]
-            mv = {"MLP": "mlp", "MLP (stable)": "mlp_stable",
-                  "LSTM": "lstm", "LSTM (stable)": "lstm_stable",
-                  "GNN": "gnn", "GNN (stable)": "gnn_stable"}[label]
-            for j, pkey in enumerate(PRESET_ORDER):
-                want = unescape(r[2 + j])
-                mac = f"resRoll{RV[mv]}{pkey}{NS[n]}Mean"
-                if want == "div.":
-                    if macros[mac] != "div.":
-                        errs.append(f"rollout {label} {pkey} N{n}: md div. vs macro '{macros[mac]}'")
-                else:
-                    v = float(want.replace("%", "").replace("\\%", ""))
-                    if abs(roll[(mv, pkey, str(n))] - v) > 0.05:
-                        errs.append(f"rollout {label} {pkey} N{n}: md {v} vs json {roll[(mv, pkey, str(n))]:.2f}")
-                    if macros[mac] != pct1(v):
-                        errs.append(f"rollout {label} {pkey} N{n}: formatting {macros[mac]} vs md {want}")
-
-    # (b) single-step grid vs cross_N_audit_single_step.md
-    srows = parse_md_table(REPO / "results" / "cross_N_audit_single_step.md")
-    cur_preset = None
-    for r in srows:
-        if r and r[0].startswith("### "):
-            cur_preset = r[0][4:].strip()
-            cur_preset = {"disc_imf_in_distribution_baseline (in-distribution)": "Disc",
-                          "full_solar_system (OOD)": "Fss",
-                          "inner_planets (OOD)": "Ip",
-                          "jupiter_galileans (OOD)": "Jg",
-                          "solar_system_extended (OOD)": "Sse",
-                          "sun_earth_only (OOD)": "Seo",
-                          "sun_planets_moon (OOD)": "Spm"}.get(cur_preset)
+        if len(r) != 10 or not r[0].strip().rstrip("=").strip().isdigit():
             continue
-        if cur_preset and len(r) == 5 and r[0] in ("MLP", "LSTM", "GNN"):
+        n_grid_rows += 1
+        n = int(r[0].lstrip("N="))
+        label = r[1]
+        mv = {"MLP": "mlp", "MLP (stable)": "mlp_stable",
+              "LSTM": "lstm", "LSTM (stable)": "lstm_stable",
+              "GNN": "gnn", "GNN (stable)": "gnn_stable"}[label]
+        for j, pkey in enumerate(PRESET_ORDER):
+            want = unescape(r[2 + j])
+            # the md prints the disc baseline raw (it is in-distribution,
+            # excluded from the survivor mean); OOD presets use div.
+            suffix = "RawMean" if pkey == "Disc" else "Mean"
+            mac = f"resRoll{RV[mv]}{pkey}{NS[n]}{suffix}"
+            if want in ("div.", "--"):
+                if pkey == "Disc":
+                    errs.append(f"rollout {label} disc N{n}: md '{want}' but the md prints disc raw")
+                elif macros[mac] != "div.":
+                    errs.append(f"rollout {label} {pkey} N{n}: md div. vs macro '{macros[mac]}'")
+            else:
+                v = float(want.replace("%", "").replace("\\%", ""))
+                if abs(roll[(mv, pkey, str(n))] - v) > 0.05:
+                    errs.append(f"rollout {label} {pkey} N{n}: md {v} vs json {roll[(mv, pkey, str(n))]:.2f}")
+                if macros[mac] != pct1(v):
+                    errs.append(f"rollout {label} {pkey} N{n}: formatting {macros[mac]} vs md {want}")
+        # OOD mean column of the grid must agree with the headline table
+        want_ood = unescape(r[9])
+        head_vals = head.get(label)
+        if head_vals is not None:
+            hv = unescape(head_vals[(10, 25, 50, 100).index(n)])
+            diverged = {">100", "--", "div."}
+            if not (hv == want_ood or (hv in diverged and want_ood in diverged)):
+                errs.append(f"rollout {label} N{n}: grid OOD mean '{want_ood}' vs headline '{hv}'")
+    if n_grid_rows != 24:
+        errs.append(f"cross_N_audit.md: expected 24 grid rows, parsed {n_grid_rows}")
+
+    # (b) single-step per-preset grid vs cross_N_audit_single_step.md.
+    # Section headers ("### preset (OOD)") are outside the pipe tables, so
+    # parse the raw text with a section tracker instead of parse_md_table.
+    ss_md = REPO / "results" / "cross_N_audit_single_step.md"
+    section_map = {"disc_imf_in_distribution_baseline (in-distribution)": "Disc",
+                   "full_solar_system (OOD)": "Fss",
+                   "inner_planets (OOD)": "Ip",
+                   "jupiter_galileans (OOD)": "Jg",
+                   "solar_system_extended (OOD)": "Sse",
+                   "sun_earth_only (OOD)": "Seo",
+                   "sun_planets_moon (OOD)": "Spm"}
+    cur_preset = None
+    n_ss_rows = 0
+    for line in ss_md.read_text(encoding="utf-8").splitlines():
+        ls = line.strip()
+        if ls.startswith("### "):
+            cur_preset = section_map.get(ls[4:].strip())
+            continue
+        if cur_preset is None or not ls.startswith("|"):
+            continue
+        r = [c.strip() for c in ls.strip("|").split("|")]
+        if set("".join(r)) <= set("-: "):
+            continue
+        if len(r) == 5 and r[0] in ("MLP", "LSTM", "GNN"):
+            n_ss_rows += 1
             for i, n in enumerate((10, 25, 50, 100)):
                 want = unescape(r[1 + i])
-                mac = f"resSs{r[0]}{cur_preset}{NS[n]}"
-                if want == "--":
+                if want in ("--", "div."):
                     continue
                 v = float(want.replace("%", "").replace("\\%", ""))
-                if abs(ss[(r[0].lower(), cur_preset, str(n))] - v) > 0.005:
-                    errs.append(f"ss {r[0]} {cur_preset} N{n}: md {v} vs json {ss[(r[0].lower(), cur_preset, str(n))]:.4f}")
+                jv = ss[(r[0].lower(), cur_preset, str(n))]
+                if abs(jv - v) > 0.005:
+                    errs.append(f"ss {r[0]} {cur_preset} N{n}: md {v} vs json {jv:.4f}")
+                mac = f"resSs{MODELS[r[0].lower()]}{cur_preset}{NS[n]}"
+                if mac not in macros:
+                    errs.append(f"missing macro {mac}")
+                elif macros[mac] != pct1(jv):
+                    errs.append(f"ss {r[0]} {cur_preset} N{n}: macro '{macros[mac]}' vs pct1(json) {pct1(jv)}")
+    if n_ss_rows != 21:
+        errs.append(f"single-step md: expected 21 rows (3 models x 7 presets), parsed {n_ss_rows}")
 
-    # (c) compounding table
+    # (c) compounding table (cols: N | variant | no compounding | full rollout | factor)
     comp = {}
     in_comp = False
     for r in grid_rows:
-        if r and "no compounding" in r[0].lower():
+        if len(r) == 5 and "compounding" in " ".join(r).lower():
             in_comp = True
             continue
         if in_comp and len(r) == 5:
@@ -400,8 +437,9 @@ def main() -> int:
                 errs.append(f"nocomp {label} N{n}: md '{nc}' vs macro '{macros[mac]}'")
         if not is_st and fac != "--":
             mac = f"resCompFactor{MODELS[m]}{NS[n]}"
-            want = "x" + fac.replace("x", "").replace("×", "").strip()
-            if macros[mac] != want:
+            want = fac.replace("x", "").replace("×", "").strip()
+            got = macros[mac].replace("$\\times$", "").replace("$", "").strip()
+            if got != want:
                 errs.append(f"factor {label} N{n}: md '{fac}' vs macro '{macros[mac]}'")
 
     if errs:
@@ -409,8 +447,10 @@ def main() -> int:
         for e in errs:
             print("  -", e)
         return 1
-    print(f"SELF-VERIFICATION OK: rollout grid, OOD means, single-step grid,")
-    print(f"  no-compounding means, compounding factors all match canonical mds.")
+    print(f"SELF-VERIFICATION OK: OOD means ({len(head)} headline rows), rollout grid")
+    print(f"  ({n_grid_rows} rows), single-step grid ({n_ss_rows} rows),")
+    print(f"  no-compounding means and compounding factors ({len(comp)} rows) all")
+    print(f"  match the canonical mds.")
     print(f"  {len(macros)} macros emitted.")
 
     # ---- write metrics.tex ----

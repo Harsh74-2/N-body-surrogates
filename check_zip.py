@@ -48,9 +48,12 @@ pairs = [("thesis.tex", FORK / "thesis_overleaf" / "thesis.tex"),
           FORK / "thesis_appendix_results.tex"),
          ("biblio.bib", FORK / "biblio.bib")]
 for arc, src in pairs:
-    if arc in names and src.is_file():
-        if zf.read(arc) != src.read_bytes():
-            fail(f"{arc} differs from {src.name}")
+    if not src.is_file():
+        fail(f"byte-identity source missing on disk: {src}")
+    if arc not in names:
+        continue
+    if zf.read(arc) != src.read_bytes():
+        fail(f"{arc} differs from {src.name}")
 
 # 2. graphics resolution inside the zip
 pat = re.compile(r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}")
