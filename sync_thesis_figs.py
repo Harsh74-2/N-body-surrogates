@@ -15,6 +15,7 @@ renders, and rewrites the fork's figures/MANIFEST.txt.
 from __future__ import annotations
 
 import shutil
+import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent
@@ -110,6 +111,8 @@ def main() -> None:
                                                   "single_step"))
     n_rc = sum(1 for _ in rcdst.rglob("*.png"))
     print(f"  real_case_validation tree: {n_rc} PNGs copied")
+    if n_rc == 0:
+        sys.exit("real_case_validation tree: no PNGs copied — source dirs missing?")
 
     # 6. rewrite the fork manifest
     lines = ["# figures/MANIFEST.txt",

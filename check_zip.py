@@ -55,17 +55,17 @@ for arc, src in pairs:
     if zf.read(arc) != src.read_bytes():
         fail(f"{arc} differs from {src.name}")
 
-# 2. graphics resolution inside the zip
+# 2. graphics resolution inside the zip (whole-text scan: an
+# \includegraphics wrapped across lines must still be found)
 pat = re.compile(r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}")
 figs: set[str] = set()
 for arc in ("thesis.tex", "thesis_appendix_results.tex"):
     if arc not in names:
         continue
-    for line in zf.read(arc).decode("utf-8").splitlines():
-        if line.lstrip().startswith("%"):
-            continue
-        for m in pat.finditer(line):
-            figs.add(m.group(1).strip())
+    body = "\n".join(l for l in zf.read(arc).decode("utf-8").splitlines()
+                     if not l.lstrip().startswith("%"))
+    for m in pat.finditer(body):
+        figs.add(m.group(1).strip())
 missing = []
 for p in sorted(figs):
     cands = [p, f"figures/{p}", f"pics/{p}", f"real_case_validation/{p}"]

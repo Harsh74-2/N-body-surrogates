@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """verify_thesis_claims.py — recompute every hand-written count/delta claim
 in thesis.tex + thesis_appendix_results.tex from the generated macro file."""
+import json
 import re
+import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent
+errs: list[str] = []
 FORK = REPO / "Universe Simulation Thesis"
 txt = (FORK / "metrics.tex").read_text(encoding="utf-8")
 M = {}
@@ -95,21 +98,52 @@ for m, n, x in cells:
     print(f"  {m:4s} {n:12s}: {x:.3g}")
 print("  best:", cells[0])
 
-print("\n== 'GNN reaches 1e-8 band from N=50 on' ==")
-for n in NS:
-    a = v(f"resGnnMse{n}")
-    b = v(f"resGnnStMse{n}")
-    print(f"  {n:12s}: GNN={a:.3g} GNN_st={b:.3g} "
-          f"(single in band: {a < 1e-7}, stable in band: {b < 1e-7})")
+print("\n== '$10^{-8}$ band' claims (thesis: MLP at N=10/25/100, LSTM at N=25/100,")
+print("   GNN single at N=50, GNN stable at N=100; band = [1e-8, 1e-7) loosely) ==")
+BAND = lambda x: 1e-8 <= x < 1e-7
+band_claims = [
+    ("MLP N=10",  v("resMlpMseNten"),  True),
+    ("MLP N=25",  v("resMlpMseNtwentyfive"), True),
+    ("MLP N=50",  v("resMlpMseNfifty"), False),   # 1.2e-07, prose excludes it
+    ("MLP N=100", v("resMlpMseNhundred"), True),
+    ("LSTM N=25", v("resLstmMseNtwentyfive"), True),
+    ("LSTM N=100", v("resLstmMseNhundred"), True),
+    ("GNN N=50 (single)", v("resGnnMseNfifty"), True),
+    ("GNN-stable N=100", v("resGnnStMseNhundred"), True),
+]
+for label, x, want in band_claims:
+    got = BAND(x)
+    print(f"  {label:20s}: {x:.3g} in-band={got} (prose expects {want})")
+    if got != want:
+        errs.append(f"band claim {label}: {x:.3g} in-band={got} but prose expects {want}")
 
 print("\n== 'LSTM most accurate single-step surrogate at N=25' ==")
 for n in ("Ntwentyfive",):
     vals = {m: v(f"res{m}Mse{n}") for m in ("Mlp", "Lstm", "Gnn")}
     print(" ", vals, "-> best:", min(vals, key=vals.get))
 
-print("\n== '0.00-0.03% disc ss' and '0.78-11.4% OOD ss' (sec:res:ood disc para) ==")
-disc = [v(f"resSs{m}Disc{n}") for m in ("Mlp", "Lstm", "Gnn") for n in NS]
-ood = [v(f"resSs{m}{p}{n}") for m in ("Mlp", "Lstm", "Gnn")
-       for p in ("Fss", "Ip", "Jg", "Sse", "Seo", "Spm") for n in NS]
-print(f"  disc range: {min(disc):.2f}-{max(disc):.2f}")
-print(f"  OOD ss range: {min(ood):.2f}-{max(ood):.2f}")
+print("\n== '0.00-0.03% disc ss' and '0.3-29.9% OOD ss' (thesis 1448) ==")
+# read from the 2-decimal source JSONs; the 1-decimal macros cannot show 0.03
+ss_vals: dict[str, list[float]] = {"disc": [], "ood": []}
+for n in (10, 25, 50, 100):
+    for pd in (REPO / "real_case_validation" / f"report_N{n}" / "single_step").glob("preset_*"):
+        j = json.loads((pd / "ss_summary.json").read_text(encoding="utf-8"))
+        lane = "disc" if j.get("in_distribution") else "ood"
+        for mv in j["per_model"].values():
+            ss_vals[lane].append(mv["mean_err_pct"])
+dmin, dmax = min(ss_vals["disc"]), max(ss_vals["disc"])
+omin, omax = min(ss_vals["ood"]), max(ss_vals["ood"])
+print(f"  disc range: {dmin:.4f}-{dmax:.4f}  (prose: 0.00-0.03)")
+print(f"  OOD ss range: {omin:.2f}-{omax:.2f}  (prose: 0.3-29.9)")
+if not (0.0 <= dmin and dmax <= 0.03):
+    errs.append(f"disc ss range {dmin:.4f}-{dmax:.4f} outside prose 0.00-0.03")
+if not (0.25 <= omin and omax <= 30.0):
+    errs.append(f"OOD ss range {omin:.2f}-{omax:.2f} outside prose 0.3-29.9")
+
+print()
+if errs:
+    print(f"MISMATCHES ({len(errs)}):")
+    for e in errs:
+        print("  -", e)
+    sys.exit(1)
+print("ALL RECOMPUTED CLAIMS AGREE WITH THE THESIS PROSE")

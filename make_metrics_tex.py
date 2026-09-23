@@ -128,6 +128,7 @@ def main() -> int:
     all_eval = json.loads((REPO / "results" / "all_eval.json")
                           .read_text(encoding="utf-8"))
     params = {}
+    errs_param: list[str] = []
     for c in all_eval:
         n, mt = c["cell"].split("/")
         m, v = mt, c["variant"]
@@ -143,7 +144,12 @@ def main() -> int:
         put(f"res{mtok}{vtok}Lat{nt}", dec(c["latency_ms"], 3),
             c["latency_ms"], src)
         put(f"res{mtok}{vtok}Roll{nt}", sci3(c["rollout"]), c["rollout"], src)
+        if mtok in params and params[mtok] != c["n_params"]:
+            errs_param.append(f"{mtok}: param count differs between variants "
+                              f"({params[mtok]} vs {c['n_params']})")
         params[mtok] = c["n_params"]
+    if errs_param:
+        errs.extend(errs_param)
     for mtok, p in params.items():
         put(f"resParams{mtok}", f"{p:,}", p, "results/all_eval.json")
 
@@ -441,6 +447,12 @@ def main() -> int:
             got = macros[mac].replace("$\\times$", "").replace("$", "").strip()
             if got != want:
                 errs.append(f"factor {label} N{n}: md '{fac}' vs macro '{macros[mac]}'")
+        # full-rollout column must agree with the verified OOD mean
+        if fr != "--":
+            mac_ood = f"resRollOOD{MODELS[m]}{('St' if is_st else '')}{NS[n]}"
+            want_fr = pct1(float(fr.replace("%", "").replace("\\%", "")))
+            if macros[mac_ood] not in (want_fr, ">100", "--"):
+                errs.append(f"rollout {label} N{n}: md '{fr}' vs macro '{macros[mac_ood]}'")
 
     if errs:
         print("SELF-VERIFICATION MISMATCHES:")
