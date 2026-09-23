@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""check_env.py — structural LaTeX sanity for the fork's thesis.tex +
+r"""check_env.py — structural LaTeX sanity for the fork's thesis.tex +
 thesis_appendix_results.tex (local Overleaf-compile proxy, since no local
 TeX toolchain is installed):
   1. every \\begin{env} has a matching \\end{env}, properly nested
@@ -8,6 +8,8 @@ TeX toolchain is installed):
      unescaped % outside comments are ignored; too noisy — skipped)
   4. no \\res macro whose body contains $ used inside math mode
      (macro bodies like {$\\times$4.7} nest math and break the compile)
+  5. no backslash-backslash inside a \href text argument in a p-column cell
+     (it ends the table row; use \newline — tabularx \cr errors at \end)
 """
 from __future__ import annotations
 
@@ -90,4 +92,19 @@ if not dollar_bodies:
 elif bad == 0:
     print(f"dollar-body macro check: OK ({len(dollar_bodies)} macros, "
           f"0 math-wrapped usages)")
+
+# 5. backslash-backslash inside \href text argument (row-break in p-cells)
+href_bad = 0
+for f in FILES + [FORK / "thesis_overleaf" / "thesis.tex"]:
+    if not f.is_file():
+        continue
+    txt = f.read_text(encoding="utf-8")
+    for m in re.finditer(r"\\href\{[^{}]*\}\{[^{}]*\\\\", txt):
+        ln = txt[:m.start()].count("\n") + 1
+        print(f"FAIL: {f.name}:{ln} backslash-backslash inside \\href "
+              f"argument (ends the table row; use \\newline)")
+        href_bad += 1
+        ok = False
+if href_bad == 0:
+    print("href row-break check: OK (0 backslash-backslash in \\href args)")
 sys.exit(0 if ok else 1)
