@@ -30,13 +30,13 @@ for p in ("Sse", "Seo", "Spm"):
         print(f"    {m:4s}", [num(f"resSs{m}{p}{n}") for n in NS])
 
 print("\n== rollout Ip + Seo grid (6 variants x 4N, calibrated mean) ==")
-for p in ("Sse",):
+for p in ("Ip", "Seo"):
     print(f"  {p}:")
     for m in ("Mlp", "MlpSt", "Lstm", "LstmSt", "Gnn", "GnnSt"):
         print(f"    {m:6s}", [num(f"resRoll{m}{p}{n}Mean") for n in NS])
 
 print("\n== rollout Ip/Seo ranges claimed: Ip 63-74, Seo 64-92 ==")
-for p in ("Sse",):
+for p in ("Ip", "Seo"):
     vals = [num(f"resRoll{m}{p}{n}Mean") for m in
             ("Mlp", "MlpSt", "Lstm", "LstmSt", "Gnn", "GnnSt") for n in NS]
     vals = [x for x in vals if x is not None]

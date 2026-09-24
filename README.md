@@ -146,6 +146,24 @@ the simulation window show NaN, as expected.
 
 ---
 
+## Guides (by reader)
+
+Different readers want different entry points; these docs each start from
+one point of view:
+
+- [ARCHITECTURE.md](guides/ARCHITECTURE.md) — model structures, parameter
+  counts, the per-body shared-weight design, data contract.
+- [TRAINING_GUIDE.md](guides/TRAINING_GUIDE.md) — single-step vs
+  stability-trained recipes, schedules, and the practical hints and tricks.
+- [For ML educators](guides/GUIDE_ML_EDUCATORS.md) — a compact teaching
+  case study with a lesson sequence and assignments.
+- [For physics educators](guides/GUIDE_PHYSICS_EDUCATORS.md) — classroom
+  demos of Kepler, energy conservation, and error growth from the clip archive.
+- [For game developers](guides/GUIDE_GAME_DEVELOPERS.md) — what ships
+  today, the re-anchoring pattern, and honest limits.
+- [For researchers](guides/GUIDE_RESEARCHERS.md) — the measured headline,
+  the evaluation harness, and tooling you can lift.
+
 ## Repository layout
 
 ```
