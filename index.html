@@ -44,7 +44,7 @@ out on 7 Solar-System presets from NASA JPL Horizons ephemerides.</p>
 
 <div class="hero">
   <video autoplay loop muted playsinline preload="metadata"
-         src="animations/N25_full_solar_system_GNN_3d.mp4"></video>
+         src="animations/N25_gnn_full_solar_system/preset_full_solar_system_gnn_3d.mp4"></video>
   <div>
     <h2>Watch the simulations</h2>
     <p>Animated trajectory rollouts — leapfrog reference (dashed) vs. learned
@@ -59,15 +59,285 @@ out on 7 Solar-System presets from NASA JPL Horizons ephemerides.</p>
 
 <h2>Headline results (rollout)</h2>
 <p>Source: <a href="audit/cross_N_audit.md">cross_N_audit.md</a></p>
-<p>(not found)</p>
+<h2>Cross-N audit (rollout)</h2>
+
+
+
+Post-retrain (2026-09-22). Every number below is read
+
+directly from the canonical result JSONs of that run; nothing is
+
+hand-transcribed.
+
+<h4>Rollout OOD mean (headline)</h4>
+
+Mean rollout positional error (% of scale length L) averaged
+over the six out-of-distribution presets. '>100' = every OOD
+preset diverged for that cell, so no survivor mean exists.
+
+<table>
+<tr><th>model</th><th>N=10</th><th>N=25</th><th>N=50</th><th>N=100</th></tr>
+<tr><td>MLP</td><td>66.6%</td><td>68.9%</td><td>64.6%</td><td>65.6%</td></tr>
+<tr><td>MLP (stable)</td><td>65.0%</td><td>68.7%</td><td>64.6%</td><td>66.6%</td></tr>
+<tr><td>LSTM</td><td>64.7%</td><td>70.8%</td><td>64.0%</td><td>&gt;100</td></tr>
+<tr><td>LSTM (stable)</td><td>63.6%</td><td>74.3%</td><td>65.2%</td><td>97.9%</td></tr>
+<tr><td>GNN</td><td>69.3%</td><td>66.7%</td><td>73.0%</td><td>72.2%</td></tr>
+<tr><td>GNN (stable)</td><td>69.1%</td><td>66.6%</td><td>73.1%</td><td>82.5%</td></tr>
+</table>
+
+<h4>Out-of-distribution rollout error</h4>
+
+Mean rollout positional error as a percentage of the preset's
+scale length L, averaged over the rollout, for every training
+body count N and model variant. All presets except the disc
+baseline are out-of-distribution; their values use the calibrated
+post-hoc error of the thesis. Cells marked div. diverged
+(error above 100% of L) and are excluded from the mean; the disc
+baseline is in-distribution and also excluded from the mean.
+
+<table>
+<tr><th>N</th><th>variant</th><th>disc (in-dist.)</th><th>full solar system</th><th>inner planets</th><th>jupiter galileans</th><th>solar system extended</th><th>sun earth only</th><th>sun planets moon</th><th>OOD mean</th></tr>
+<tr><td>10</td><td>MLP</td><td>171.9%</td><td>div.</td><td>64.6%</td><td>div.</td><td>div.</td><td>68.5%</td><td>div.</td><td>66.6%</td></tr>
+<tr><td>10</td><td>MLP (stable)</td><td>167.5%</td><td>div.</td><td>63.1%</td><td>div.</td><td>div.</td><td>67.0%</td><td>div.</td><td>65.0%</td></tr>
+<tr><td>10</td><td>LSTM</td><td>204.9%</td><td>div.</td><td>64.6%</td><td>div.</td><td>div.</td><td>64.8%</td><td>div.</td><td>64.7%</td></tr>
+<tr><td>10</td><td>LSTM (stable)</td><td>327.2%</td><td>div.</td><td>63.2%</td><td>div.</td><td>div.</td><td>64.0%</td><td>div.</td><td>63.6%</td></tr>
+<tr><td>10</td><td>GNN</td><td>122.3%</td><td>div.</td><td>64.6%</td><td>div.</td><td>div.</td><td>74.1%</td><td>div.</td><td>69.3%</td></tr>
+<tr><td>10</td><td>GNN (stable)</td><td>120.6%</td><td>div.</td><td>64.1%</td><td>div.</td><td>div.</td><td>74.0%</td><td>div.</td><td>69.1%</td></tr>
+<tr><td>25</td><td>MLP</td><td>134.1%</td><td>div.</td><td>68.1%</td><td>div.</td><td>div.</td><td>69.8%</td><td>div.</td><td>68.9%</td></tr>
+<tr><td>25</td><td>MLP (stable)</td><td>123.7%</td><td>div.</td><td>67.7%</td><td>div.</td><td>div.</td><td>69.7%</td><td>div.</td><td>68.7%</td></tr>
+<tr><td>25</td><td>LSTM</td><td>3314.3%</td><td>div.</td><td>70.5%</td><td>div.</td><td>div.</td><td>71.1%</td><td>div.</td><td>70.8%</td></tr>
+<tr><td>25</td><td>LSTM (stable)</td><td>730.6%</td><td>div.</td><td>74.3%</td><td>div.</td><td>div.</td><td>74.4%</td><td>div.</td><td>74.3%</td></tr>
+<tr><td>25</td><td>GNN</td><td>167.5%</td><td>div.</td><td>63.0%</td><td>div.</td><td>div.</td><td>70.3%</td><td>div.</td><td>66.7%</td></tr>
+<tr><td>25</td><td>GNN (stable)</td><td>147.1%</td><td>div.</td><td>62.6%</td><td>div.</td><td>div.</td><td>70.6%</td><td>div.</td><td>66.6%</td></tr>
+<tr><td>50</td><td>MLP</td><td>166.4%</td><td>div.</td><td>64.2%</td><td>div.</td><td>div.</td><td>65.1%</td><td>div.</td><td>64.6%</td></tr>
+<tr><td>50</td><td>MLP (stable)</td><td>146.7%</td><td>div.</td><td>64.1%</td><td>div.</td><td>div.</td><td>65.1%</td><td>div.</td><td>64.6%</td></tr>
+<tr><td>50</td><td>LSTM</td><td>130.2%</td><td>div.</td><td>63.1%</td><td>div.</td><td>div.</td><td>65.0%</td><td>div.</td><td>64.0%</td></tr>
+<tr><td>50</td><td>LSTM (stable)</td><td>126.6%</td><td>div.</td><td>64.2%</td><td>div.</td><td>div.</td><td>66.1%</td><td>div.</td><td>65.2%</td></tr>
+<tr><td>50</td><td>GNN</td><td>176.9%</td><td>div.</td><td>66.6%</td><td>div.</td><td>div.</td><td>79.4%</td><td>div.</td><td>73.0%</td></tr>
+<tr><td>50</td><td>GNN (stable)</td><td>161.8%</td><td>div.</td><td>66.4%</td><td>div.</td><td>div.</td><td>79.8%</td><td>div.</td><td>73.1%</td></tr>
+<tr><td>100</td><td>MLP</td><td>287.8%</td><td>div.</td><td>63.0%</td><td>div.</td><td>div.</td><td>68.3%</td><td>div.</td><td>65.6%</td></tr>
+<tr><td>100</td><td>MLP (stable)</td><td>185.3%</td><td>div.</td><td>63.7%</td><td>div.</td><td>div.</td><td>69.4%</td><td>div.</td><td>66.6%</td></tr>
+<tr><td>100</td><td>LSTM</td><td>315.3%</td><td>div.</td><td>div.</td><td>div.</td><td>div.</td><td>div.</td><td>div.</td><td>&mdash;</td></tr>
+<tr><td>100</td><td>LSTM (stable)</td><td>300.8%</td><td>div.</td><td>97.9%</td><td>div.</td><td>div.</td><td>div.</td><td>div.</td><td>97.9%</td></tr>
+<tr><td>100</td><td>GNN</td><td>114.8%</td><td>div.</td><td>64.2%</td><td>div.</td><td>div.</td><td>80.1%</td><td>div.</td><td>72.2%</td></tr>
+<tr><td>100</td><td>GNN (stable)</td><td>179.5%</td><td>div.</td><td>73.0%</td><td>div.</td><td>div.</td><td>92.0%</td><td>div.</td><td>82.5%</td></tr>
+</table>
+
+<h4>Error with vs. without autoregressive feedback (OOD mean)</h4>
+
+The same checkpoints scored two ways, averaged over the six
+out-of-distribution presets. 'Single-step (no compounding)'
+rebuilds the input window from the true reference at every step,
+so prediction errors never feed back into the model -- it is
+scored at every point of the rollout horizon without feedback.
+'Full rollout' lets predictions feed back (autoregressive), so
+errors compound. Diverged rollout cells (error above 100% of L)
+are excluded from the rollout mean, so the compounding factor is
+a lower bound. The gap between the two columns isolates the cost
+of error compounding: the same checkpoints hold roughly 5x lower
+error when their own predictions never feed back.
+
+<table>
+<tr><th>N</th><th>variant</th><th>no compounding</th><th>full rollout</th><th>factor</th></tr>
+<tr><td>10</td><td>MLP</td><td>11.3%</td><td>66.6%</td><td>&times;5.9</td></tr>
+<tr><td>10</td><td>MLP (stable)</td><td>&mdash;</td><td>65.0%</td><td>&mdash;</td></tr>
+<tr><td>10</td><td>LSTM</td><td>13.7%</td><td>64.7%</td><td>&times;4.7</td></tr>
+<tr><td>10</td><td>LSTM (stable)</td><td>&mdash;</td><td>63.6%</td><td>&mdash;</td></tr>
+<tr><td>10</td><td>GNN</td><td>11.4%</td><td>69.3%</td><td>&times;6.1</td></tr>
+<tr><td>10</td><td>GNN (stable)</td><td>&mdash;</td><td>69.1%</td><td>&mdash;</td></tr>
+<tr><td>25</td><td>MLP</td><td>11.7%</td><td>68.9%</td><td>&times;5.9</td></tr>
+<tr><td>25</td><td>MLP (stable)</td><td>&mdash;</td><td>68.7%</td><td>&mdash;</td></tr>
+<tr><td>25</td><td>LSTM</td><td>13.6%</td><td>70.8%</td><td>&times;5.2</td></tr>
+<tr><td>25</td><td>LSTM (stable)</td><td>&mdash;</td><td>74.3%</td><td>&mdash;</td></tr>
+<tr><td>25</td><td>GNN</td><td>11.6%</td><td>66.7%</td><td>&times;5.7</td></tr>
+<tr><td>25</td><td>GNN (stable)</td><td>&mdash;</td><td>66.6%</td><td>&mdash;</td></tr>
+<tr><td>50</td><td>MLP</td><td>11.6%</td><td>64.6%</td><td>&times;5.6</td></tr>
+<tr><td>50</td><td>MLP (stable)</td><td>&mdash;</td><td>64.6%</td><td>&mdash;</td></tr>
+<tr><td>50</td><td>LSTM</td><td>11.8%</td><td>64.0%</td><td>&times;5.4</td></tr>
+<tr><td>50</td><td>LSTM (stable)</td><td>&mdash;</td><td>65.2%</td><td>&mdash;</td></tr>
+<tr><td>50</td><td>GNN</td><td>11.6%</td><td>73.0%</td><td>&times;6.3</td></tr>
+<tr><td>50</td><td>GNN (stable)</td><td>&mdash;</td><td>73.1%</td><td>&mdash;</td></tr>
+<tr><td>100</td><td>MLP</td><td>11.6%</td><td>65.6%</td><td>&times;5.7</td></tr>
+<tr><td>100</td><td>MLP (stable)</td><td>&mdash;</td><td>66.6%</td><td>&mdash;</td></tr>
+<tr><td>100</td><td>LSTM</td><td>11.6%</td><td>&mdash;</td><td>&mdash;</td></tr>
+<tr><td>100</td><td>LSTM (stable)</td><td>&mdash;</td><td>97.9%</td><td>&mdash;</td></tr>
+<tr><td>100</td><td>GNN</td><td>11.6%</td><td>72.2%</td><td>&times;6.2</td></tr>
+<tr><td>100</td><td>GNN (stable)</td><td>&mdash;</td><td>82.5%</td><td>&mdash;</td></tr>
+</table>
+
+<h4>In-distribution rollout drift (test split)</h4>
+
+Mean energy-relative rollout drift over a K=50 autoregressive
+rollout on held-out test windows (dimensionless), from the
+post-audit evaluation of every checkpoint.
+
+<table>
+<tr><th>N</th><th>variant</th><th>rollout drift (K=50)</th></tr>
+<tr><td>10</td><td>MLP</td><td>9.31e-02</td></tr>
+<tr><td>10</td><td>MLP (stable)</td><td>7.45e-02</td></tr>
+<tr><td>10</td><td>LSTM</td><td>1.27e-01</td></tr>
+<tr><td>10</td><td>LSTM (stable)</td><td>2.08e-01</td></tr>
+<tr><td>10</td><td>GNN</td><td>1.14e-02</td></tr>
+<tr><td>10</td><td>GNN (stable)</td><td>3.40e-02</td></tr>
+<tr><td>25</td><td>MLP</td><td>1.87e-02</td></tr>
+<tr><td>25</td><td>MLP (stable)</td><td>1.68e-02</td></tr>
+<tr><td>25</td><td>LSTM</td><td>8.74e-03</td></tr>
+<tr><td>25</td><td>LSTM (stable)</td><td>3.54e-02</td></tr>
+<tr><td>25</td><td>GNN</td><td>3.86e-03</td></tr>
+<tr><td>25</td><td>GNN (stable)</td><td>7.59e-03</td></tr>
+<tr><td>50</td><td>MLP</td><td>1.35e-02</td></tr>
+<tr><td>50</td><td>MLP (stable)</td><td>1.16e-02</td></tr>
+<tr><td>50</td><td>LSTM</td><td>1.78e-02</td></tr>
+<tr><td>50</td><td>LSTM (stable)</td><td>2.08e-02</td></tr>
+<tr><td>50</td><td>GNN</td><td>6.26e-03</td></tr>
+<tr><td>50</td><td>GNN (stable)</td><td>3.86e-03</td></tr>
+<tr><td>100</td><td>MLP</td><td>6.31e-03</td></tr>
+<tr><td>100</td><td>MLP (stable)</td><td>9.91e-03</td></tr>
+<tr><td>100</td><td>LSTM</td><td>5.66e-03</td></tr>
+<tr><td>100</td><td>LSTM (stable)</td><td>3.91e-03</td></tr>
+<tr><td>100</td><td>GNN</td><td>1.12e-03</td></tr>
+<tr><td>100</td><td>GNN (stable)</td><td>8.91e-04</td></tr>
+</table>
 
 <h2>Headline results (single-step)</h2>
 <p>Source: <a href="audit/cross_N_audit_single_step.md">cross_N_audit_single_step.md</a></p>
-<p>(not found)</p>
+<h2>Cross-N audit (single-step)</h2>
+
+
+
+Post-retrain (2026-09-22).
+
+Single-step test metrics (held-out windows, in-distribution):
+mean squared error of the next-frame prediction, the
+energy-relative drift of that prediction, and the per-step
+latency. Source: `results/all_eval.json`.
+
+<table>
+<tr><th>N</th><th>variant</th><th>params</th><th>single-step MSE</th><th>energy drift</th><th>latency (ms)</th></tr>
+<tr><td>10</td><td>MLP</td><td>210,182</td><td>7.79e-08</td><td>7.11e-04</td><td>0.256</td></tr>
+<tr><td>10</td><td>MLP (stable)</td><td>210,182</td><td>8.28e-08</td><td>6.09e-04</td><td>0.253</td></tr>
+<tr><td>10</td><td>LSTM</td><td>865,542</td><td>1.47e-07</td><td>9.93e-04</td><td>0.387</td></tr>
+<tr><td>10</td><td>LSTM (stable)</td><td>865,542</td><td>1.51e-07</td><td>1.07e-03</td><td>0.383</td></tr>
+<tr><td>10</td><td>GNN</td><td>168,199</td><td>2.71e-06</td><td>2.13e-03</td><td>2.118</td></tr>
+<tr><td>10</td><td>GNN (stable)</td><td>168,199</td><td>2.55e-06</td><td>2.18e-03</td><td>2.016</td></tr>
+<tr><td>25</td><td>MLP</td><td>210,182</td><td>7.75e-08</td><td>1.74e-04</td><td>0.251</td></tr>
+<tr><td>25</td><td>MLP (stable)</td><td>210,182</td><td>8.29e-08</td><td>1.93e-04</td><td>0.254</td></tr>
+<tr><td>25</td><td>LSTM</td><td>865,542</td><td>1.20e-08</td><td>8.36e-05</td><td>0.384</td></tr>
+<tr><td>25</td><td>LSTM (stable)</td><td>865,542</td><td>1.16e-08</td><td>9.48e-05</td><td>0.454</td></tr>
+<tr><td>25</td><td>GNN</td><td>168,199</td><td>1.51e-06</td><td>1.06e-03</td><td>2.152</td></tr>
+<tr><td>25</td><td>GNN (stable)</td><td>168,199</td><td>1.15e-06</td><td>8.16e-04</td><td>3.889</td></tr>
+<tr><td>50</td><td>MLP</td><td>210,182</td><td>1.20e-07</td><td>9.51e-05</td><td>0.250</td></tr>
+<tr><td>50</td><td>MLP (stable)</td><td>210,182</td><td>1.30e-07</td><td>1.07e-04</td><td>0.248</td></tr>
+<tr><td>50</td><td>LSTM</td><td>865,542</td><td>2.26e-06</td><td>6.90e-04</td><td>0.451</td></tr>
+<tr><td>50</td><td>LSTM (stable)</td><td>865,542</td><td>1.84e-06</td><td>6.54e-04</td><td>0.788</td></tr>
+<tr><td>50</td><td>GNN</td><td>168,199</td><td>8.38e-08</td><td>2.91e-04</td><td>7.326</td></tr>
+<tr><td>50</td><td>GNN (stable)</td><td>168,199</td><td>8.05e-08</td><td>2.68e-04</td><td>16.315</td></tr>
+<tr><td>100</td><td>MLP</td><td>210,182</td><td>2.15e-08</td><td>5.42e-05</td><td>0.251</td></tr>
+<tr><td>100</td><td>MLP (stable)</td><td>210,182</td><td>1.91e-08</td><td>4.90e-05</td><td>0.315</td></tr>
+<tr><td>100</td><td>LSTM</td><td>865,542</td><td>5.30e-08</td><td>8.48e-05</td><td>0.790</td></tr>
+<tr><td>100</td><td>LSTM (stable)</td><td>865,542</td><td>4.77e-08</td><td>8.94e-05</td><td>1.514</td></tr>
+<tr><td>100</td><td>GNN</td><td>168,199</td><td>2.83e-07</td><td>2.62e-04</td><td>33.077</td></tr>
+<tr><td>100</td><td>GNN (stable)</td><td>168,199</td><td>4.04e-08</td><td>8.30e-05</td><td>67.660</td></tr>
+</table>
+
+Per-preset single-step mean error (% of the preset's scale
+
+length L), averaged over every start index in the window:
+
+each prediction is scored against a reference-rebuilt input
+
+window, so errors do not compound. Source: the fresh
+
+2026-09-22 single-step dumps.
+
+<h4>disc_imf_in_distribution_baseline (in-distribution)</h4>
+
+<table>
+<tr><th>model</th><th>N=10</th><th>N=25</th><th>N=50</th><th>N=100</th></tr>
+<tr><td>MLP</td><td>0.00%</td><td>0.00%</td><td>0.00%</td><td>0.00%</td></tr>
+<tr><td>MLP (stable)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+<tr><td>LSTM</td><td>0.00%</td><td>0.00%</td><td>0.02%</td><td>0.00%</td></tr>
+<tr><td>LSTM (stable)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+<tr><td>GNN</td><td>0.02%</td><td>0.03%</td><td>0.01%</td><td>0.03%</td></tr>
+<tr><td>GNN (stable)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+</table>
+
+<h4>full_solar_system (OOD)</h4>
+
+<table>
+<tr><th>model</th><th>N=10</th><th>N=25</th><th>N=50</th><th>N=100</th></tr>
+<tr><td>MLP</td><td>0.78%</td><td>1.00%</td><td>1.05%</td><td>1.06%</td></tr>
+<tr><td>MLP (stable)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+<tr><td>LSTM</td><td>2.95%</td><td>3.34%</td><td>1.39%</td><td>0.98%</td></tr>
+<tr><td>LSTM (stable)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+<tr><td>GNN</td><td>0.89%</td><td>1.08%</td><td>1.02%</td><td>1.07%</td></tr>
+<tr><td>GNN (stable)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+</table>
+
+<h4>inner_planets (OOD)</h4>
+
+<table>
+<tr><th>model</th><th>N=10</th><th>N=25</th><th>N=50</th><th>N=100</th></tr>
+<tr><td>MLP</td><td>29.37%</td><td>29.51%</td><td>29.63%</td><td>29.44%</td></tr>
+<tr><td>MLP (stable)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+<tr><td>LSTM</td><td>29.13%</td><td>29.40%</td><td>29.75%</td><td>29.56%</td></tr>
+<tr><td>LSTM (stable)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+<tr><td>GNN</td><td>29.71%</td><td>29.85%</td><td>29.87%</td><td>29.81%</td></tr>
+<tr><td>GNN (stable)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+</table>
+
+<h4>jupiter_galileans (OOD)</h4>
+
+<table>
+<tr><th>model</th><th>N=10</th><th>N=25</th><th>N=50</th><th>N=100</th></tr>
+<tr><td>MLP</td><td>11.05%</td><td>11.10%</td><td>11.25%</td><td>11.27%</td></tr>
+<tr><td>MLP (stable)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+<tr><td>LSTM</td><td>10.67%</td><td>10.76%</td><td>11.33%</td><td>11.13%</td></tr>
+<tr><td>LSTM (stable)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+<tr><td>GNN</td><td>11.27%</td><td>11.39%</td><td>11.44%</td><td>11.35%</td></tr>
+<tr><td>GNN (stable)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+</table>
+
+<h4>solar_system_extended (OOD)</h4>
+
+<table>
+<tr><th>model</th><th>N=10</th><th>N=25</th><th>N=50</th><th>N=100</th></tr>
+<tr><td>MLP</td><td>0.54%</td><td>1.97%</td><td>1.35%</td><td>1.13%</td></tr>
+<tr><td>MLP (stable)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+<tr><td>LSTM</td><td>11.37%</td><td>9.70%</td><td>1.45%</td><td>1.20%</td></tr>
+<tr><td>LSTM (stable)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+<tr><td>GNN</td><td>0.31%</td><td>0.63%</td><td>0.44%</td><td>0.69%</td></tr>
+<tr><td>GNN (stable)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+</table>
+
+<h4>sun_earth_only (OOD)</h4>
+
+<table>
+<tr><th>model</th><th>N=10</th><th>N=25</th><th>N=50</th><th>N=100</th></tr>
+<tr><td>MLP</td><td>25.26%</td><td>25.31%</td><td>25.45%</td><td>25.49%</td></tr>
+<tr><td>MLP (stable)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+<tr><td>LSTM</td><td>24.76%</td><td>24.67%</td><td>25.54%</td><td>25.44%</td></tr>
+<tr><td>LSTM (stable)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+<tr><td>GNN</td><td>25.52%</td><td>25.63%</td><td>25.84%</td><td>25.59%</td></tr>
+<tr><td>GNN (stable)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+</table>
+
+<h4>sun_planets_moon (OOD)</h4>
+
+<table>
+<tr><th>model</th><th>N=10</th><th>N=25</th><th>N=50</th><th>N=100</th></tr>
+<tr><td>MLP</td><td>0.83%</td><td>1.07%</td><td>1.14%</td><td>1.19%</td></tr>
+<tr><td>MLP (stable)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+<tr><td>LSTM</td><td>3.30%</td><td>3.82%</td><td>1.57%</td><td>1.09%</td></tr>
+<tr><td>LSTM (stable)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+<tr><td>GNN</td><td>0.97%</td><td>1.20%</td><td>1.10%</td><td>1.19%</td></tr>
+<tr><td>GNN (stable)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+</table>
+
 
 <h2>Links</h2>
 <ul>
-<li><a href="animations.html">168 trajectory animations</a></li>
+<li><a href="animations.html">336 trajectory animations</a></li>
 <li><a href="plots.html">Static plot gallery</a></li>
 <li><a href="n10.html">N=10 detail</a> &middot;
     <a href="n25.html">N=25</a> &middot;

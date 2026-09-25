@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>N-Body Gravity Sandbox</title>
+<style>
+  :root { --bg:#0a0e17; --panel:#111827; --accent:#4fc3f7; --text:#e5e7eb; --dim:#94a3b8; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,sans-serif; min-height:100vh; display:flex; flex-direction:column; }
+  header { padding:14px 20px; display:flex; flex-wrap:wrap; gap:10px; align-items:baseline; background:var(--panel); border-bottom:1px solid #1f2937; }
+  header h1 { font-size:1.15rem; font-weight:600; color:var(--accent); }
+  header a { color:var(--dim); font-size:.85rem; text-decoration:none; margin-left:auto; }
+  header a:hover { color:var(--accent); }
+  #hud { position:fixed; top:64px; left:12px; background:rgba(17,24,39,.85); border:1px solid #1f2937; border-radius:8px; padding:10px 12px; font-size:.8rem; line-height:1.5; pointer-events:none; z-index:5; }
+  #hud b { color:var(--accent); font-weight:600; }
+  #hint { position:fixed; bottom:12px; left:50%; transform:translateX(-50%); background:rgba(17,24,39,.85); border:1px solid #1f2937; border-radius:20px; padding:7px 16px; font-size:.8rem; color:var(--dim); pointer-events:none; z-index:5; white-space:nowrap; }
+  #toolbar { display:flex; flex-wrap:wrap; gap:6px; padding:10px 20px; background:var(--panel); border-bottom:1px solid #1f2937; align-items:center; }
+  button { background:#1f2937; color:var(--text); border:1px solid #374151; border-radius:6px; padding:6px 12px; font-size:.8rem; cursor:pointer; }
+  button:hover { border-color:var(--accent); color:var(--accent); }
+  button.active { background:var(--accent); color:#0a0e17; border-color:var(--accent); font-weight:600; }
+  .sliderbox { display:flex; align-items:center; gap:8px; font-size:.8rem; color:var(--dim); margin-left:8px; }
+  input[type=range] { width:110px; accent-color:var(--accent); }
+  canvas { flex:1; display:block; touch-action:none; cursor:crosshair; }
+</style>
+</head>
+<body>
+<header>
+  <h1>&#9670; N-Body Gravity Sandbox</h1>
+  <span style="font-size:.8rem;color:var(--dim)">same leapfrog integrator as the simulation engine &mdash; click&ndash;drag to sling a planet</span>
+  <a href="index.html">&larr; back to the findings site</a>
+</header>
+<div id="toolbar">
+  <button data-preset="binary">Binary dance</button>
+  <button data-preset="solar">Mini solar system</button>
+  <button data-preset="fig8">Figure-8 (famous 3-body orbit)</button>
+  <button data-preset="chaos">Chaos cluster</button>
+  <button id="btnPause">Pause</button>
+  <button id="btnClear">Clear</button>
+  <button id="btnTrails" class="active">Trails</button>
+  <span class="sliderbox">Speed <input type="range" id="speed" min="10" max="300" value="100"></span>
+  <span class="sliderbox">New-body mass <input type="range" id="mass" min="1" max="200" value="30"> <span id="massVal">30</span></span>
+</div>
+<div id="hud">bodies: <b id="hN">0</b> &nbsp;|&nbsp; energy drift: <b id="hE">0.00%</b></div>
+<div id="hint">click &amp; drag on empty space to launch a body &bull; drag a direction = its velocity</div>
+<canvas id="cv"></canvas>
+
+<script>
+"use strict";
+// ── physics: dimensionless N-body, leapfrog KDK (kick-drift-kick), the
+// same integrator family as the repo's simulation engine (softened
+// Plummer gravity keeps close encounters finite).
+const G = 1.0, EPS2 = 0.4 * 0.4, DT = 0.008, MERGE_DIST = 1.1;
+let bodies = [];      // {x,y,vx,vy,m,r,ax,ay,color,trail:[]}
+let E0 = null, paused = false, showTrails = true, t = 0;
+
+function accelAll(bs) {
+  for (const b of bs) { b.ax = 0; b.ay = 0; }
+  for (let i = 0; i < bs.length; i++) {
+    const bi = bs[i];
+    for (let j = i + 1; j < bs.length; j++) {
+      const bj = bs[j];
+      const dx = bj.x - bi.x, dy = bj.y - bi.y;
+      const inv = 1 / Math.sqrt(dx * dx + dy * dy + EPS2);
+      const f = G * inv * inv * inv;
+      bi.ax += f * bj.m * dx; bi.ay += f * bj.m * dy;
+      bj.ax -= f * bi.m * dx; bj.ay -= f * bi.m * dy;
+    }
+  }
+}
+function leapfrogStep(bs, dt) {
+  // kick-drift-kick
+  for (const b of bs) { b.vx += 0.5 * dt * b.ax; b.vy += 0.5 * dt * b.ay; }
+  for (const b of bs) { b.x += dt * b.vx; b.y += dt * b.vy; }
+  accelAll(bs);
+  for (const b of bs) { b.vx += 0.5 * dt * b.ax; b.vy += 0.5 * dt * b.ay; }
+}
+function totalEnergy(bs) {
+  let ke = 0, pe = 0;
+  for (let i = 0; i < bs.length; i++) {
+    ke += 0.5 * bs[i].m * (bs[i].vx ** 2 + bs[i].vy ** 2);
+    for (let j = i + 1; j < bs.length; j++) {
+      const dx = bs[j].x - bs[i].x, dy = bs[j].y - bs[i].y;
+      pe -= G * bs[i].m * bs[j].m / Math.sqrt(dx * dx + dy * dy + EPS2);
+    }
+  }
+  return ke + pe;
+}
+function mergeClose(bs) {
+  for (let i = 0; i < bs.length; i++) {
+    for (let j = i + 1; j < bs.length; j++) {
+      const dx = bs[j].x - bs[i].x, dy = bs[j].y - bs[i].y;
+      if (dx * dx + dy * dy < MERGE_DIST * MERGE_DIST) {
+        const a = bs[i], b = bs[j], M = a.m + b.m;
+        const merged = {
+          x: (a.m * a.x + b.m * b.x) / M, y: (a.m * a.y + b.m * b.y) / M,
+          vx: (a.m * a.vx + b.m * b.vx) / M, vy: (a.m * a.vy + b.m * b.vy) / M,
+          m: M, r: radiusOf(M), color: a.m >= b.m ? a.color : b.color, trail: a.trail,
+        };
+        bs.splice(j, 1); bs.splice(i, 1, merged);
+        return; // one merge per step keeps the pass simple
+      }
+    }
+  }
+}
+const radiusOf = m => 2.2 * Math.cbrt(m) + 1.6;
+const bodyColor = i => `hsl(${(i * 137.5) % 360} 85% 62%)`;
+
+// ── presets ────────────────────────────────────────────────────────────
+function addBody(bs, x, y, vx, vy, m, i) {
+  bs.push({ x, y, vx, vy, m, ax: 0, ay: 0, r: radiusOf(m),
+            color: bodyColor(i), trail: [] });
+}
+const PRESETS = {
+  binary(bs) {                       // two equal masses, circular orbit
+    const m = 60, d = 7, v = Math.sqrt(G * (2 * m) / d) / 2;
+    addBody(bs, -d / 2, 0, 0, -v, m, 0);
+    addBody(bs,  d / 2, 0, 0,  v, m, 1);
+  },
+  solar(bs) {                        // heavy centre + circular planets
+    const M = 220;
+    addBody(bs, 0, 0, 0, 0, M, 0);
+    const orbits = [[9, 1], [16, 2], [26, 3], [38, 1.2], [52, 2.5]];
+    for (const [r, m] of orbits)
+      addBody(bs, r, 0, 0, Math.sqrt(G * M / r), m, bs.length);
+  },
+  fig8(bs) {                         // Chenciner–Montgomery figure-8 choreography
+    const px = 0.97000436, py = -0.24308753, s = 30;   // scale up
+    const v3x = -0.93240737, v3y = -0.86473146;
+    addBody(bs,  s * px,  s * py,  s * v3x / 2,  s * v3y / 2, 1, 0);
+    addBody(bs, -s * px, -s * py,  s * v3x / 2,  s * v3y / 2, 1, 1);
+    addBody(bs,  0, 0,             s * v3x,     s * v3y,     1, 2);
+  },
+  chaos(bs) {                        // random cluster → mergers & flings
+    for (let i = 0; i < 14; i++) {
+      const a = Math.random() * 2 * Math.PI, r = 5 + Math.random() * 16;
+      addBody(bs, r * Math.cos(a), r * Math.sin(a),
+              (Math.random() - .5) * 1.2, (Math.random() - .5) * 1.2,
+              5 + Math.random() * 40, i);
+    }
+  },
+};
+
+// ── rendering ──────────────────────────────────────────────────────────
+const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+let stars = [];
+function resize() {
+  cv.width = innerWidth; cv.height = innerHeight - 100;
+  stars = Array.from({ length: 140 }, () => ({
+    x: Math.random() * cv.width, y: Math.random() * cv.height,
+    s: Math.random() * 1.4 + .3, a: Math.random() * .5 + .15 }));
+}
+addEventListener("resize", resize); resize();
+
+function draw() {
+  ctx.fillStyle = "#0a0e17"; ctx.fillRect(0, 0, cv.width, cv.height);
+  for (const st of stars) {
+    ctx.globalAlpha = st.a; ctx.fillStyle = "#cbd5e1";
+    ctx.fillRect(st.x, st.y, st.s, st.s);
+  }
+  ctx.globalAlpha = 1;
+  if (showTrails)
+    for (const b of bodies) {
+      if (b.trail.length < 2) continue;
+      ctx.lineWidth = 1.4; ctx.strokeStyle = b.color; ctx.globalAlpha = .45;
+      ctx.beginPath(); ctx.moveTo(b.trail[0][0], b.trail[0][1]);
+      for (const p of b.trail) ctx.lineTo(p[0], p[1]);
+      ctx.stroke(); ctx.globalAlpha = 1;
+    }
+  for (const b of bodies) {
+    ctx.shadowColor = b.color; ctx.shadowBlur = 14;         // glow = game feel
+    ctx.fillStyle = b.color;
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 6.2832); ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+  if (drag) {                                               // slingshot aim
+    ctx.strokeStyle = "#4fc3f7"; ctx.lineWidth = 2; ctx.setLineDash([6, 5]);
+    ctx.beginPath(); ctx.moveTo(drag.x0, drag.y0);
+    ctx.lineTo(drag.x, drag.y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = "rgba(79,195,247,.15)";
+    ctx.beginPath(); ctx.arc(drag.x0, drag.y0, radiusOf(+massEl.value), 0, 6.2832); ctx.fill();
+  }
+}
+
+// ── input (mouse + touch) ──────────────────────────────────────────────
+let drag = null;
+function pt(e) {
+  const r = cv.getBoundingClientRect();
+  const t = e.touches ? e.touches[0] : e;
+  return { x: t.clientX - r.left, y: t.clientY - r.top };
+}
+function down(e) { const p = pt(e); drag = { x0: p.x, y0: p.y, x: p.x, y: p.y }; e.preventDefault(); }
+function move(e) { if (drag) { const p = pt(e); drag.x = p.x; drag.y = p.y; e.preventDefault(); } }
+function up(e) {
+  if (!drag) return;
+  const k = 0.04, m = +massEl.value;
+  addBody(bodies, drag.x0, drag.y0,
+          (drag.x - drag.x0) * k, (drag.y - drag.y0) * k, m,
+          nextColor++);
+  E0 = null;                       // re-baseline energy after adding a body
+  drag = null;
+}
+cv.addEventListener("mousedown", down); cv.addEventListener("mousemove", move);
+addEventListener("mouseup", up);
+cv.addEventListener("touchstart", down); cv.addEventListener("touchmove", move);
+addEventListener("touchend", up);
+
+// ── UI wiring ──────────────────────────────────────────────────────────
+const massEl = document.getElementById("mass");
+massEl.addEventListener("input", () =>
+  document.getElementById("massVal").textContent = massEl.value);
+document.getElementById("btnPause").addEventListener("click", function () {
+  paused = !paused; this.textContent = paused ? "Resume" : "Pause";
+});
+document.getElementById("btnClear").addEventListener("click", () => {
+  bodies = []; E0 = null; nextColor = 0;
+});
+document.getElementById("btnTrails").addEventListener("click", function () {
+  showTrails = !showTrails; this.classList.toggle("active", showTrails);
+});
+let nextColor = 0;
+for (const btn of document.querySelectorAll("[data-preset]"))
+  btn.addEventListener("click", () => {
+    bodies = []; E0 = null; nextColor = 0;
+    PRESETS[btn.dataset.preset](bodies);
+    for (const b of bodies) b.color = bodyColor(nextColor++);
+    accelAll(bodies); E0 = totalEnergy(bodies);
+  });
+// start on the binary so the page is alive immediately
+document.querySelector('[data-preset="binary"]').click();
+
+// ── main loop: fixed physics dt, N substeps per frame scaled by speed ──
+const hudN = document.getElementById("hN"), hudE = document.getElementById("hE");
+function frame() {
+  if (!paused && bodies.length) {
+    const steps = Math.round(+document.getElementById("speed").value / 25);
+    for (let s = 0; s < steps; s++) {
+      leapfrogStep(bodies, DT);
+      mergeClose(bodies);
+      for (const b of bodies) {
+        b.trail.push([b.x, b.y]);
+        if (b.trail.length > 220) b.trail.shift();
+      }
+      t += DT;
+    }
+    if (E0 !== null && Math.abs(E0) > 1e-9) {
+      const drift = Math.abs((totalEnergy(bodies) - E0) / E0) * 100;
+      hudE.textContent = drift.toFixed(2) + "%";
+    }
+    hudN.textContent = bodies.length;
+  }
+  draw(); requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

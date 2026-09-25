@@ -1,0 +1,74 @@
+[
+  {
+    "name": "sun_earth_only",
+    "label": "Sun\u2013Earth 2-body (Keplerian reference)",
+    "in_distribution": false,
+    "n_bodies": 2,
+    "n_samples": 120,
+    "dt_N": 0.5126514626560704,
+    "duration_years": 10,
+    "scale": {
+      "M_kg": 1.9884759722e+30,
+      "L_m": 151719838085.82532,
+      "T_s": 5129801.0277292235,
+      "V_m_per_s": 29576.16431235856,
+      "E_J": 1.739418353359874e+39
+    },
+    "per_model": {
+      "GNN": {
+        "mse_state": 0.34031581875324834,
+        "mse_position": 0.332243242836513,
+        "max_error_over_L": 1.9754769566965331,
+        "mean_error_over_L": 0.6368048195526355,
+        "frames_before_half_L": 0,
+        "max_energy_drift": 0.006863182644475165,
+        "calibrated": {
+          "mse_state": 0.3219983119145185,
+          "mse_position": 0.3219983119145185,
+          "mean_err_pct": 62.456381222346636,
+          "max_err_pct": 99.0597377986957,
+          "n_predictions": 172,
+          "calibration": {
+            "1": {
+              "a": -1.647813366691872e-05,
+              "b": 0.972209327098116,
+              "r2": 0.005395232147466511,
+              "n_cal": 29
+            }
+          }
+        }
+      }
+    },
+    "wallclock_s": 1.624237751995679,
+    "kepler_check": [
+      {
+        "body": "Sun",
+        "is_primary": true,
+        "mass_kg": 1.98847e+30,
+        "T_N": null,
+        "a_N": null,
+        "T_s": null,
+        "a_m": null,
+        "a_au": null,
+        "T_yr": null,
+        "K_measured": null,
+        "K_predicted": 39.47853617441663,
+        "deviation_pct": null
+      },
+      {
+        "body": "Earth",
+        "is_primary": false,
+        "mass_kg": 5.9722e+24,
+        "T_N": 6.1537256503171385,
+        "a_N": 0.9862113445070866,
+        "T_s": 31567388.16536054,
+        "a_m": 149627825507.01926,
+        "a_au": 1.000200235517251,
+        "T_yr": 1.000310168243483,
+        "K_measured": 39.479012295712565,
+        "K_predicted": 39.47853617441663,
+        "deviation_pct": 0.0012060257093438054
+      }
+    ]
+  }
+]
