@@ -98,6 +98,7 @@ function mergeClose(bs) {
           m: M, r: radiusOf(M), color: a.m >= b.m ? a.color : b.color, trail: a.trail,
         };
         bs.splice(j, 1); bs.splice(i, 1, merged);
+        E0 = totalEnergy(bs);          // merges are dissipative — re-baseline so the drift HUD stays meaningful
         return; // one merge per step keeps the pass simple
       }
     }
@@ -197,7 +198,7 @@ function up(e) {
   addBody(bodies, drag.x0, drag.y0,
           (drag.x - drag.x0) * k, (drag.y - drag.y0) * k, m,
           nextColor++);
-  E0 = null;                       // re-baseline energy after adding a body
+  E0 = totalEnergy(bodies);        // re-baseline: the new body changed the system's energy
   drag = null;
 }
 cv.addEventListener("mousedown", down); cv.addEventListener("mousemove", move);
@@ -233,7 +234,8 @@ document.querySelector('[data-preset="binary"]').click();
 const hudN = document.getElementById("hN"), hudE = document.getElementById("hE");
 function frame() {
   if (!paused && bodies.length) {
-    const steps = Math.round(+document.getElementById("speed").value / 25);
+    // slider min (10) must still advance: round(10/25) = 0 would freeze the sim
+    const steps = Math.max(1, Math.round(+document.getElementById("speed").value / 25));
     for (let s = 0; s < steps; s++) {
       leapfrogStep(bodies, DT);
       mergeClose(bodies);
