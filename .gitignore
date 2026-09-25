@@ -117,3 +117,26 @@ live_inter_check.html
 compress_appendix_pngs.py
 rebuild_loss_curves.py
 real_case_validation/report_N*_dump/
+
+# One-off helper scripts + audit scaffolding removed from the published
+# repo (kept on disk for local use only).
+/check_*.py
+/verify_thesis_claims.py
+/make_audit_digest.py
+/make_error_tables.py
+/make_metrics_tex.py
+/make_payment_flow_diagram.py
+/regen_thesis_figures.py
+/sync_thesis_figs.py
+/audit_prompt.txt
+/gemini_audit_input.md
+/payment_flow_diagram.png
+/pics/
+
+# Local tooling output (knowledge-graph indexer) and regenerable
+# per-model animation render dirs; the flat tracked mp4s under
+# results/animations/ and real_case_validation/animations/ stay tracked,
+# gitignore does not affect already-tracked files.
+graphify-out/
+real_case_validation/animations/*.mp4
+results/animations/N*/
