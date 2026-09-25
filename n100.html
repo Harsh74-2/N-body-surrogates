@@ -12,24 +12,30 @@ nav a:hover { text-decoration: underline; }
 table { border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
 th, td { border: 1px solid #ccc; padding: 0.3rem 0.6rem; text-align: left; }
 th { background: #003a70; color: #fff; }
-.video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+.video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
               gap: 1rem; margin: 1rem 0; }
 .video-card { background: #fff; padding: 0.6rem; border-radius: 6px;
               box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
 .video-card video { width: 100%; height: auto; }
 .video-card h4 { margin: 0.3rem 0 0.1rem; font-size: 0.95rem; }
-.plot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+.plot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
              gap: 1rem; margin: 1rem 0; }
 .plot-grid img { width: 100%; height: auto; border: 1px solid #ddd;
                  border-radius: 4px; background: #fff; }
 .plot-grid figcaption { font-size: 0.85rem; color: #555; padding-top: 0.3rem; }
 .plot-grid .card-link { font-size: 0.8rem; }
+img, video { max-width: 100%; height: auto; }
 .hero { display: flex; gap: 1.2rem; align-items: center; background: #fff;
         padding: 1rem; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
         margin: 1.2rem 0; }
 .hero video { width: 46%; max-width: 420px; height: auto; border-radius: 4px;
               background: #000; }
 .hero h2 { margin-top: 0; }
+table { display: block; overflow-x: auto; }
+@media (max-width: 700px) {
+  .hero { flex-direction: column; }
+  .hero video { width: 100%; max-width: none; }
+}
 </style></head><body>
 <nav><a href="index.html">Home</a><a href="main_interactive.html">Interactive</a><a href="sandbox.html">Sandbox</a><a href="animations.html">Animations</a><a href="plots.html">Plots</a><a href="n10.html">N=10</a><a href="n25.html">N=25</a><a href="n50.html">N=50</a><a href="n100.html" style="text-decoration: underline">N=100</a></nav>
 <h1>N = 100</h1>
