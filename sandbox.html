@@ -96,7 +96,7 @@ function mergeClose(bs) {
         const merged = {
           x: (a.m * a.x + b.m * b.x) / M, y: (a.m * a.y + b.m * b.y) / M,
           vx: (a.m * a.vx + b.m * b.vx) / M, vy: (a.m * a.vy + b.m * b.vy) / M,
-          m: M, r: radiusOf(M), color: a.m >= b.m ? a.color : b.color, trail: a.trail,
+          m: M, ax: 0, ay: 0, r: radiusOf(M), color: a.m >= b.m ? a.color : b.color, trail: a.trail,
         };
         bs.splice(j, 1); bs.splice(i, 1, merged);
         E0 = totalEnergy(bs);          // merges are dissipative — re-baseline so the drift HUD stays meaningful
@@ -123,19 +123,25 @@ const PRESETS = {
     const M = 220;
     addBody(bs, 0, 0, 0, 0, M, 0);
     const orbits = [[30, 1], [52, 2], [84, 3], [122, 1.2], [168, 2.5]];
-    for (const [r, m] of orbits)
-      addBody(bs, r, 0, 0, Math.sqrt(G * M / r), m, bs.length);
+    orbits.forEach(([r, m], k) => {          // spread phase angles, not one row
+      const th = k * 2.4, v = Math.sqrt(G * M / r);
+      addBody(bs, r * Math.cos(th), r * Math.sin(th),
+              -Math.sin(th) * v, Math.cos(th) * v, m, bs.length);
+    });
   },
   fig8(bs) {                         // Chenciner–Montgomery figure-8 choreography
     const px = 0.97000436, py = -0.24308753, s = 30;   // scale up
     const v3x = -0.93240737, v3y = -0.86473146;
-    addBody(bs,  s * px,  s * py,  s * v3x / 2,  s * v3y / 2, 1, 0);
-    addBody(bs, -s * px, -s * py,  s * v3x / 2,  s * v3y / 2, 1, 1);
-    addBody(bs,  0, 0,             s * v3x,     s * v3y,     1, 2);
+    // masses ×s³, v ×s keeps the choreography similar AND fast enough to watch
+    const vf = s, m = s * s * s;
+    addBody(bs,  s * px,  s * py, -v3x / 2 * vf, -v3y / 2 * vf, m, 0);
+    addBody(bs, -s * px, -s * py, -v3x / 2 * vf, -v3y / 2 * vf, m, 1);
+    addBody(bs,  0, 0,             v3x * vf,     v3y * vf,     m, 2);
+    for (const b of bs) b.r = 5;     // cosmetic: radiusOf(m) would swamp the orbit
   },
   chaos(bs) {                        // random cluster → mergers & flings
     for (let i = 0; i < 14; i++) {
-      const a = Math.random() * 2 * Math.PI, r = 5 + Math.random() * 16;
+      const a = Math.random() * 2 * Math.PI, r = 12 + Math.random() * 38;
       addBody(bs, r * Math.cos(a), r * Math.sin(a),
               (Math.random() - .5) * 1.2, (Math.random() - .5) * 1.2,
               5 + Math.random() * 40, i);
@@ -147,7 +153,11 @@ const PRESETS = {
 const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
 let stars = [], OX = 0, OY = 0;   // physics origin maps to canvas centre
 function resize() {
-  cv.width = innerWidth; cv.height = innerHeight - 100;
+  // header + toolbar heights are layout-dependent (toolbar wraps on phones) — measure, don't hardcode
+  const top = document.querySelector("header").offsetHeight
+            + document.getElementById("toolbar").offsetHeight;
+  document.getElementById("hud").style.top = (top + 8) + "px";
+  cv.width = innerWidth; cv.height = Math.max(200, innerHeight - top);
   OX = cv.width / 2; OY = cv.height / 2;
   stars = Array.from({ length: 140 }, () => ({
     x: Math.random() * cv.width, y: Math.random() * cv.height,
