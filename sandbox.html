@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='5' fill='%234fc3f7'/%3E%3C/svg%3E">
 <title>N-Body Gravity Sandbox</title>
 <style>
   :root { --bg:#0a0e17; --panel:#111827; --accent:#4fc3f7; --text:#e5e7eb; --dim:#94a3b8; }
@@ -12,7 +13,7 @@
   header h1 { font-size:1.15rem; font-weight:600; color:var(--accent); }
   header a { color:var(--dim); font-size:.85rem; text-decoration:none; margin-left:auto; }
   header a:hover { color:var(--accent); }
-  #hud { position:fixed; top:64px; left:12px; background:rgba(17,24,39,.85); border:1px solid #1f2937; border-radius:8px; padding:10px 12px; font-size:.8rem; line-height:1.5; pointer-events:none; z-index:5; }
+  #hud { position:fixed; top:112px; left:12px; background:rgba(17,24,39,.85); border:1px solid #1f2937; border-radius:8px; padding:10px 12px; font-size:.8rem; line-height:1.5; pointer-events:none; z-index:5; }
   #hud b { color:var(--accent); font-weight:600; }
   #hint { position:fixed; bottom:12px; left:50%; transform:translateX(-50%); background:rgba(17,24,39,.85); border:1px solid #1f2937; border-radius:20px; padding:7px 16px; font-size:.8rem; color:var(--dim); pointer-events:none; z-index:5; white-space:nowrap; }
   #toolbar { display:flex; flex-wrap:wrap; gap:6px; padding:10px 20px; background:var(--panel); border-bottom:1px solid #1f2937; align-items:center; }
@@ -114,14 +115,14 @@ function addBody(bs, x, y, vx, vy, m, i) {
 }
 const PRESETS = {
   binary(bs) {                       // two equal masses, circular orbit
-    const m = 60, d = 7, v = Math.sqrt(G * (2 * m) / d) / 2;
+    const m = 60, d = 26, v = Math.sqrt(G * (2 * m) / d) / 2;
     addBody(bs, -d / 2, 0, 0, -v, m, 0);
     addBody(bs,  d / 2, 0, 0,  v, m, 1);
   },
   solar(bs) {                        // heavy centre + circular planets
     const M = 220;
     addBody(bs, 0, 0, 0, 0, M, 0);
-    const orbits = [[9, 1], [16, 2], [26, 3], [38, 1.2], [52, 2.5]];
+    const orbits = [[30, 1], [52, 2], [84, 3], [122, 1.2], [168, 2.5]];
     for (const [r, m] of orbits)
       addBody(bs, r, 0, 0, Math.sqrt(G * M / r), m, bs.length);
   },
@@ -144,9 +145,10 @@ const PRESETS = {
 
 // ── rendering ──────────────────────────────────────────────────────────
 const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
-let stars = [];
+let stars = [], OX = 0, OY = 0;   // physics origin maps to canvas centre
 function resize() {
   cv.width = innerWidth; cv.height = innerHeight - 100;
+  OX = cv.width / 2; OY = cv.height / 2;
   stars = Array.from({ length: 140 }, () => ({
     x: Math.random() * cv.width, y: Math.random() * cv.height,
     s: Math.random() * 1.4 + .3, a: Math.random() * .5 + .15 }));
@@ -164,22 +166,22 @@ function draw() {
     for (const b of bodies) {
       if (b.trail.length < 2) continue;
       ctx.lineWidth = 1.4; ctx.strokeStyle = b.color; ctx.globalAlpha = .45;
-      ctx.beginPath(); ctx.moveTo(b.trail[0][0], b.trail[0][1]);
-      for (const p of b.trail) ctx.lineTo(p[0], p[1]);
+      ctx.beginPath(); ctx.moveTo(b.trail[0][0] + OX, b.trail[0][1] + OY);
+      for (const p of b.trail) ctx.lineTo(p[0] + OX, p[1] + OY);
       ctx.stroke(); ctx.globalAlpha = 1;
     }
   for (const b of bodies) {
     ctx.shadowColor = b.color; ctx.shadowBlur = 14;         // glow = game feel
     ctx.fillStyle = b.color;
-    ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 6.2832); ctx.fill();
+    ctx.beginPath(); ctx.arc(b.x + OX, b.y + OY, b.r, 0, 6.2832); ctx.fill();
     ctx.shadowBlur = 0;
   }
   if (drag) {                                               // slingshot aim
     ctx.strokeStyle = "#4fc3f7"; ctx.lineWidth = 2; ctx.setLineDash([6, 5]);
-    ctx.beginPath(); ctx.moveTo(drag.x0, drag.y0);
-    ctx.lineTo(drag.x, drag.y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(drag.x0 + OX, drag.y0 + OY);
+    ctx.lineTo(drag.x + OX, drag.y + OY); ctx.stroke(); ctx.setLineDash([]);
     ctx.fillStyle = "rgba(79,195,247,.15)";
-    ctx.beginPath(); ctx.arc(drag.x0, drag.y0, radiusOf(+massEl.value), 0, 6.2832); ctx.fill();
+    ctx.beginPath(); ctx.arc(drag.x0 + OX, drag.y0 + OY, radiusOf(+massEl.value), 0, 6.2832); ctx.fill();
   }
 }
 
@@ -188,7 +190,7 @@ let drag = null;
 function pt(e) {
   const r = cv.getBoundingClientRect();
   const t = e.touches ? e.touches[0] : e;
-  return { x: t.clientX - r.left, y: t.clientY - r.top };
+  return { x: t.clientX - r.left - OX, y: t.clientY - r.top - OY };
 }
 function down(e) { const p = pt(e); drag = { x0: p.x, y0: p.y, x: p.x, y: p.y }; e.preventDefault(); }
 function move(e) { if (drag) { const p = pt(e); drag.x = p.x; drag.y = p.y; e.preventDefault(); } }

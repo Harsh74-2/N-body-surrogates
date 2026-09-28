@@ -1,41 +1,56 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='5' fill='%234fc3f7'/%3E%3C/svg%3E">
 <title>N-body ML Surrogates &mdash; Interactive Benchmark</title>
 <style>
-body { font-family: system-ui, sans-serif; max-width: 1100px; margin: 0 auto;
-       padding: 1rem 1.5rem; background: #fafafa; color: #222; }
-h1, h2, h3 { color: #003a70; }
-h1 { border-bottom: 2px solid #003a70; padding-bottom: 0.3rem; }
-nav { background: #003a70; color: #fff; padding: 0.6rem 1rem; border-radius: 6px;
-      margin-bottom: 1.5rem; }
-nav a { color: #fff; margin-right: 1rem; text-decoration: none; font-weight: 500; }
-nav a:hover { text-decoration: underline; }
-table { border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
-th, td { border: 1px solid #ccc; padding: 0.3rem 0.6rem; text-align: left; }
-th { background: #003a70; color: #fff; }
+:root { --bg:#0a0e17; --panel:#111827; --border:#1f2937; --accent:#4fc3f7;
+        --text:#e5e7eb; --dim:#94a3b8; }
+body { font-family: system-ui, 'Segoe UI', sans-serif; max-width: 1100px; margin: 0 auto;
+       padding: 1.25rem 1.5rem 3rem; background: var(--bg); color: var(--text);
+       line-height: 1.55; }
+h1, h2, h3 { color: #e8f4fd; line-height: 1.25; }
+h1 { font-size: 1.65rem; letter-spacing: -0.01em;
+     border-bottom: 1px solid var(--border); padding-bottom: 0.45rem; }
+h2 { margin-top: 2.3rem; font-size: 1.25rem; }
+h3 { font-size: 1.05rem; }
+a { color: var(--accent); }
+nav { position: sticky; top: 0.6rem; z-index: 20; display: flex; flex-wrap: wrap;
+      gap: 0.15rem; background: rgba(17,24,39,0.92); border: 1px solid var(--border);
+      padding: 0.45rem 0.55rem; border-radius: 10px; margin-bottom: 1.8rem;
+      backdrop-filter: blur(6px); }
+nav a { color: var(--dim); margin-right: 0.2rem; padding: 0.3rem 0.65rem;
+        border-radius: 6px; text-decoration: none; font-weight: 500; font-size: 0.92rem; }
+nav a:hover { color: var(--text); background: #1b2436; }
+nav a.active { color: var(--accent); background: #14283a; }
+table { border-collapse: collapse; margin: 1.1rem 0; font-size: 0.88rem;
+        display: block; overflow-x: auto; }
+th, td { border: 1px solid var(--border); padding: 0.35rem 0.65rem; text-align: left; }
+th { background: var(--panel); color: var(--accent); font-weight: 600; }
+tr:nth-child(odd) td { background: #0d1422; }
 .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
               gap: 1rem; margin: 1rem 0; }
-.video-card { background: #fff; padding: 0.6rem; border-radius: 6px;
-              box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-.video-card video { width: 100%; height: auto; }
-.video-card h4 { margin: 0.3rem 0 0.1rem; font-size: 0.95rem; }
+.video-card { background: var(--panel); border: 1px solid var(--border);
+              padding: 0.6rem; border-radius: 10px; }
+.video-card video { width: 100%; height: auto; border-radius: 6px; background: #000; }
+.video-card h4 { margin: 0.35rem 0 0.1rem; font-size: 0.95rem; color: #e8f4fd; }
 .plot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
              gap: 1rem; margin: 1rem 0; }
-.plot-grid img { width: 100%; height: auto; border: 1px solid #ddd;
-                 border-radius: 4px; background: #fff; }
-.plot-grid figcaption { font-size: 0.85rem; color: #555; padding-top: 0.3rem; }
+.plot-grid img { width: 100%; height: auto; border: 1px solid var(--border);
+                 border-radius: 8px; background: #fff; }
+.plot-grid figcaption { font-size: 0.85rem; color: var(--dim); padding-top: 0.3rem; }
 section { margin: 2rem 0; padding-top: 1rem;
-          border-top: 1px solid #e0e0e0; }
+          border-top: 1px solid var(--border); }
 section:first-of-type { border-top: none; padding-top: 0; }
-.lead { font-size: 1.05rem; color: #333; margin-bottom: 1.5rem; }
-.page-intro { background: #eef3f9; padding: 0.8rem 1rem; border-radius: 6px;
-              border-left: 4px solid #003a70; margin: 1rem 0 1.5rem; }
+.lead { font-size: 1.05rem; color: var(--text); margin-bottom: 1.5rem; }
+.page-intro { background: var(--panel); border: 1px solid var(--border);
+              padding: 0.8rem 1rem; border-radius: 10px;
+              border-left: 4px solid var(--accent); margin: 1rem 0 1.5rem; }
 .page-intro p { margin: 0.4rem 0; }
-footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #ccc;
-         text-align: center; color: #666; font-size: 0.9rem; }
-.footer-credit a { color: #003a70; }
+footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border);
+         text-align: center; color: var(--dim); font-size: 0.9rem; }
+.footer-credit a { color: var(--accent); }
 </style></head><body>
-<nav><a href="index.html">Overview</a><a href="main_interactive.html" style="text-decoration: underline">Interactive hub</a><a href="animations.html">Animations</a><a href="plots.html">Plots</a><a href="n10.html">N=10</a><a href="n25.html">N=25</a><a href="n50.html">N=50</a><a href="n100.html">N=100</a></nav>
+<nav><a href="index.html">Home</a><a href="main_interactive.html" class="active">Interactive</a><a href="sandbox.html">Sandbox</a><a href="animations.html">Animations</a><a href="plots.html">Plots</a><a href="n10.html">N=10</a><a href="n25.html">N=25</a><a href="n50.html">N=50</a><a href="n100.html">N=100</a></nav>
 <h1>N-body ML Surrogates &mdash; Out-of-Distribution Benchmark</h1>
 <p class="lead"><strong>An open benchmark for machine-learning surrogates of gravitational N-body dynamics, validated against real Solar-System initial conditions.</strong></p>
 <p>Variable-body-count machine-learning surrogates for gravitational N-body
