@@ -425,4 +425,9 @@ out-of-distribution robustness.
 - Real-case rescaling reports its chosen mass and length units in each
   per-preset summary so the mapping back to SI is auditable.
 
+## License
+
+Released under the [MIT License](LICENSE). The simulation results, plots, and
+animations on the companion site may be reused with attribution.
+
 ---
