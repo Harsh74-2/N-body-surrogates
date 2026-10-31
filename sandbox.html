@@ -199,7 +199,9 @@ function draw() {
 let drag = null;
 function pt(e) {
   const r = cv.getBoundingClientRect();
-  const t = e.touches ? e.touches[0] : e;
+  // touchend fires with touches=[] (truthy!) — prefer changedTouches, which
+  // always carries the finger that ended the gesture
+  const t = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
   return { x: t.clientX - r.left - OX, y: t.clientY - r.top - OY };
 }
 function down(e) { const p = pt(e); drag = { x0: p.x, y0: p.y, x: p.x, y: p.y }; e.preventDefault(); }
@@ -217,6 +219,7 @@ cv.addEventListener("mousedown", down); cv.addEventListener("mousemove", move);
 addEventListener("mouseup", up);
 cv.addEventListener("touchstart", down); cv.addEventListener("touchmove", move);
 addEventListener("touchend", up);
+addEventListener("touchcancel", up);   // interrupted gesture: release the drag, don't stick the aim line
 
 // ── UI wiring ──────────────────────────────────────────────────────────
 const massEl = document.getElementById("mass");
@@ -248,6 +251,18 @@ function frame() {
   if (!paused && bodies.length) {
     // slider min (10) must still advance: round(10/25) = 0 would freeze the sim
     const steps = Math.max(1, Math.round(+document.getElementById("speed").value / 25));
+    // Deep close encounters slingshot velocity without bound; v^2 then crosses
+    // Infinity, energy reads NaN and every body leaves the canvas. Clamp speed
+    // and cull anything non-finite before it can poison the rest.
+    const VMAX = 400;
+    bodies = bodies.filter(b => isFinite(b.x + b.y + b.vx + b.vy + b.m));
+    for (const b of bodies) {
+      const v2 = b.vx * b.vx + b.vy * b.vy;
+      if (v2 > VMAX * VMAX) {
+        const s = VMAX / Math.sqrt(v2);
+        b.vx *= s; b.vy *= s;
+      }
+    }
     for (let s = 0; s < steps; s++) {
       leapfrogStep(bodies, DT);
       mergeClose(bodies);
@@ -259,7 +274,7 @@ function frame() {
     }
     if (E0 !== null && Math.abs(E0) > 1e-9) {
       const drift = Math.abs((totalEnergy(bodies) - E0) / E0) * 100;
-      hudE.textContent = drift.toFixed(2) + "%";
+      hudE.textContent = isFinite(drift) ? drift.toFixed(2) + "%" : "—";
     }
     hudN.textContent = bodies.length;
   }
