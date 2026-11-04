@@ -19,11 +19,15 @@ PAGES = ["index.html", "main_interactive.html", "sandbox.html",
 
 
 def fetch(url, tries=3):
-    for _ in range(tries):
+    for attempt in range(tries):
         req = urllib.request.Request(url, method="HEAD")
         try:
             return urllib.request.urlopen(req, timeout=20).status
         except urllib.error.HTTPError as e:
+            # GitHub Pages throws transient 503s under load; retry those, not 4xx
+            if e.code >= 500 and attempt < tries - 1:
+                time.sleep(2)
+                continue
             return e.code
         except Exception:
             time.sleep(2)
