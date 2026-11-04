@@ -1,0 +1,56 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  syntax-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: py-compile every tracked script
+        run: python -m compileall -q . -x '(__pycache__|archive|iubh_materials|old data|node_modules)'
+
+  site-health:
+    # the findings site is the repo's public face; a dead link there is a
+    # broken interview asset. Crawl it on every push.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: check all internal links on the live site
+        run: python tools/check_links.py https://harsh74-2.github.io/N-body-surrogates/
+
+  full-eval:
+    # heavy job: needs the dataset npz + model checkpoints, which are release
+    # artifacts, not git content. Run `gh release upload` once, then this job
+    # reproduces evaluate_models.py on CI and uploads fresh result JSONs.
+    if: github.event_name == 'workflow_dispatch'
+    needs: syntax-gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: install runtime deps
+        run: pip install numpy torch --index-url https://download.pytorch.org/whl/cpu torch 2>/dev/null || pip install numpy torch
+      - name: fetch dataset + checkpoints from the latest release
+        run: gh release download -R "$GITHUB_REPOSITORY" -D data/ -p '*.npz' -p '*.pt' -p '*.pth'
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: evaluate
+        run: python evaluate_models.py --split test --rollout-batches 5
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eval-results
+          path: |
+            results/
