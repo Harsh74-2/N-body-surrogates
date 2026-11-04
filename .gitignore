@@ -140,3 +140,6 @@ real_case_validation/report_N*_dump/
 graphify-out/
 real_case_validation/animations/*.mp4
 results/animations/N*/
+
+.playwright-cli/
+sandbox*.png

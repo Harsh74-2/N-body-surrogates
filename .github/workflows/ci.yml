@@ -1,0 +1,30 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  syntax-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: py-compile every tracked script
+        run: python -m compileall -q . -x '(__pycache__|archive|iubh_materials|old data|node_modules)'
+
+  site-health:
+    # the findings site is the repo's public face; a dead link there is a
+    # broken interview asset. Crawl it on every push.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: check all internal links on the live site
+        run: python tools/check_links.py https://harsh74-2.github.io/N-body-surrogates/

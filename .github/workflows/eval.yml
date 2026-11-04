@@ -1,0 +1,31 @@
+name: full-eval
+
+# Reproduce the model evaluation on CI. Heavy: needs the dataset npz and model
+# checkpoints, which are release artifacts, not git content.
+# One-time setup:
+#   gh release create data -R Harsh74-2/N-body-surrogates
+#   gh release upload data -R Harsh74-2/N-body-surrogates *.npz *.pt *.pth
+# Then: Actions -> full-eval -> Run workflow.
+on:
+  workflow_dispatch:
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: install runtime deps (CPU torch builds are the small wheels)
+        run: pip install numpy torch --index-url https://download.pytorch.org/whl/cpu
+      - name: fetch dataset + checkpoints from the release
+        run: gh release download data -R "$GITHUB_REPOSITORY" -D results -p '*.npz' -p '*.pt' -p '*.pth'
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: evaluate on the held-out test split
+        run: python evaluate_models.py --split test --rollout-batches 5
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eval-results
+          path: results/
