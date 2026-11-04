@@ -59,6 +59,11 @@ MODEL_COLORS = {
     "GNN":         THEME["accent"],
     "GNN_stable":  "#9bd5ff",
 }
+# One colour per training budget N for the grouped-bar panels of
+# eval_benchmark.png (bars are grouped by N *within* each model, so the
+# series colour must encode N — per-model colours there made the legend
+# swatches meaningless).
+BUDGET_COLORS = ["#9b6dff", "#56b6f2", "#3ddc97", "#e7c46d"]
 MODEL_SHORT = {
     "MLP": "MLP",
     "LSTM": "LSTM",
@@ -229,16 +234,18 @@ def plot_eval_benchmark(cross_n_audit_md: Path,
     for ni, n in enumerate(N_VALUES):
         vals = [in_dist.get(m, [0]*4)[ni] for m in base_models]
         bars = ax.bar(x + (ni - 1.5) * width, vals, width,
-                      color=[MODEL_COLORS[m] for m in base_models],
+                      color=BUDGET_COLORS[ni],
                       edgecolor=THEME["bg"], alpha=0.85, label=f"N={n}")
         for b, v in zip(bars, vals):
-            ax.annotate(f"{v:.1f}", xy=(b.get_x() + b.get_width()/2, v),
+            label = f"{v:.2f}" if v < 0.1 else f"{v:.1f}"
+            ax.annotate(label, xy=(b.get_x() + b.get_width()/2, v),
                         xytext=(0, 3), textcoords="offset points",
                         ha="center", color=THEME["text"], fontsize=7)
     ax.set_xticks(x)
     ax.set_xticklabels(base_models)
-    ax.set_yscale("log")
-    ax.set_ylabel("mean err %  (log)")
+    # linear scale: in-dist values hug 0.00-0.03%, and log axes cannot
+    # render the true zeros (they vanished or clipped in the old version)
+    ax.set_ylabel("mean err %")
     ax.legend(title="training budget", fontsize=8, title_fontsize=9,
               labelcolor=THEME["text"], facecolor=THEME["bg"],
               edgecolor=THEME["spine"])
@@ -249,7 +256,7 @@ def plot_eval_benchmark(cross_n_audit_md: Path,
     for ni, n in enumerate(N_VALUES):
         vals = [ood.get(m, [0]*4)[ni] for m in base_models]
         bars = ax.bar(x + (ni - 1.5) * width, vals, width,
-                      color=[MODEL_COLORS[m] for m in base_models],
+                      color=BUDGET_COLORS[ni],
                       edgecolor=THEME["bg"], alpha=0.85, label=f"N={n}")
         for b, v in zip(bars, vals):
             ax.annotate(f"{v:.0f}", xy=(b.get_x() + b.get_width()/2, v),
@@ -257,9 +264,10 @@ def plot_eval_benchmark(cross_n_audit_md: Path,
                         ha="center", color=THEME["text"], fontsize=7)
     ax.set_xticks(x)
     ax.set_xticklabels(base_models)
-    ax.set_yscale("log")
-    ax.set_ylim(top=320)
-    ax.set_ylabel("mean err %  (log)")
+    # linear: all OOD single-step means sit at 11-14%; the old log axis
+    # with ylim top=320 rendered them as slivers in a mostly-empty panel
+    ax.set_ylim(top=17)          # headroom so the legend clears the bars
+    ax.set_ylabel("mean err %")
     ax.legend(title="training budget", fontsize=8, title_fontsize=9,
               labelcolor=THEME["text"], facecolor=THEME["bg"],
               edgecolor=THEME["spine"], loc="upper left")
@@ -292,7 +300,7 @@ def plot_eval_benchmark(cross_n_audit_md: Path,
     for ni, n in enumerate(N_VALUES):
         vals = [rollout.get(m, [0]*4)[ni] for m in base_models]
         bars = ax.bar(x + (ni - 1.5) * width, vals, width,
-                      color=[MODEL_COLORS[m] for m in base_models],
+                      color=BUDGET_COLORS[ni],
                       edgecolor=THEME["bg"], alpha=0.85, label=f"N={n}")
         for b, v in zip(bars, vals):
             ax.annotate(f"{v:.0f}", xy=(b.get_x() + b.get_width()/2, v),
@@ -300,8 +308,10 @@ def plot_eval_benchmark(cross_n_audit_md: Path,
                         ha="center", color=THEME["text"], fontsize=7)
     ax.set_xticks(x)
     ax.set_xticklabels(base_models)
-    ax.set_yscale("log")
-    ax.set_ylabel("mean err %  (log)")
+    # linear: rollout means span 64-100%, a log axis exaggerated the
+    # spread; the 100 bar is the diverged LSTM N=100 cell (md: >100)
+    ax.set_ylim(top=118)         # headroom so the legend clears the bars
+    ax.set_ylabel("mean err %")
     ax.legend(title="training budget", fontsize=8, title_fontsize=9,
               labelcolor=THEME["text"], facecolor=THEME["bg"],
               edgecolor=THEME["spine"])
@@ -326,35 +336,52 @@ def plot_stability_per_n(single_step: dict[str, list[float]],
     base_models = ["MLP", "LSTM", "GNN"]
     N_VALUES = [10, 25, 50, 100]
 
-    # Per-N 3-panel (one bar chart per N, single vs stable per family)
+    # Per-N 3-panel (one bar chart per N, single vs stable per family).
+    # Honest-data guard: the stable-variant single-step OOD dumps do not
+    # exist, so a stable series with no data must be SKIPPED — the old
+    # code substituted zeros, which on a log axis silently deleted the
+    # "stable" bars while the legend kept promising them.
+    have_stable = any(single_step is not None and stable_step.get(f"{m}_stable")
+                      for m in base_models)
     for ni, n in enumerate(N_VALUES):
         fig, ax = plt.subplots(figsize=(8, 5))
         fig.patch.set_facecolor(THEME["bg"])
         x = np.arange(len(base_models))
-        width = 0.35
         single_vals = [single_step.get(m, [0]*4)[ni] for m in base_models]
-        stable_vals = [stable_step.get(f"{m}_stable", [0]*4)[ni] for m in base_models]
-        ax.bar(x - width/2, single_vals, width,
-               color=[MODEL_COLORS[m] for m in base_models],
-               edgecolor=THEME["bg"], alpha=0.85, label="single-step ckpt")
-        ax.bar(x + width/2, stable_vals, width,
-               color=[MODEL_COLORS[f"{m}_stable"] for m in base_models],
-               edgecolor=THEME["bg"], alpha=0.85, label="stable ckpt")
+        if have_stable:
+            width = 0.35
+            stable_vals = [stable_step.get(f"{m}_stable", [0]*4)[ni]
+                           for m in base_models]
+            ax.bar(x - width/2, single_vals, width,
+                   color=[MODEL_COLORS[m] for m in base_models],
+                   edgecolor=THEME["bg"], alpha=0.85, label="single-step ckpt")
+            ax.bar(x + width/2, stable_vals, width,
+                   color=[MODEL_COLORS[f"{m}_stable"] for m in base_models],
+                   edgecolor=THEME["bg"], alpha=0.85, label="stable ckpt")
+            off = width / 2
+        else:
+            ax.bar(x, single_vals, 0.55,
+                   color=[MODEL_COLORS[m] for m in base_models],
+                   edgecolor=THEME["bg"], alpha=0.85)
+            off = 0.0
         for xi, v in enumerate(single_vals):
-            ax.annotate(f"{v:.1f}", xy=(xi - width/2, v),
+            ax.annotate(f"{v:.1f}", xy=(xi - off, v),
                         xytext=(0, 3), textcoords="offset points",
                         ha="center", color=THEME["text"], fontsize=8)
-        for xi, v in enumerate(stable_vals):
-            ax.annotate(f"{v:.1f}", xy=(xi + width/2, v),
-                        xytext=(0, 3), textcoords="offset points",
-                        ha="center", color=THEME["text"], fontsize=8)
+        if have_stable:
+            for xi, v in enumerate(stable_vals):
+                ax.annotate(f"{v:.1f}", xy=(xi + off, v),
+                            xytext=(0, 3), textcoords="offset points",
+                            ha="center", color=THEME["text"], fontsize=8)
         ax.set_xticks(x)
         ax.set_xticklabels(base_models)
-        ax.set_yscale("log")
-        ax.set_ylabel("OOD mean err %  (log)")
-        ax.legend(fontsize=10, labelcolor=THEME["text"],
-                  facecolor=THEME["bg"], edgecolor=THEME["spine"])
-        _style_ax(ax, f"Stability training effect, N = {n}")
+        # linear: all values sit in a narrow 11-14% band; the old log
+        # axis turned that into a 40x visual tower for the largest bar
+        ax.set_ylabel("OOD mean err %")
+        if have_stable:
+            ax.legend(fontsize=10, labelcolor=THEME["text"],
+                      facecolor=THEME["bg"], edgecolor=THEME["spine"])
+        _style_ax(ax, f"OOD single-step mean err, N = {n}")
         fig.tight_layout()
         out = out_dir / f"stability_N{n}.png"
         fig.savefig(out, dpi=180, bbox_inches="tight",
@@ -362,32 +389,41 @@ def plot_stability_per_n(single_step: dict[str, list[float]],
         plt.close(fig)
         print(f"  [plot] {out}")
 
-    # Overview: gradient of (stable / single - 1) across N per family
-    fig, ax = plt.subplots(figsize=(9, 5))
-    fig.patch.set_facecolor(THEME["bg"])
-    for m in base_models:
-        single = np.array([single_step.get(m, [0]*4)[ni] for ni in range(4)])
-        stable = np.array([stable_step.get(f"{m}_stable", [0]*4)[ni] for ni in range(4)])
-        delta_pct = 100.0 * (stable - single) / np.maximum(single, 1e-6)
-        ax.plot(N_VALUES, delta_pct, marker="o", lw=2.0,
-                color=MODEL_COLORS[m], label=m)
-        for ni, dv in enumerate(delta_pct):
-            ax.annotate(f"{dv:+.0f}%", xy=(N_VALUES[ni], dv),
-                        xytext=(0, 8), textcoords="offset points",
-                        ha="center", color=MODEL_COLORS[m], fontsize=9)
-    ax.axhline(0, color=THEME["text"], lw=1.0, ls="--", alpha=0.6)
-    ax.set_xlabel("training budget N")
-    ax.set_ylabel("stable − single  (% of single)")
-    ax.set_xticks(N_VALUES)
-    ax.legend(fontsize=10, labelcolor=THEME["text"],
-              facecolor=THEME["bg"], edgecolor=THEME["spine"])
-    _style_ax(ax, "Stability-training effect  (positive = stable is worse)")
-    fig.tight_layout()
-    out = out_dir / "stability_overview.png"
-    fig.savefig(out, dpi=180, bbox_inches="tight",
-                facecolor=fig.get_facecolor())
-    plt.close(fig)
-    print(f"  [plot] {out}")
+    # Overview: gradient of (stable / single - 1) across N per family.
+    # Only drawn for families that actually have stable data — with the
+    # zeros the old version plotted a fabricated flat -100% line.
+    pairs = [(m, stable_step.get(f"{m}_stable")) for m in base_models]
+    pairs = [(m, s) for m, s in pairs if s is not None and any(s)]
+    if pairs:
+        fig, ax = plt.subplots(figsize=(9, 5))
+        fig.patch.set_facecolor(THEME["bg"])
+        for m, _ in pairs:
+            single = np.array([single_step.get(m, [0]*4)[ni] for ni in range(4)])
+            stable = np.array([stable_step[f"{m}_stable"][ni] for ni in range(4)])
+            delta_pct = 100.0 * (stable - single) / np.maximum(single, 1e-6)
+            ax.plot(N_VALUES, delta_pct, marker="o", lw=2.0,
+                    color=MODEL_COLORS[m], label=m)
+            for ni, dv in enumerate(delta_pct):
+                ax.annotate(f"{dv:+.0f}%", xy=(N_VALUES[ni], dv),
+                            xytext=(0, 8), textcoords="offset points",
+                            ha="center", color=MODEL_COLORS[m], fontsize=9)
+        ax.axhline(0, color=THEME["text"], lw=1.0, ls="--", alpha=0.6)
+        ax.set_xlabel("training budget N")
+        ax.set_ylabel("stable − single  (% of single)")
+        ax.set_xticks(N_VALUES)
+        ax.legend(fontsize=10, labelcolor=THEME["text"],
+                  facecolor=THEME["bg"], edgecolor=THEME["spine"])
+        _style_ax(ax, "Stability-training effect  (positive = stable is worse)")
+        fig.tight_layout()
+        out = out_dir / "stability_overview.png"
+        fig.savefig(out, dpi=180, bbox_inches="tight",
+                    facecolor=fig.get_facecolor())
+        plt.close(fig)
+        print(f"  [plot] {out}")
+    else:
+        print("  [skip] stability_overview.png — no stable-variant "
+              "single-step OOD data; plotting a stable-vs-single delta "
+              "would fabricate a -100% line")
 
 
 def plot_scaling_latency(latency_json: Path, out_dir: Path) -> None:
@@ -473,10 +509,13 @@ def main() -> None:
     # want OOD single-step, NOT in-distribution (which is what the
     # ckpts were *trained* on). Use OOD mean.
     ood = _load_single_step_ood_mean(cross_n_ss)
-    # The "stable" variant is the *_stable keys in the same dict.
+    # The "stable" variant is the *_stable keys in the same dict — only
+    # kept when the audit md actually carries numbers (no fabricated
+    # zeros; see plot_stability_per_n).
     single_step = {m: ood.get(m, [0]*4) for m in ("MLP", "LSTM", "GNN")}
-    stable_step = {f"{m}_stable": ood.get(f"{m}_stable", [0]*4)
-                   for m in ("MLP", "LSTM", "GNN")}
+    stable_step = {f"{m}_stable": ood[f"{m}_stable"]
+                   for m in ("MLP", "LSTM", "GNN")
+                   if ood.get(f"{m}_stable")}
     plot_stability_per_n(single_step, stable_step, out_dir)
 
     # ── scaling_latency.png ──────────────────────────────────────────
